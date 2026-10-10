@@ -69,7 +69,7 @@ def test_stability_bound_is_far_looser_than_practice() -> None:
 
 
 def test_expanding_modes_do_not_veto_every_step() -> None:
-    """Regression guard for the bug this function originally had.
+    """Growing directions must not drive the stable step to zero.
 
     Requiring |R| <= 1 over the *whole* spectrum yields h = 0, because Lorenz
     genuinely has growing directions. Restricting to the damped modes is what

@@ -4,9 +4,11 @@ Lorenz (1963) 系统的可复现数值工程，为课程汇报《**什么样的�
 
 报告正文：[`report/report.md`](report/report.md)
 
+汇报幻灯片：[`report/slides.html`](report/slides.html)，浏览器直接打开，按 N 显示讲稿。
+
 论点一句话：**判断数值结果可信的标准随系统类型而变。守恒系统靠不变量验证；混沌系统的单条轨道不可信，统计量可信。**
 
-Lorenz 是这个论点的理想载体——它没有守恒量可查（相空间散度恒为 −13.667），可预报时间被 λ₁≈0.904 锁死在约 41 个时间单位，但它的 Lyapunov 谱、不变密度和 Lorenz 映射对求解器完全不敏感。
+Lorenz 是这个论点的理想载体：它没有守恒量可查，可预报时间被最大 Lyapunov 指数锁死，但它的 Lyapunov 谱、不变密度和 Lorenz 映射对求解器不敏感。具体数字由 `lorenz63 info` 打印，报告正文引用它们。
 
 ## 安装
 
@@ -22,7 +24,7 @@ uv sync --all-groups
 # 打印报告引用的全部数字（Lyapunov 谱、分岔阈值、稳定步长上限……）
 uv run lorenz63 info
 
-# 重建 report/figures/ 下全部 16 张图，约 4 分钟
+# 重建 report/figures/ 下全部图（耗时见报告附录 A）
 uv run lorenz63 figure all
 
 # 单张
@@ -47,23 +49,24 @@ src/lorenz63/
   bifurcation.py    ρ 扫描；C± 特征值分支与复平面轨迹
   portrait.py       相图：分区轨道、不动点本征方向与不变平面
   stability.py      RK4 稳定域与吸引子上的 Jacobian 谱
-  figures.py        16 张图，每张一个函数
+  figures.py        报告的图，每张一个函数
   cli.py
 report/
   report.md         报告正文
-  figures/          16 张 png
-tests/              74 个测试
+  slides.html       汇报幻灯片（引用 figures/ 里的图）
+  figures/          png 图
+tests/
 ```
 
 ## 两个作为测试存在的论点
 
 本仓库的断言不只写在报告里，也写成了测试：
 
-**`test_lyapunov.py::test_spectrum_sums_to_the_divergence`** — 对任何流 `Σλᵢ = ⟨tr J⟩`，而 Lorenz 的 `tr J` 是常数 `−(σ+1+β)`。计算出的谱必须精确加和到 −13.6666666667，无需拟合。实测偏差 `2.17e-09`。这是报告引用 λ₁ 的依据。
+**`test_lyapunov.py::test_spectrum_sums_to_the_divergence`** — 对任何流 `Σλᵢ = ⟨tr J⟩`，而 Lorenz 的 `tr J` 是常数 `−(σ+1+β)`。计算出的谱必须精确加和到这个常数，无需拟合。这是报告引用 λ₁ 的依据。
 
-**`test_predictability.py::test_divergence_time_grows_linearly_in_log_inverse_tolerance`** — 可分辨时间对 `ln(1/rtol)` 呈直线，斜率应为 `1/λ₁`。这直接检验报告的核心论点：容差收紧 8 个数量级只买到 20.2 个时间单位。
+**`test_predictability.py::test_divergence_time_grows_linearly_in_log_inverse_tolerance`** — 可分辨时间对 `ln(1/rtol)` 呈直线，斜率应为 `1/λ₁`。这直接检验报告的核心论点：精度只换来对数的预报时间。
 
-慢测试标了 `slow` 标记但默认运行；全套约 45 秒。
+慢测试标了 `slow` 标记但默认运行；全套不到一分钟。
 
 ## 待补的证据
 
