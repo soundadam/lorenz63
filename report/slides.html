@@ -170,6 +170,40 @@ pre.eig {
 .ctrl button:focus-visible, .ctrl input:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
 .demo .fitline { font-size: 23px; line-height: 1.5; }
 
+/* 目录思维导图：左边一个问题，右边五行按讲的顺序排；分隔页复用同一张图，只高亮当前一行 */
+.map-host { flex: 1; min-height: 0; display: flex; align-items: center; }
+.mmap { position: relative; width: 100%; height: 580px; display: grid; grid-template-columns: 300px 1fr; column-gap: 90px; }
+.mm-root {
+  align-self: center; background: var(--navy); color: var(--paper); border-radius: 6px;
+  padding: 30px 28px; display: flex; flex-direction: column; gap: 14px;
+}
+.mm-root b { font-family: var(--serif); font-weight: 900; font-size: 36px; line-height: 1.35; }
+.mm-root span { font-size: 20px; opacity: .8; }
+.mm-wires { position: absolute; left: 300px; top: 0; width: 90px; height: 580px; overflow: visible; }
+.mm-wires path { fill: none; stroke: var(--ink-2); stroke-opacity: .45; stroke-width: 3; }
+.mm-rows { display: grid; grid-template-rows: repeat(5, 1fr); }
+.mm-row { display: grid; grid-template-columns: 410px 1fr; gap: 40px; align-items: center; cursor: pointer; position: relative; }
+.mm-row::after { content: ""; position: absolute; left: 410px; width: 40px; top: 50%; border-top: 3px solid var(--ink-2); opacity: .45; }
+.mm-q {
+  font-size: 24px; font-weight: 700; line-height: 1.35; background: var(--wash-navy);
+  border-radius: 4px; padding: 14px 20px; display: flex; gap: 14px; align-items: baseline;
+}
+.mm-q i { font-style: normal; font-family: var(--serif); font-weight: 900; color: var(--navy); flex: 0 0 auto; }
+.mm-a { font-size: 23px; line-height: 1.45; display: flex; flex-direction: column; gap: 4px; }
+.mm-a small { font-family: var(--mono); font-size: 16px; color: var(--ink-2); }
+.mm-row:hover .mm-q { outline: 2px solid var(--navy); }
+.mmap[data-focus] .mm-row:not(.on) { opacity: .3; }
+.mmap[data-focus] .mm-row.on .mm-q { background: var(--navy); color: var(--paper); }
+.mmap[data-focus] .mm-row.on .mm-q i { color: var(--paper); }
+.mmap[data-focus] .mm-row.on::after { border-color: var(--navy); opacity: 1; }
+.mm-wires path.on { stroke: var(--navy); stroke-opacity: 1; }
+.mmap[data-focus] .mm-wires path:not(.on) { stroke-opacity: .15; }
+
+.backup-list { margin: 0; padding: 0 0 0 1.6em; columns: 2; column-gap: 72px; font-size: 26px; line-height: 1.5; }
+.backup-list li { break-inside: avoid; padding: 8px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
+.backup-list li:hover { color: var(--navy); }
+.backup-list li span { font-size: 18px; color: var(--ink-2); margin-left: 12px; }
+
 /* ---------- persistent footer: argument chain ---------- */
 .foot {
   position: absolute; left: 96px; right: 96px; bottom: 34px;
@@ -238,7 +272,17 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 2 悖论 -->
+<!-- 2 目录 -->
+<section class="slide" data-part="0" data-min="1" data-title="目录">
+  <header><p class="eyebrow">目录</p><h2>先看方程从哪来，再回答四个问题</h2></header>
+  <div class="map-host"></div>
+  <aside class="notes">
+    <p>先把整张地图亮出来：中间是一个问题，右边五行从上往下就是讲的顺序。每一行左边是用大白话问的问题，右边是答案和拿来作证的图或演示。现在不用解释答案，只念问题。</p>
+    <p>每一段开头会再回到这张图，高亮要讲的那一行。页脚的格子一直跟着，提示讲到哪一步。点任一行可以直接跳到那一段。</p>
+  </aside>
+</section>
+
+<!-- 3 悖论 -->
 <section class="slide" data-part="0" data-min="1.5" data-title="开场悖论">
   <header><p class="eyebrow">开场</p><h2>同一个方程，同一个初值</h2></header>
   <div class="split">
@@ -256,23 +300,17 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 3 路线 -->
-<section class="slide" data-part="0" data-min="1.5" data-title="论证路线">
-  <header><p class="eyebrow">论证路线</p><h2>判断可信的标准随系统类型而变</h2></header>
-  <ol class="route">
-    <li><span class="n">①</span><span>Lorenz 是耗散系统，没有守恒量。<strong>靠不变量验证</strong>的办法在这里无从下手。</span><span class="ev">体积坍缩 · fig05</span></li>
-    <li><span class="n">②</span><span>可预报时间被 Lyapunov 指数锁死，<strong>精度只换来对数的时间</strong>。</span><span class="ev">容差扫描 · fig09</span></li>
-    <li><span class="n">③</span><span>尽管如此，<strong>长时间统计量对求解器不敏感</strong>。</span><span class="ev">Lorenz 映射 · fig10</span></li>
-    <li><span class="n">④</span><span>判据要换：守恒系统看不变量，<strong>混沌系统看统计量</strong>。</span><span class="ev">判据表</span></li>
-  </ol>
+<!-- 4 分隔：背景 -->
+<section class="slide" data-part="bg" data-min="0.25" data-title="分隔：背景">
+  <header><p class="eyebrow">背景</p><h2>这组方程描述的是什么？</h2></header>
+  <div class="map-host" data-focus="bg"></div>
   <aside class="notes">
-    <p>先把结论亮出来，后面每一步都有一张主图作为证据。页脚的四格会一直跟着，提示现在讲到哪一步。</p>
-    <p>强调第 ② 步有一张直线图作为定量证据，第 ③ 步是全场的中心实验。</p>
+    <p>先不谈数值，花几分钟让 x、y、z 和 σ、ρ、β 都有一个看得见的物理意思。</p>
   </aside>
 </section>
 
-<!-- 4 物理图景 -->
-<section class="slide" data-part="0" data-min="1.5" data-title="从哪里来">
+<!-- 5 物理图景 -->
+<section class="slide" data-part="bg" data-min="1.5" data-title="从哪里来">
   <header><p class="eyebrow">背景 · 方程从哪里来</p><h2>一层从下面加热的流体</h2></header>
   <div class="split even">
     <div class="col">
@@ -312,8 +350,8 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 5 三个变量 -->
-<section class="slide" data-part="0" data-min="2" data-title="三个变量">
+<!-- 6 三个变量 -->
+<section class="slide" data-part="bg" data-min="2" data-title="三个变量">
   <header><p class="eyebrow">背景 · 方程从哪里来</p><h2>x、y、z 是三种空间花样的振幅</h2></header>
   <div class="split">
     <figure class="fig"><img src="figures/fig18_convection.png" alt="三个模态各自的空间形状，以及三者在 C+ 处合成的定常对流卷"><figcaption>lorenz63 figure fig18</figcaption></figure>
@@ -334,8 +372,8 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 6 每一项 -->
-<section class="slide" data-part="0" data-min="2" data-title="每一项的物理">
+<!-- 7 每一项 -->
+<section class="slide" data-part="bg" data-min="2" data-title="每一项的物理">
   <header><p class="eyebrow">背景 · 方程从哪里来</p><h2>代回去，每一项都是一个物理过程</h2></header>
   <div class="center">
     <table class="data tight" style="font-size:23px">
@@ -359,8 +397,8 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 7 经典参数 -->
-<section class="slide" data-part="0" data-min="2" data-title="经典的那一组数">
+<!-- 8 经典参数 -->
+<section class="slide" data-part="bg" data-min="2" data-title="经典的那一组数">
   <header><p class="eyebrow">背景 · 方程从哪里来</p><h2>经典的那一组数，每个都有来由</h2></header>
   <div class="full" style="justify-content:center;gap:40px">
     <div class="strip" style="gap:72px">
@@ -382,8 +420,8 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 8 边界 -->
-<section class="slide" data-part="0" data-min="1" data-title="方程与它的边界">
+<!-- 9 边界 -->
+<section class="slide" data-part="bg" data-min="1" data-title="方程与它的边界">
   <header><p class="eyebrow">背景 · 方程从哪里来</p><h2>推导到这里就断了</h2></header>
   <div class="split even">
     <div class="col">
@@ -405,82 +443,16 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 9 体积 -->
-<section class="slide" data-part="1" data-min="1.5" data-title="相空间体积">
-  <header><p class="eyebrow">① 没有不变量可查</p><h2>相空间体积以固定速率坍缩</h2></header>
-  <div class="split">
-    <figure class="fig"><img src="figures/fig05_volume.png" alt="Lorenz 与谐振子的 ln det M(t) 对比"><figcaption>lorenz63 figure fig05</figcaption></figure>
-    <div class="col">
-      <p>Jacobian 的迹在任何一点都相同：</p>
-      <div style="font-size:30px">$$\operatorname{tr} J = -(\sigma+1+\beta) = -13.667$$</div>
-      <div class="strip">
-        <div class="kv small"><span class="v">−13.6675</span><span class="k">拟合斜率</span></div>
-        <div class="kv small"><span class="v">6.1e−5</span><span class="k">相对误差</span></div>
-      </div>
-      <div class="callout navy-bg">谐振子贴在 0 上：辛结构保面积。Lorenz 没有守恒量、没有辛形式，<strong>"该用辛方法吗"在这里是个空问题</strong>。</div>
-    </div>
-  </div>
+<!-- 10 分隔：第 ① 问 -->
+<section class="slide" data-part="1" data-min="0.25" data-title="分隔：第 ① 问">
+  <header><p class="eyebrow">第 ① 问</p><h2>能像检查能量守恒那样检查它吗？</h2></header>
+  <div class="map-host" data-focus="1"></div>
   <aside class="notes">
-    <p>由 Liouville 公式，体积按 e^(−13.667 t) 收缩，2 个时间单位缩到 1.35×10⁻¹²。验证方法：积分 M′ = JM，M(0)=I，det M 就是体积因子。</p>
-    <p>这一页是第 ① 步的全部前提：守恒系统可以监视能量、监视不变量，Lorenz 连出发点都没有。</p>
+    <p>学数值方法时最常用的验证是看守恒量漂不漂。这一段先看 ρ 变大时相图怎么变，再说明 Lorenz 为什么没有这样的量可查。</p>
   </aside>
 </section>
 
-<!-- 10 有界 -->
-<section class="slide" data-part="1" data-min="1" data-title="有界性">
-  <header><p class="eyebrow">① 没有不变量可查</p><h2>耗散，但有界</h2></header>
-  <div class="split even">
-    <div class="col">
-      <div style="font-size:28px">$$V = \rho x^2 + \sigma y^2 + \sigma (z-2\rho)^2$$
-      $$\frac{\mathrm dV}{\mathrm dt} = -2\sigma\left[\rho x^2 + y^2 + \beta(z-\rho)^2 - \beta\rho^2\right]$$</div>
-    </div>
-    <div class="col">
-      <p>方括号在椭球 \(\rho x^2 + y^2 + \beta(z-\rho)^2 = \beta\rho^2\) 之外为正，V 在那里单调下降。</p>
-      <p>所有轨道最终被困在一个有界区域里。</p>
-      <div class="callout navy-bg"><strong>局部指数分离 + 全局折叠回来</strong><br>这是混沌，不是发散。</div>
-    </div>
-  </div>
-  <aside class="notes">
-    <p>耗散不等于收缩到一点，也不等于跑到无穷。这个 Lyapunov 函数说明轨道跑不掉；下一页说明它也停不下来。两者合起来就是奇怪吸引子。</p>
-  </aside>
-</section>
-
-<!-- 11 不动点 -->
-<section class="slide" data-part="1" data-min="1.5" data-title="不动点稳定性">
-  <header><p class="eyebrow">① 没有不变量可查</p><h2>三个不动点，ρ = 28 时全部不稳定</h2></header>
-  <div class="split">
-    <figure class="fig"><img src="figures/fig04_fixed_point_stability.png" alt="C+ 处 Jacobian 特征值最大实部随 ρ 的变化"><figcaption>lorenz63 figure fig04</figcaption></figure>
-    <div class="col">
-      <div style="font-size:24px">$$C_\pm = \left(\pm\sqrt{\beta(\rho-1)},\ \pm\sqrt{\beta(\rho-1)},\ \rho-1\right)$$</div>
-      <p class="mono navy" style="font-size:24px">= (±8.4853, ±8.4853, 27)</p>
-      <p>亚临界 Hopf 阈值有闭式：</p>
-      <div style="font-size:26px">$$\rho_H = \frac{\sigma(\sigma+\beta+3)}{\sigma-\beta-1} = 24.737$$</div>
-    </div>
-  </div>
-  <aside class="notes">
-    <p>这张图是纯线性代数，不含任何积分：对每个 ρ 解析写出 C+，算 Jacobian 特征值，取实部最大者，它在 ρ_H 处穿零。</p>
-    <p>ρ = 28 在 ρ_H 右侧：三个不动点全不稳定，没有稳态可去。轨道停不下也跑不掉，只能在有界区域里永远游荡。</p>
-  </aside>
-</section>
-
-<!-- 12 分岔 -->
-<section class="slide" data-part="1" data-min="1.5" data-title="分岔图">
-  <header><p class="eyebrow">① 没有不变量可查</p><h2>动力学在代数预言的位置改变</h2></header>
-  <div class="full">
-    <figure class="fig"><img src="figures/fig03_bifurcation.png" alt="z 的局部极大值随 ρ 的分岔图"><figcaption>lorenz63 figure fig03</figcaption></figure>
-    <div class="strip">
-      <div class="kv small"><span class="v">ρ = 1</span><span class="k">叉式分岔，C± 诞生</span></div>
-      <div class="kv small"><span class="v">ρ ≈ 13.926</span><span class="k">同宿爆炸（Sparrow 1982）</span></div>
-      <div class="kv small"><span class="v">ρ_H = 24.737</span><span class="k">Hopf，C± 失稳</span></div>
-    </div>
-  </div>
-  <aside class="notes">
-    <p>纵轴是 z 的局部极大值。ρ_H 以下极大值并没有变少，而是收敛到 ρ−1：轨道以衰减螺旋落向 C+，振幅趋于零。Hopf 点之后它们不再收敛，散成一条带。</p>
-    <p>同宿爆炸的值是文献值，不是闭式，这里注明出处。</p>
-  </aside>
-</section>
-
-<!-- 13 相图 -->
+<!-- 11 相图 -->
 <section class="slide" data-part="1" data-min="1.5" data-title="四个 ρ 下的相图">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>四个区间，四种相图</h2></header>
   <div class="split">
@@ -501,34 +473,70 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 14 本征结构 -->
-<section class="slide" data-part="1" data-min="2" data-title="本征结构">
-  <header><p class="eyebrow">① 没有不变量可查</p><h2>吸引子的形状来自线性代数</h2></header>
-  <div class="full">
-    <figure class="fig"><img src="figures/fig15_eigen_structure.png" alt="特征值在复平面上随 ρ 的路径，以及相空间中的本征方向和不变平面"><figcaption>lorenz63 figure fig15</figcaption></figure>
-    <pre class="eig">原点  +11.827723   −2.666667   −22.827723           <span class="muted">一正二负 → 鞍点</span>
-C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收缩方向 + 向外旋的不变平面</span></pre>
-  </div>
-  <aside class="notes">
-    <p>左图：ρ 从 0 扫到 32，特征值在复平面上的路径。ρ=1 处原点一个实特征值穿过原点（叉式）；ρ_H 处 C± 一对复特征值穿过虚轴，穿越点 ±9.6246i（Hopf），失稳形式是旋转着往外走。穿越时第三个特征值恰好等于 tr J = −13.667。</p>
-    <p>右图：原点的不稳定方向（红）是两叶之间的通道；C± 处复特征值张成一张实的不变平面，轨道在平面内外旋，同时沿实特征方向被压进来。每一叶就是一张平面附近的螺旋外流。</p>
-  </aside>
-</section>
-
-<!-- 15 Poincaré -->
-<section class="slide" data-part="1" data-min="1.5" data-title="Poincaré 截面">
-  <header><p class="eyebrow">① 没有不变量可查</p><h2>三维流 → 二维截面 → 一维映射</h2></header>
-  <div class="full">
-    <figure class="fig"><img src="figures/fig14_poincare.png" alt="z=27 截面上的穿越点与回归映射"><figcaption>lorenz63 figure fig14</figcaption></figure>
-    <div class="strip">
-      <div class="kv small"><span class="v">3992</span><span class="k">T = 3000 内上行穿越 z = 27 的次数</span></div>
-      <div class="kv small"><span class="v">56.7%</span><span class="k">穿越后留在同一叶</span></div>
-      <p style="flex:1;min-width:12em;font-size:24px">截面上是两条细线，不是一片云。回归映射处处 |F′| &gt; 1，任何不动点都不可能稳定。</p>
+<!-- 12 不动点 -->
+<section class="slide" data-part="1" data-min="1.5" data-title="不动点稳定性">
+  <header><p class="eyebrow">① 没有不变量可查</p><h2>三个不动点，ρ = 28 时全部不稳定</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig04_fixed_point_stability.png" alt="C+ 处 Jacobian 特征值最大实部随 ρ 的变化"><figcaption>lorenz63 figure fig04</figcaption></figure>
+    <div class="col">
+      <div style="font-size:24px">$$C_\pm = \left(\pm\sqrt{\beta(\rho-1)},\ \pm\sqrt{\beta(\rho-1)},\ \rho-1\right)$$</div>
+      <p class="mono navy" style="font-size:24px">= (±8.4853, ±8.4853, 27)</p>
+      <p>亚临界 Hopf 阈值有闭式：</p>
+      <div style="font-size:26px">$$\rho_H = \frac{\sigma(\sigma+\beta+3)}{\sigma-\beta-1} = 24.737$$</div>
     </div>
   </div>
   <aside class="notes">
-    <p>截面取在 C± 的高度 z = ρ−1 = 27。中间一格的两条细线，就是 Kaplan–Yorke 维数 2.06 的几何含义：横向厚度小到在这个尺度上看不见。</p>
-    <p>右格把截面压成一维：第 n 次穿越的 x 对第 n+1 次。后面第 ③ 步的 Lorenz 映射是另一条独立的降维路线，结论一致。</p>
+    <p>这张图是纯线性代数，不含任何积分：对每个 ρ 解析写出 C+，算 Jacobian 特征值，取实部最大者，它在 ρ_H 处穿零。</p>
+    <p>ρ = 28 在 ρ_H 右侧：三个不动点全不稳定，没有稳态可去。轨道停不下也跑不掉，只能在有界区域里永远游荡。</p>
+  </aside>
+</section>
+
+<!-- 13 有界 -->
+<section class="slide" data-part="1" data-min="1" data-title="有界性">
+  <header><p class="eyebrow">① 没有不变量可查</p><h2>耗散，但有界</h2></header>
+  <div class="split even">
+    <div class="col">
+      <div style="font-size:28px">$$V = \rho x^2 + \sigma y^2 + \sigma (z-2\rho)^2$$
+      $$\frac{\mathrm dV}{\mathrm dt} = -2\sigma\left[\rho x^2 + y^2 + \beta(z-\rho)^2 - \beta\rho^2\right]$$</div>
+    </div>
+    <div class="col">
+      <p>方括号在椭球 \(\rho x^2 + y^2 + \beta(z-\rho)^2 = \beta\rho^2\) 之外为正，V 在那里单调下降。</p>
+      <p>所有轨道最终被困在一个有界区域里。</p>
+      <div class="callout navy-bg"><strong>局部指数分离 + 全局折叠回来</strong><br>这是混沌，不是发散。</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>耗散不等于收缩到一点，也不等于跑到无穷。上一页说明轨道停不下来；这个 Lyapunov 函数说明它也跑不掉。两者合起来就是奇怪吸引子。</p>
+  </aside>
+</section>
+
+<!-- 14 体积 -->
+<section class="slide" data-part="1" data-min="1.5" data-title="相空间体积">
+  <header><p class="eyebrow">① 没有不变量可查</p><h2>相空间体积以固定速率坍缩</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig05_volume.png" alt="Lorenz 与谐振子的 ln det M(t) 对比"><figcaption>lorenz63 figure fig05</figcaption></figure>
+    <div class="col">
+      <p>Jacobian 的迹在任何一点都相同：</p>
+      <div style="font-size:30px">$$\operatorname{tr} J = -(\sigma+1+\beta) = -13.667$$</div>
+      <div class="strip">
+        <div class="kv small"><span class="v">−13.6675</span><span class="k">拟合斜率</span></div>
+        <div class="kv small"><span class="v">6.1e−5</span><span class="k">相对误差</span></div>
+      </div>
+      <div class="callout navy-bg">谐振子贴在 0 上：辛结构保面积。Lorenz 没有守恒量、没有辛形式，<strong>"该用辛方法吗"在这里是个空问题</strong>。</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>由 Liouville 公式，体积按 e^(−13.667 t) 收缩，2 个时间单位缩到 1.35×10⁻¹²。验证方法：积分 M′ = JM，M(0)=I，det M 就是体积因子。</p>
+    <p>这一页就是第 ① 问的答案：守恒系统可以监视能量、监视不变量，Lorenz 连出发点都没有。</p>
+  </aside>
+</section>
+
+<!-- 15 分隔：第 ② 问 -->
+<section class="slide" data-part="2" data-min="0.25" data-title="分隔：第 ② 问">
+  <header><p class="eyebrow">第 ② 问</p><h2>算得更准，能多算多久？</h2></header>
+  <div class="map-host" data-focus="2"></div>
+  <aside class="notes">
+    <p>先现场演示，让大家自己猜、自己看，再给名字（λ₁）和正式的证据（图 9）。</p>
   </aside>
 </section>
 
@@ -561,92 +569,18 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
     <p>操作：拖滑块就从同一个起点用新的 ε 重跑，旧曲线留在右图上。"扫一遍"依次跑 10⁻²、10⁻⁴ … 10⁻¹⁴。两条轨道都用 RK4、h = 0.005 在浏览器里现算，"分开"指距离首次超过 1。</p>
     <p>讲法：先用 ε = 10⁻⁶ 跑一次，左边两条线一开始完全重合，过一阵突然各走各的。然后问大家：<span class="q">把 ε 再缩小一百万倍到 10⁻¹²，能多看多久？</span>等几个人猜完，点"扫一遍"。</p>
     <p>右图纵轴是对数，曲线在分开之前近似一条直线，说明误差是指数增长；每条线都是上一条平移过去的，斜率就是最大 Lyapunov 指数 λ₁。所以每缩小 10 倍只推后 ln10/λ₁ ≈ 2.55。双精度的尽头是 10⁻¹⁶，再往下不是算法问题，是数字本身表示不出来，对应约 41 个时间单位。</p>
-    <p>单条轨道相邻两次的差距会在 0.2 到 7 之间跳，因为局部拉伸率差别很大（后面有一页专门讲）。看拟合斜率，不看单次差距。正式的结果是后面图 9，8 个起点平均、换的是求解器容差。</p>
+    <p>单条轨道相邻两次的差距会在 0.2 到 7 之间跳，因为局部拉伸率差别很大（备用页「有限时间 Lyapunov 指数」）。看拟合斜率，不看单次差距。正式的结果是后面图 9，8 个起点平均、换的是求解器容差。</p>
   </aside>
 </section>
 
-<!-- 17 两件事 -->
-<section class="slide" data-part="2" data-min="1" data-title="稳定性与 Lyapunov 指数">
-  <header><p class="eyebrow">② 精度只换来对数时间</p><h2>两件常被混为一谈的事</h2></header>
-  <div class="center">
-    <table class="data">
-      <thead><tr><th></th><th>是什么的性质</th><th>由什么决定</th><th>步长能改变吗</th></tr></thead>
-      <tbody>
-        <tr><td><strong>数值稳定性</strong></td><td>方法 + 步长</td><td>hλ<sub>J</sub> 是否落在稳定域内</td><td><strong class="stat">能</strong></td></tr>
-        <tr><td><strong>Lyapunov 指数</strong></td><td>流本身</td><td>方程</td><td><strong class="orbit">不能</strong></td></tr>
-      </tbody>
-    </table>
-    <p class="lede">真解自己就在指数分离。步长变小只减少<strong>注入的误差量</strong>，这些误差随后照样按 e<sup>λt</sup> 放大。</p>
-  </div>
-  <aside class="notes">
-    <p>这是第 ② 步的准备。混淆这两件事会让人以为"只要步长够小就能一直跟住轨道"。</p>
-  </aside>
-</section>
-
-<!-- 18 稳定域 -->
-<section class="slide" data-part="2" data-min="1.5" data-title="RK4 稳定域">
-  <header><p class="eyebrow">② 精度只换来对数时间</p><h2>瓶颈是精度，不是稳定性</h2></header>
-  <div class="split">
-    <figure class="fig"><img src="figures/fig06_stability.png" alt="吸引子上 Jacobian 特征值乘以 h 与 RK4 稳定域"><figcaption>lorenz63 figure fig06</figcaption></figure>
-    <div class="col">
-      <div class="strip" style="gap:40px">
-        <div class="kv small"><span class="v">0.1253</span><span class="k">RK4 稳定步长上限</span></div>
-        <div class="kv small"><span class="v">≈ 0.01</span><span class="k">实际用的步长</span></div>
-      </div>
-      <p style="font-size:24px">吸引子上采样的 Jacobian 谱：max |λ<sub>J</sub>| = 23.0，<span class="mono">36.3%</span> 的特征值实部为正。</p>
-      <div class="callout orbit-bg" style="font-size:23px"><span class="tag orbit">小心</span>红点（增长模）永远在稳定域外。那是格式在复现真实的增长方向。要求全谱 |R(hλ)| ≤ 1 只会得到 h = 0。<strong>稳定域只约束衰减模。</strong></div>
-    </div>
-  </div>
-  <aside class="notes">
-    <p>左图 h=0.01：整个谱缩在原点附近，离边界还有一个数量级。右图 h=0.1253：衰减模正好顶到边界。经典估计 2.785/|min Re λ_J| = 0.1275，一致。</p>
-    <p>"我得限制 h 免得它炸掉"：动作对，理由错。这一条有测试守着：test_stability.py::test_expanding_modes_do_not_veto_every_step。</p>
-  </aside>
-</section>
-
-<!-- 19 正交化 -->
-<section class="slide" data-part="2" data-min="2" data-title="QR 重正交化">
-  <header><p class="eyebrow">② 精度只换来对数时间</p><h2>Lyapunov 谱为什么必须重正交</h2></header>
-  <div class="full">
-    <figure class="fig"><img src="figures/fig16_orthogonalisation.png" alt="运送的正交标架、不正交化时切向量夹角塌缩、log 范数斜率对照"><figcaption>lorenz63 figure fig16</figcaption></figure>
-    <div class="strip" style="gap:44px">
-      <div class="kv small"><span class="v orbit">3×10⁻¹⁴</span><span class="k">不做 QR，t = 30 时切向量夹角（弧度）</span></div>
-      <div class="kv small"><span class="v orbit">0.98 / 1.01 / 1.05</span><span class="k">不做 QR：三个"指数"全是 λ₁</span></div>
-      <div class="kv small"><span class="v stat">0.92 / −0.003 / −14.58</span><span class="k">做 QR 后分开</span></div>
-    </div>
-  </div>
-  <aside class="notes">
-    <p>做法：沿轨道积分变分方程 Q′ = J(u)Q，带着三个切向量走，每隔一小段做 QR，把 log|R_ii| 累加。</p>
-    <p>不做 QR：任何一般向量都含最不稳定方向的分量，按 e^(λ₁t) 长，于是三个向量都倒向同一条线，λ₂、λ₃ 一点痕迹都没有。QR 每次把第 k 个向量投影到前 k−1 个的正交补上，是唯一让它们可见的机制。</p>
-    <p>附带好处：不归一化的话 e^1800 早就溢出了。右格是 T=200 的短跑，和下一页 T=2000 的谱在第二位小数上一致。</p>
-  </aside>
-</section>
-
-<!-- 20 谱 -->
-<section class="slide" data-part="2" data-min="2" data-title="Lyapunov 谱与自洽检验">
-  <header><p class="eyebrow">② 精度只换来对数时间</p><h2>λ₁ 是数值结果，凭什么信它</h2></header>
-  <div class="split">
-    <figure class="fig"><img src="figures/fig08_lyapunov.png" alt="Benettin 算法三个 Lyapunov 指数的收敛曲线"><figcaption>lorenz63 figure fig08</figcaption></figure>
-    <div class="col">
-      <p class="mono" style="font-size:26px">λ = (+0.903764, −0.000411, −14.570019)</p>
-      <p>对任何流 \(\sum_i \lambda_i = \langle \operatorname{tr} J\rangle\)，而 Lorenz 的 tr J 是常数。不需要拟合：</p>
-      <div class="callout stat-bg mono" style="font-size:23px;line-height:1.8">Σλᵢ　　= −13.666666669<br>tr J　　= −13.666666667<br><strong class="stat">偏差　　= 2.17e−09</strong></div>
-      <p class="muted" style="font-size:22px">D<sub>KY</sub> = 2 + λ₁/|λ₃| = 2.062：体积为零，却比曲面厚。</p>
-    </div>
-  </div>
-  <aside class="notes">
-    <p>Benettin 算法，T = 2000。λ₂ ≈ 0 是应该的：有界非定常流沿流方向总有一个零指数。</p>
-    <p>如果变分方程写错、QR 记账错、或者积分精度不够，这个和会明显偏掉。它对得上，λ₁ 就有了"看起来合理"之外的依据。这个恒等式就是测试 test_lyapunov.py::test_spectrum_sums_to_the_divergence 的断言。</p>
-  </aside>
-</section>
-
-<!-- 21 误差增长 -->
+<!-- 17 误差增长 -->
 <section class="slide" data-part="2" data-min="1.5" data-title="误差增长">
   <header><p class="eyebrow">② 精度只换来对数时间</p><h2>误差按 λ₁ 增长，到吸引子尺度饱和</h2></header>
   <div class="split">
     <figure class="fig"><img src="figures/fig07_ensemble.png" alt="64 个扰动初值的分离度随时间增长"><figcaption>lorenz63 figure fig07</figcaption></figure>
     <div class="col">
       <p style="font-size:24px">64 个随机方向，扰动 δ₀ = 1e−9，全部用参考精度积分。</p>
-      <div class="kv small"><span class="v">0.9090</span><span class="k">t ∈ [5, 22] 的拟合斜率，与 Benettin 的 0.9038 相差 0.6%，两条路径没有共用代码</span></div>
+      <div class="kv small"><span class="v">0.9090</span><span class="k">t ∈ [5, 22] 的拟合斜率，与变分方程算出的 0.9038（备用页）相差 0.6%，两条路径没有共用代码</span></div>
       <div class="kv small"><span class="v">0.767</span><span class="k">倍增时间 ln 2 / λ₁</span></div>
       <div class="kv small"><span class="v orbit">40.76</span><span class="k">双精度预报极限 ln(10¹⁶) / λ₁</span></div>
     </div>
@@ -657,7 +591,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 22 容差扫描 -->
+<!-- 18 容差扫描 -->
 <section class="slide" data-part="2" data-min="2" data-title="容差扫描">
   <header><p class="eyebrow">② 精度只换来对数时间 · 核心证据</p><h2>可分辨时间对 ln(1/rtol) 是一条直线</h2></header>
   <div class="split">
@@ -683,7 +617,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 23 回答 -->
+<!-- 19 回答 -->
 <section class="slide" data-part="2" data-min="0.5" data-title="回答开场的问题">
   <header><p class="eyebrow">② 精度只换来对数时间</p><h2>回到开场的问题</h2></header>
   <div class="center">
@@ -691,34 +625,20 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
     <p class="lede">从 rtol = 1e−4 收紧到 1e−12，计算量增加上百倍，预报时间从 4.5 涨到 24.7。再要 20 个时间单位需要再收紧 8 个数量级，而双精度已经到头了。</p>
   </div>
   <aside class="notes">
-    <p>提高精度这条路的回报是对数的，走不通。到这里全是坏消息，下一页先看一个细节，然后进入第 ③ 步。</p>
+    <p>提高精度这条路的回报是对数的，走不通。到这里全是坏消息，下一页进入第 ③ 问。</p>
   </aside>
 </section>
 
-<!-- 24 FTLE -->
-<section class="slide" data-part="2" data-min="1.5" data-title="有限时间 Lyapunov 指数">
-  <header><p class="eyebrow">② 精度只换来对数时间</p><h2>局部拉伸率差别极大</h2></header>
-  <div class="split">
-    <figure class="fig"><img src="figures/fig12_ftle.png" alt="吸引子上按有限时间 λ₁ 着色，以及其分布"><figcaption>lorenz63 figure fig12</figcaption></figure>
-    <div class="col">
-      <p style="font-size:24px">窗口长 0.5 的有限时间 λ₁：</p>
-      <div class="strip" style="gap:36px">
-        <div class="kv small"><span class="v">0.908</span><span class="k">均值</span></div>
-        <div class="kv small"><span class="v">2.60</span><span class="k">标准差</span></div>
-      </div>
-      <div class="strip" style="gap:36px">
-        <div class="kv small"><span class="v">[−4.07, 9.79]</span><span class="k">取值范围</span></div>
-        <div class="kv small"><span class="v">42.7%</span><span class="k">局部收缩的窗口</span></div>
-      </div>
-      <p style="font-size:24px">在红色区域减小步长确实有用，理由是少注入误差，λ 本身改变不了。</p>
-    </div>
-  </div>
+<!-- 20 分隔：第 ③ 问 -->
+<section class="slide" data-part="3" data-min="0.25" data-title="分隔：第 ③ 问">
+  <header><p class="eyebrow">第 ③ 问</p><h2>单条轨道不可信，那还有什么可信？</h2></header>
+  <div class="map-host" data-focus="3"></div>
   <aside class="notes">
-    <p>全局 λ₁ = 0.904 是长时间平均。红色区域主要在两叶交界与外缘。自适应控制器在那里自动缩小步长，这符合前面那张表：它减少的是注入的误差量。</p>
+    <p>前一段全是坏消息。这一段给出好消息，以及它为什么站得住。</p>
   </aside>
 </section>
 
-<!-- 25 影随 -->
+<!-- 21 影随 -->
 <section class="slide" data-part="3" data-min="1.5" data-title="影随">
   <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>那还剩下什么可信？</h2></header>
   <div class="split even">
@@ -738,7 +658,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 26 中心实验 -->
+<!-- 22 中心实验 -->
 <section class="slide" data-part="3" data-min="2.5" data-title="中心实验">
   <header><p class="eyebrow">③ 统计量不随求解器变 · 中心实验</p><h2>同一组数据：<span class="orbit">左边报废</span>，<span class="stat">右边完好</span></h2></header>
   <div class="full">
@@ -756,7 +676,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 27 不变密度 -->
+<!-- 23 不变密度 -->
 <section class="slide" data-part="3" data-min="1" data-title="不变密度">
   <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>不变密度同样不动</h2></header>
   <div class="split">
@@ -773,7 +693,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 28 吸引子 -->
+<!-- 24 吸引子 -->
 <section class="slide" data-part="3" data-min="0.5" data-title="吸引子">
   <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>教科书上的蝴蝶不是幻觉</h2></header>
   <div class="split">
@@ -785,11 +705,20 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
     </div>
   </div>
   <aside class="notes">
-    <p>喘口气的一页。把第 ③ 步收一句话：蝴蝶是真的，可信的是它的形状和统计。</p>
+    <p>喘口气的一页。把第 ③ 问收成一句话：蝴蝶是真的，可信的是它的形状和统计。</p>
   </aside>
 </section>
 
-<!-- 29 判据表 -->
+<!-- 25 分隔：第 ④ 问 -->
+<section class="slide" data-part="4" data-min="0.25" data-title="分隔：第 ④ 问">
+  <header><p class="eyebrow">第 ④ 问</p><h2>换一类系统，答案还一样吗？</h2></header>
+  <div class="map-host" data-focus="4"></div>
+  <aside class="notes">
+    <p>把 Lorenz 放回更大的图景里：换成守恒系统，判断可信的标准会变。</p>
+  </aside>
+</section>
+
+<!-- 26 判据表 -->
 <section class="slide" data-part="4" data-min="1.5" data-title="判据表">
   <header><p class="eyebrow">④ 判据随系统类型变</p><h2>"可信吗"不能脱离系统类型回答</h2></header>
   <div class="center">
@@ -801,7 +730,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
         <tr class="hl"><td><strong>混沌</strong></td><td>无</td><td>统计量对方法不敏感？</td><td class="orbit"><strong>不可信</strong>（超过 1/λ₁ 量级）</td></tr>
       </tbody>
     </table>
-    <p class="lede">混沌问题的验证协议：容差扫几个数量级、方法换几种，检查 λ₁、D<sub>KY</sub>、不变密度、Lorenz 映射是否稳定。前面第 ③ 步就是在执行这套协议。</p>
+    <p class="lede">混沌问题的验证协议：容差扫几个数量级、方法换几种，检查 λ₁、不变密度、Lorenz 映射是否稳定。第 ③ 问就是在执行这套协议。</p>
   </div>
   <aside class="notes">
     <p>第一行是分子动力学、天体力学的世界：H = T(p) + V(q) 可分离，于是有显式辛格式（Verlet、蛙跳、Yoshida 高阶复合），验证手段是监视能量有界震荡不漂移。</p>
@@ -809,7 +738,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 30 守恒对照 -->
+<!-- 27 守恒对照 -->
 <section class="slide" data-part="4" data-min="2" data-title="守恒系统对照">
   <header><p class="eyebrow">④ 判据随系统类型变</p><h2>守恒系统里，精度换来成倍的时间</h2></header>
   <div class="full">
@@ -828,26 +757,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 31 收敛性 -->
-<section class="slide" data-part="4" data-min="1" data-title="收敛性研究的推论">
-  <header><p class="eyebrow">④ 判据随系统类型变</p><h2>推论：混沌问题的收敛阶要在短窗口里验</h2></header>
-  <div class="split even">
-    <div class="col">
-      <p>画"误差 vs 步长"期待一条 O(h<sup>p</sup>) 直线？</p>
-      <p>超过可预报时间后误差饱和到吸引子直径，图会变成一条<strong class="orbit">水平线</strong>，看起来像格式失去了精度阶。</p>
-    </div>
-    <div class="col">
-      <div class="callout navy-bg">格式没有问题，是被测的量失去了意义。<br>收敛阶必须在 <strong>t ≪ 1/λ₁</strong> 的窗口内验证。</div>
-      <p class="mono muted" style="font-size:18px;line-height:1.8">test_integrate.py::<br>test_tighter_tolerance_is_more_accurate_before_saturation</p>
-    </div>
-  </div>
-  <aside class="notes">
-    <p>测试里的比较放在饱和之前；同样的比较放到 t=30 就会失败。</p>
-    <p class="q">待补清单里有一张图会把这件事画出来：RK4 在 T=1/5/15/30 上的误差–步长图。</p>
-  </aside>
-</section>
-
-<!-- 32 声学 -->
+<!-- 28 声学 -->
 <section class="slide" data-part="4" data-min="1" data-title="回到声学">
   <header><p class="eyebrow">④ 判据随系统类型变</p><h2>回到声学</h2></header>
   <div class="split even">
@@ -867,7 +777,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 33 结论 -->
+<!-- 29 结论 -->
 <section class="slide" data-part="4" data-min="1" data-title="结论与复现">
   <header><p class="eyebrow">结论</p><h2>守恒系统看不变量，混沌系统看统计量</h2></header>
   <div class="split even">
@@ -887,12 +797,185 @@ uv run lorenz63 figure all</pre>
     </div>
   </div>
   <aside class="notes">
-    <p>重复开头那句论点，收尾。然后进入提问。备用页是数字汇总，被问到具体数值时翻过去。</p>
+    <p>重复开头那句论点，收尾。然后进入提问。被问到细节时按 B 到备用目录，从那里跳到分岔图、Lyapunov 谱、RK4 稳定域或数字汇总。</p>
   </aside>
 </section>
 
-<!-- 34 备用 -->
-<section class="slide" data-part="0" data-min="0" data-title="备用：数字汇总">
+<!-- 30 备用目录 -->
+<section class="slide" id="backupIndex" data-part="b" data-min="0" data-title="备用页">
+  <header><p class="eyebrow">备用</p><h2>备用页</h2></header>
+  <ol class="backup-list" id="backupList"></ol>
+  <aside class="notes">
+    <p>正文到上一页结束。提问时点这里的条目直接跳过去；在任何一页按 B 回到这里，按 Home 回封面。</p>
+  </aside>
+</section>
+
+<!-- 31 分岔 -->
+<section class="slide" data-part="b" data-min="0" data-title="分岔图">
+  <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>动力学在代数预言的位置改变</h2></header>
+  <div class="full">
+    <figure class="fig"><img src="figures/fig03_bifurcation.png" alt="z 的局部极大值随 ρ 的分岔图"><figcaption>lorenz63 figure fig03</figcaption></figure>
+    <div class="strip">
+      <div class="kv small"><span class="v">ρ = 1</span><span class="k">叉式分岔，C± 诞生</span></div>
+      <div class="kv small"><span class="v">ρ ≈ 13.926</span><span class="k">同宿爆炸（Sparrow 1982）</span></div>
+      <div class="kv small"><span class="v">ρ_H = 24.737</span><span class="k">Hopf，C± 失稳</span></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>纵轴是 z 的局部极大值。ρ_H 以下极大值并没有变少，而是收敛到 ρ−1：轨道以衰减螺旋落向 C+，振幅趋于零。Hopf 点之后它们不再收敛，散成一条带。</p>
+    <p>同宿爆炸的值是文献值，不是闭式，这里注明出处。</p>
+  </aside>
+</section>
+
+<!-- 32 本征结构 -->
+<section class="slide" data-part="b" data-min="0" data-title="本征结构">
+  <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>吸引子的形状来自线性代数</h2></header>
+  <div class="full">
+    <figure class="fig"><img src="figures/fig15_eigen_structure.png" alt="特征值在复平面上随 ρ 的路径，以及相空间中的本征方向和不变平面"><figcaption>lorenz63 figure fig15</figcaption></figure>
+    <pre class="eig">原点  +11.827723   −2.666667   −22.827723           <span class="muted">一正二负 → 鞍点</span>
+C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收缩方向 + 向外旋的不变平面</span></pre>
+  </div>
+  <aside class="notes">
+    <p>左图：ρ 从 0 扫到 32，特征值在复平面上的路径。ρ=1 处原点一个实特征值穿过原点（叉式）；ρ_H 处 C± 一对复特征值穿过虚轴，穿越点 ±9.6246i（Hopf），失稳形式是旋转着往外走。穿越时第三个特征值恰好等于 tr J = −13.667。</p>
+    <p>右图：原点的不稳定方向（红）是两叶之间的通道；C± 处复特征值张成一张实的不变平面，轨道在平面内外旋，同时沿实特征方向被压进来。每一叶就是一张平面附近的螺旋外流。</p>
+  </aside>
+</section>
+
+<!-- 33 Poincaré -->
+<section class="slide" data-part="b" data-min="0" data-title="Poincaré 截面">
+  <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>三维流 → 二维截面 → 一维映射</h2></header>
+  <div class="full">
+    <figure class="fig"><img src="figures/fig14_poincare.png" alt="z=27 截面上的穿越点与回归映射"><figcaption>lorenz63 figure fig14</figcaption></figure>
+    <div class="strip">
+      <div class="kv small"><span class="v">3992</span><span class="k">T = 3000 内上行穿越 z = 27 的次数</span></div>
+      <div class="kv small"><span class="v">56.7%</span><span class="k">穿越后留在同一叶</span></div>
+      <p style="flex:1;min-width:12em;font-size:24px">截面上是两条细线，不是一片云。回归映射处处 |F′| &gt; 1，任何不动点都不可能稳定。</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>截面取在 C± 的高度 z = ρ−1 = 27。中间一格的两条细线，就是 Kaplan–Yorke 维数 2.06 的几何含义：横向厚度小到在这个尺度上看不见。</p>
+    <p>右格把截面压成一维：第 n 次穿越的 x 对第 n+1 次。第 ③ 问里的 Lorenz 映射是另一条独立的降维路线，结论一致。</p>
+  </aside>
+</section>
+
+<!-- 34 两件事 -->
+<section class="slide" data-part="b" data-min="0" data-title="稳定性与 Lyapunov 指数">
+  <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>两件常被混为一谈的事</h2></header>
+  <div class="center">
+    <table class="data">
+      <thead><tr><th></th><th>是什么的性质</th><th>由什么决定</th><th>步长能改变吗</th></tr></thead>
+      <tbody>
+        <tr><td><strong>数值稳定性</strong></td><td>方法 + 步长</td><td>hλ<sub>J</sub> 是否落在稳定域内</td><td><strong class="stat">能</strong></td></tr>
+        <tr><td><strong>Lyapunov 指数</strong></td><td>流本身</td><td>方程</td><td><strong class="orbit">不能</strong></td></tr>
+      </tbody>
+    </table>
+    <p class="lede">真解自己就在指数分离。步长变小只减少<strong>注入的误差量</strong>，这些误差随后照样按 e<sup>λt</sup> 放大。</p>
+  </div>
+  <aside class="notes">
+    <p>被问到"步长再小一点不就行了"时用这一页和下一页。混淆这两件事会让人以为只要步长够小就能一直跟住轨道。</p>
+  </aside>
+</section>
+
+<!-- 35 稳定域 -->
+<section class="slide" data-part="b" data-min="0" data-title="RK4 稳定域">
+  <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>瓶颈是精度，不是稳定性</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig06_stability.png" alt="吸引子上 Jacobian 特征值乘以 h 与 RK4 稳定域"><figcaption>lorenz63 figure fig06</figcaption></figure>
+    <div class="col">
+      <div class="strip" style="gap:40px">
+        <div class="kv small"><span class="v">0.1253</span><span class="k">RK4 稳定步长上限</span></div>
+        <div class="kv small"><span class="v">≈ 0.01</span><span class="k">实际用的步长</span></div>
+      </div>
+      <p style="font-size:24px">吸引子上采样的 Jacobian 谱：max |λ<sub>J</sub>| = 23.0，<span class="mono">36.3%</span> 的特征值实部为正。</p>
+      <div class="callout orbit-bg" style="font-size:23px"><span class="tag orbit">小心</span>红点（增长模）永远在稳定域外。那是格式在复现真实的增长方向。要求全谱 |R(hλ)| ≤ 1 只会得到 h = 0。<strong>稳定域只约束衰减模。</strong></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>左图 h=0.01：整个谱缩在原点附近，离边界还有一个数量级。右图 h=0.1253：衰减模正好顶到边界。经典估计 2.785/|min Re λ_J| = 0.1275，一致。</p>
+    <p>"我得限制 h 免得它炸掉"：动作对，理由错。这一条有测试守着：test_stability.py::test_expanding_modes_do_not_veto_every_step。</p>
+  </aside>
+</section>
+
+<!-- 36 正交化 -->
+<section class="slide" data-part="b" data-min="0" data-title="QR 重正交化">
+  <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>Lyapunov 谱为什么必须重正交</h2></header>
+  <div class="full">
+    <figure class="fig"><img src="figures/fig16_orthogonalisation.png" alt="运送的正交标架、不正交化时切向量夹角塌缩、log 范数斜率对照"><figcaption>lorenz63 figure fig16</figcaption></figure>
+    <div class="strip" style="gap:44px">
+      <div class="kv small"><span class="v orbit">3×10⁻¹⁴</span><span class="k">不做 QR，t = 30 时切向量夹角（弧度）</span></div>
+      <div class="kv small"><span class="v orbit">0.98 / 1.01 / 1.05</span><span class="k">不做 QR：三个"指数"全是 λ₁</span></div>
+      <div class="kv small"><span class="v stat">0.92 / −0.003 / −14.58</span><span class="k">做 QR 后分开</span></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>做法：沿轨道积分变分方程 Q′ = J(u)Q，带着三个切向量走，每隔一小段做 QR，把 log|R_ii| 累加。</p>
+    <p>不做 QR：任何一般向量都含最不稳定方向的分量，按 e^(λ₁t) 长，于是三个向量都倒向同一条线，λ₂、λ₃ 一点痕迹都没有。QR 每次把第 k 个向量投影到前 k−1 个的正交补上，是唯一让它们可见的机制。</p>
+    <p>附带好处：不归一化的话 e^1800 早就溢出了。右格是 T=200 的短跑，和下一页 T=2000 的谱在第二位小数上一致。</p>
+  </aside>
+</section>
+
+<!-- 37 谱 -->
+<section class="slide" data-part="b" data-min="0" data-title="Lyapunov 谱与自洽检验">
+  <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>λ₁ 是数值结果，凭什么信它</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig08_lyapunov.png" alt="Benettin 算法三个 Lyapunov 指数的收敛曲线"><figcaption>lorenz63 figure fig08</figcaption></figure>
+    <div class="col">
+      <p class="mono" style="font-size:26px">λ = (+0.903764, −0.000411, −14.570019)</p>
+      <p>对任何流 \(\sum_i \lambda_i = \langle \operatorname{tr} J\rangle\)，而 Lorenz 的 tr J 是常数。不需要拟合：</p>
+      <div class="callout stat-bg mono" style="font-size:23px;line-height:1.8">Σλᵢ　　= −13.666666669<br>tr J　　= −13.666666667<br><strong class="stat">偏差　　= 2.17e−09</strong></div>
+      <p class="muted" style="font-size:22px">D<sub>KY</sub> = 2 + λ₁/|λ₃| = 2.062：体积为零，却比曲面厚。</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Benettin 算法，T = 2000。λ₂ ≈ 0 是应该的：有界非定常流沿流方向总有一个零指数。</p>
+    <p>如果变分方程写错、QR 记账错、或者积分精度不够，这个和会明显偏掉。它对得上，λ₁ 就有了"看起来合理"之外的依据。这个恒等式就是测试 test_lyapunov.py::test_spectrum_sums_to_the_divergence 的断言。</p>
+  </aside>
+</section>
+
+<!-- 38 FTLE -->
+<section class="slide" data-part="b" data-min="0" data-title="有限时间 Lyapunov 指数">
+  <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>局部拉伸率差别极大</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig12_ftle.png" alt="吸引子上按有限时间 λ₁ 着色，以及其分布"><figcaption>lorenz63 figure fig12</figcaption></figure>
+    <div class="col">
+      <p style="font-size:24px">窗口长 0.5 的有限时间 λ₁：</p>
+      <div class="strip" style="gap:36px">
+        <div class="kv small"><span class="v">0.908</span><span class="k">均值</span></div>
+        <div class="kv small"><span class="v">2.60</span><span class="k">标准差</span></div>
+      </div>
+      <div class="strip" style="gap:36px">
+        <div class="kv small"><span class="v">[−4.07, 9.79]</span><span class="k">取值范围</span></div>
+        <div class="kv small"><span class="v">42.7%</span><span class="k">局部收缩的窗口</span></div>
+      </div>
+      <p style="font-size:24px">在红色区域减小步长确实有用，理由是少注入误差，λ 本身改变不了。</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>全局 λ₁ = 0.904 是长时间平均。红色区域主要在两叶交界与外缘。自适应控制器在那里自动缩小步长，这符合「两件常被混为一谈的事」那张表：它减少的是注入的误差量。</p>
+  </aside>
+</section>
+
+<!-- 39 收敛性 -->
+<section class="slide" data-part="b" data-min="0" data-title="收敛性研究的推论">
+  <header><p class="eyebrow">备用 · ④ 判据随系统类型变</p><h2>推论：混沌问题的收敛阶要在短窗口里验</h2></header>
+  <div class="split even">
+    <div class="col">
+      <p>画"误差 vs 步长"期待一条 O(h<sup>p</sup>) 直线？</p>
+      <p>超过可预报时间后误差饱和到吸引子直径，图会变成一条<strong class="orbit">水平线</strong>，看起来像格式失去了精度阶。</p>
+    </div>
+    <div class="col">
+      <div class="callout navy-bg">格式没有问题，是被测的量失去了意义。<br>收敛阶必须在 <strong>t ≪ 1/λ₁</strong> 的窗口内验证。</div>
+      <p class="mono muted" style="font-size:18px;line-height:1.8">test_integrate.py::<br>test_tighter_tolerance_is_more_accurate_before_saturation</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>测试里的比较放在饱和之前；同样的比较放到 t=30 就会失败。</p>
+    <p class="q">待补清单里有一张图会把这件事画出来：RK4 在 T=1/5/15/30 上的误差–步长图。</p>
+  </aside>
+</section>
+
+<!-- 40 数字汇总 -->
+<section class="slide" data-part="b" data-min="0" data-title="数字汇总">
   <header><p class="eyebrow">备用</p><h2>数字汇总</h2></header>
   <div class="split even" style="font-size:21px">
     <table class="data" style="font-size:21px">
@@ -925,7 +1008,7 @@ uv run lorenz63 figure all</pre>
 
       <footer class="foot" aria-hidden="true">
         <span>Lorenz 63 · 数值结果的可信度</span>
-        <span class="chain" id="chain"><span data-p="1">① 无不变量</span><span data-p="2">② 对数时间</span><span data-p="3">③ 统计量</span><span data-p="4">④ 判据</span></span>
+        <span class="chain" id="chain"><span data-p="bg">背景</span><span data-p="1">① 无不变量</span><span data-p="2">② 对数时间</span><span data-p="3">③ 统计量</span><span data-p="4">④ 判据</span></span>
         <span class="pg" id="pg"></span>
       </footer>
     </div>
@@ -942,9 +1025,44 @@ uv run lorenz63 figure all</pre>
     <button type="button" id="next" aria-label="下一页">→</button>
     <button type="button" id="notesBtn" aria-pressed="false">讲稿 N</button>
     <button type="button" id="fsBtn">全屏 F</button>
-    <span class="hint">← → 翻页 · N 讲稿 · F 全屏</span>
+    <span class="hint">← → 翻页 · N 讲稿 · F 全屏 · B 备用页</span>
   </div>
 </div>
+
+<template id="mapTpl">
+  <div class="mmap">
+    <div class="mm-root"><b>什么样的<br>数值结果<br>值得相信？</b><span>以 Lorenz 系统为例</span></div>
+    <svg class="mm-wires" viewBox="0 0 90 580" aria-hidden="true">
+      <path data-p="bg" d="M0,290 C45,290 45,58 90,58"/>
+      <path data-p="1" d="M0,290 C45,290 45,174 90,174"/>
+      <path data-p="2" d="M0,290 L90,290"/>
+      <path data-p="3" d="M0,290 C45,290 45,406 90,406"/>
+      <path data-p="4" d="M0,290 C45,290 45,522 90,522"/>
+    </svg>
+    <div class="mm-rows">
+      <div class="mm-row" data-p="bg" title="跳到这一段">
+        <div class="mm-q"><i>背景</i>这组方程描述什么？</div>
+        <div class="mm-a"><span>加热的流体层：振幅 x、y、z 与参数 σ、ρ、β</span><small>对流示意 · fig18</small></div>
+      </div>
+      <div class="mm-row" data-p="1" title="跳到这一段">
+        <div class="mm-q"><i>①</i>能像查能量守恒那样查它吗？</div>
+        <div class="mm-a"><span>不能：<strong>没有守恒量</strong>，相空间体积一直在缩</span><small>四个 ρ 的相图 fig13 · 体积 fig05</small></div>
+      </div>
+      <div class="mm-row" data-p="2" title="跳到这一段">
+        <div class="mm-q"><i>②</i>算得更准，能多算多久？</div>
+        <div class="mm-a"><span><strong class="orbit">只多一点</strong>：初值差缩小 10 倍，多看 2.55 个时间单位</span><small>现场演示 · 容差扫描 fig09</small></div>
+      </div>
+      <div class="mm-row" data-p="3" title="跳到这一段">
+        <div class="mm-q"><i>③</i>那还有什么可信？</div>
+        <div class="mm-a"><span><strong class="stat">统计量</strong>：Lorenz 映射、不变密度不随求解器变</span><small>中心实验 fig10 · 不变密度 fig11</small></div>
+      </div>
+      <div class="mm-row" data-p="4" title="跳到这一段">
+        <div class="mm-q"><i>④</i>换一类系统，答案还一样吗？</div>
+        <div class="mm-a"><span>守恒系统看不变量，<strong>混沌系统看统计量</strong></span><small>判据表 · Kepler 对照 fig17</small></div>
+      </div>
+    </div>
+  </div>
+</template>
 
 <script>
 window.MathJax = {
@@ -962,6 +1080,37 @@ window.MathJax = {
   const panel = document.getElementById("notesPanel");
   const notesBtn = document.getElementById("notesBtn");
   const N = slides.length;
+
+  // 目录和各段分隔页共用一张思维导图；点一行跳到那一段的分隔页
+  const firstOf = p => slides.findIndex(s => s.dataset.part === p);
+  const tpl = document.getElementById("mapTpl");
+  document.querySelectorAll(".map-host").forEach(host => {
+    host.appendChild(tpl.content.cloneNode(true));
+    const focus = host.dataset.focus;
+    const map = host.querySelector(".mmap");
+    if (focus) {
+      map.dataset.focus = focus;
+      map.querySelectorAll("[data-p]").forEach(el => el.classList.toggle("on", el.dataset.p === focus));
+    }
+    map.querySelectorAll(".mm-row").forEach(row =>
+      row.addEventListener("click", () => go(firstOf(row.dataset.p))));
+  });
+
+  // 备用目录：列出它后面的每一页
+  const backupAt = slides.findIndex(s => s.id === "backupIndex");
+  const backupList = document.getElementById("backupList");
+  slides.slice(backupAt + 1).forEach((s, k) => {
+    const li = document.createElement("li");
+    li.textContent = s.dataset.title;
+    const eyebrow = s.querySelector(".eyebrow");
+    if (eyebrow && eyebrow.textContent !== "备用") {
+      const tag = document.createElement("span");
+      tag.textContent = eyebrow.textContent.replace(/^备用 · /, "").split(" · ")[0];
+      li.appendChild(tag);
+    }
+    li.addEventListener("click", () => go(backupAt + 1 + k));
+    backupList.appendChild(li);
+  });
 
   const minutes = slides.map(s => parseFloat(s.dataset.min) || 0);
   const cumulative = minutes.reduce((acc, m, k) => (acc.push((acc[k - 1] || 0) + m), acc), []);
@@ -986,8 +1135,9 @@ window.MathJax = {
     const part = sl.dataset.part;
     chips.forEach(c => c.classList.toggle("on", c.dataset.p === part));
     stage.classList.toggle("is-cover", sl.classList.contains("cover"));
-    document.getElementById("pg").textContent = (cur + 1) + " / " + N;
-    document.getElementById("count").textContent = (cur + 1) + " / " + N;
+    const label = cur > backupAt ? "备用 " + (cur - backupAt) : cur === backupAt ? "备用" : (cur + 1) + " / " + backupAt;
+    document.getElementById("pg").textContent = label;
+    document.getElementById("count").textContent = label;
     const notes = sl.querySelector(".notes");
     document.getElementById("nBody").innerHTML = notes ? notes.innerHTML : "";
     document.getElementById("nTime").textContent =
@@ -1026,6 +1176,7 @@ window.MathJax = {
     if (k === "ArrowRight" || k === "ArrowDown" || k === "PageDown" || k === " ") { e.preventDefault(); go(cur + 1); }
     else if (k === "ArrowLeft" || k === "ArrowUp" || k === "PageUp") { e.preventDefault(); go(cur - 1); }
     else if (k === "Home") go(0);
+    else if (k === "b" || k === "B") go(backupAt);
     else if (k === "End") go(N - 1);
     else if (k === "n" || k === "N") toggleNotes();
     else if (k === "f" || k === "F") toggleFullscreen();
