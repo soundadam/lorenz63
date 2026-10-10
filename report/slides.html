@@ -1,0 +1,938 @@
+<title>Lorenz 数值可信度</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* 布局：1600×900 的 16:9 画布按窗口等比缩放；固定页脚是四步论证链，当前所在步骤高亮。
+   单一浅色主题：16 张 matplotlib 图都是白底，投影仪上也最稳。
+   颜色语义沿用图里的配色：朱红 = 单条轨道（不可信），青绿 = 统计量（可信），藏青 = 结构与参考解。 */
+:root {
+  color-scheme: light;
+  --paper: #ffffff;
+  --surround: #dde2ea;
+  --ink: #16213a;
+  --ink-2: #4b5770;
+  --rule: #d6dbe4;
+  --navy: #1f3a73;
+  --orbit: #c2410c;
+  --stat: #0f7a6e;
+  --wash-navy: #ecf0f7;
+  --wash-orbit: #fcefe7;
+  --wash-stat: #e4f3f0;
+  --chrome-fg: #33405a;
+  --chrome-bg: #f4f6f9;
+
+  --serif: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  --sans: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--surround);
+  color: var(--ink);
+  font-family: var(--sans);
+  overflow: hidden;
+}
+
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-inline: 16px;
+  box-sizing: border-box;
+}
+.stage-area { flex: 1; position: relative; min-height: 0; margin-block: 12px 6px; }
+.stage {
+  --s: 0.5;
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 1600px; height: 900px;
+  transform: translate(-50%, -50%) scale(var(--s));
+  background: var(--paper);
+  box-shadow: 0 1px 2px rgba(22, 33, 58, .10), 0 12px 40px rgba(22, 33, 58, .14);
+  overflow: hidden;
+}
+
+/* ---------- slide frame ---------- */
+.slide {
+  position: absolute; inset: 0;
+  display: none;
+  flex-direction: column;
+  padding: 60px 96px 108px;
+  box-sizing: border-box;
+  font-size: 28px;
+  line-height: 1.6;
+}
+.slide.active { display: flex; }
+.slide > header { margin-bottom: 34px; }
+.eyebrow {
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  color: var(--navy);
+  margin: 0 0 10px;
+}
+.slide h2 {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 54px;
+  line-height: 1.25;
+  margin: 0;
+  text-wrap: balance;
+}
+.slide p { margin: 0; }
+.slide .notes { display: none; }
+
+.lede { font-size: 30px; color: var(--ink-2); max-width: 30em; }
+.muted { color: var(--ink-2); }
+.orbit { color: var(--orbit); }
+.stat { color: var(--stat); }
+.navy { color: var(--navy); }
+strong { font-weight: 700; }
+code, .mono { font-family: var(--mono); font-size: .86em; }
+
+/* ---------- layouts ---------- */
+.split { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.7fr 1fr; gap: 56px; }
+.split.even { grid-template-columns: 1fr 1fr; }
+.split.text-first { grid-template-columns: 1fr 1.5fr; }
+.col { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 26px; justify-content: center; }
+
+.fig { margin: 0; min-height: 0; min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.fig img { flex: 1; min-height: 0; width: 100%; object-fit: contain; display: block; }
+.fig figcaption { font-family: var(--mono); font-size: 16px; color: var(--ink-2); text-align: right; }
+.full { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 22px; }
+
+.strip { display: flex; gap: 56px; align-items: flex-end; flex-wrap: wrap; }
+.kv { display: flex; flex-direction: column; gap: 2px; }
+.kv .v { font-family: var(--mono); font-weight: 500; font-size: 50px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kv .k { font-size: 21px; color: var(--ink-2); line-height: 1.4; }
+.kv.small .v { font-size: 38px; }
+
+.callout { padding: 22px 28px; border-radius: 4px; font-size: 26px; line-height: 1.6; }
+.callout.navy-bg { background: var(--wash-navy); }
+.callout.orbit-bg { background: var(--wash-orbit); }
+.callout.stat-bg { background: var(--wash-stat); }
+.callout .tag { display: block; font-size: 18px; font-weight: 700; letter-spacing: .14em; margin-bottom: 6px; }
+
+ul.plain { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 18px; }
+ul.plain li { padding-left: 1.1em; position: relative; }
+ul.plain li::before { content: ""; position: absolute; left: 0; top: .72em; width: .42em; height: 2px; background: var(--navy); }
+
+table.data { border-collapse: collapse; font-size: 26px; width: 100%; }
+table.data th, table.data td { text-align: left; padding: 14px 18px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+table.data th { font-size: 19px; font-weight: 700; letter-spacing: .08em; color: var(--ink-2); border-bottom: 2px solid var(--ink); }
+table.data td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+table.data tr.hl td { background: var(--wash-orbit); }
+
+pre.eig {
+  margin: 0; font-family: var(--mono); font-size: 22px; line-height: 1.7;
+  background: var(--wash-navy); padding: 18px 26px; border-radius: 4px; overflow-x: auto;
+}
+
+.big-statement { font-family: var(--serif); font-weight: 900; font-size: 64px; line-height: 1.35; text-wrap: balance; margin: 0; }
+.center { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 36px; }
+
+/* 论证路线 */
+.route { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.route li { display: grid; grid-template-columns: 70px 1fr 300px; gap: 24px; align-items: baseline; padding: 20px 0; border-bottom: 1px solid var(--rule); }
+.route .n { font-family: var(--serif); font-weight: 900; font-size: 40px; color: var(--navy); }
+.route .ev { font-family: var(--mono); font-size: 19px; color: var(--ink-2); text-align: right; }
+
+/* 封面 */
+.cover { padding: 0; display: none; }
+.cover.active { display: grid; grid-template-columns: 1fr 760px; }
+.cover .left { padding: 96px 0 96px 96px; display: flex; flex-direction: column; justify-content: center; gap: 30px; }
+.cover h1 { font-family: var(--serif); font-weight: 900; font-size: 84px; line-height: 1.2; margin: 0; letter-spacing: .02em; }
+.cover .sub { font-family: var(--serif); font-weight: 600; font-size: 38px; color: var(--ink-2); }
+.cover .params { font-family: var(--mono); font-size: 24px; color: var(--navy); display: flex; gap: 32px; flex-wrap: wrap; }
+.cover .right { position: relative; background: var(--wash-navy); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; }
+.cover canvas { width: 640px; height: 640px; display: block; }
+.cover .readout { font-family: var(--mono); font-size: 19px; color: var(--ink-2); display: flex; gap: 28px; font-variant-numeric: tabular-nums; }
+.cover .legend { font-size: 19px; color: var(--ink-2); display: flex; gap: 24px; }
+.swatch { display: inline-block; width: 22px; height: 3px; vertical-align: middle; margin-right: 8px; }
+
+/* ---------- persistent footer: argument chain ---------- */
+.foot {
+  position: absolute; left: 96px; right: 96px; bottom: 34px;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  font-size: 17px; color: var(--ink-2);
+  border-top: 1px solid var(--rule); padding-top: 16px;
+}
+.foot .chain { display: flex; gap: 6px; }
+.foot .chain span { padding: 4px 12px; border-radius: 3px; letter-spacing: .04em; }
+.foot .chain span.on { background: var(--navy); color: var(--paper); }
+.foot .pg { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.stage.is-cover .foot { display: none; }
+
+/* ---------- chrome outside the slide ---------- */
+.bar {
+  display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
+  padding-block: 6px 12px; color: var(--chrome-fg); font-size: 14px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+.bar button {
+  font: inherit; color: var(--chrome-fg); background: var(--chrome-bg);
+  border: 1px solid var(--rule); border-radius: 4px; padding: 6px 14px; cursor: pointer;
+}
+.bar button:hover { border-color: var(--navy); color: var(--navy); }
+.bar button:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+.bar button[aria-pressed="true"] { background: var(--navy); color: var(--paper); border-color: var(--navy); }
+.bar .count { font-family: var(--mono); min-width: 5.5em; text-align: center; font-variant-numeric: tabular-nums; }
+.bar .hint { color: var(--ink-2); font-size: 13px; }
+
+.notes-panel {
+  flex: 0 0 auto; max-height: 34%; overflow-y: auto;
+  background: var(--chrome-bg); color: var(--ink); border: 1px solid var(--rule); border-radius: 4px;
+  padding: 14px 20px; margin-bottom: 8px; font-size: 16px; line-height: 1.75;
+}
+.notes-panel .meta { font-family: var(--mono); font-size: 13px; color: var(--ink-2); margin-bottom: 6px; display: flex; gap: 20px; flex-wrap: wrap; }
+.notes-panel p { margin: 0 0 8px; max-width: 70em; }
+.notes-panel .q { color: var(--orbit); }
+
+@media (max-width: 640px) {
+  .bar .hint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+
+<div class="app">
+  <div class="stage-area" id="stageArea">
+    <div class="stage" id="stage">
+
+<!-- 1 封面 -->
+<section class="slide cover" data-part="0" data-min="0.5" data-title="封面">
+  <div class="left">
+    <p class="eyebrow">计算物理 · 课程汇报</p>
+    <h1>什么样的数值结果<br>值得相信</h1>
+    <p class="sub">以 Lorenz 系统为例</p>
+    <p class="params"><span>σ = 10</span><span>ρ = 28</span><span>β = 8/3</span></p>
+  </div>
+  <div class="right">
+    <canvas id="hero" width="1280" height="1280" aria-label="两条初值相差 1e-5 的 Lorenz 轨道在 x–z 平面上逐渐分离"></canvas>
+    <p class="legend"><span><i class="swatch" style="background:var(--navy)"></i>x₀</span><span><i class="swatch" style="background:var(--orbit)"></i>x₀ + 10⁻⁵</span></p>
+    <p class="readout"><span id="heroT">t = 0.0</span><span id="heroD">|Δ| = 1.0e−5</span></p>
+  </div>
+  <aside class="notes">
+    <p>自我介绍，报题目。右边是两条 Lorenz 轨道，初值只差 10⁻⁵，画的是 x–z 平面。先别解释，让大家看着它们分开。</p>
+  </aside>
+</section>
+
+<!-- 2 悖论 -->
+<section class="slide" data-part="0" data-min="1.5" data-title="开场悖论">
+  <header><p class="eyebrow">开场</p><h2>同一个方程，同一个初值</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig01_paradox.png" alt="rtol=1e-6 与 rtol=1e-12 两条 x(t) 曲线，以及各自与参考解的距离"><figcaption>lorenz63 figure fig01</figcaption></figure>
+    <div class="col">
+      <p>唯一的区别是 <code>solve_ivp</code> 的相对容差：</p>
+      <p class="mono" style="font-size:30px"><span class="orbit">rtol = 1e-6</span><br><span class="navy">rtol = 1e-12</span></p>
+      <p>前十几个时间单位贴合得很好，之后各自脱钩，差到吸引子的尺度。</p>
+      <p class="big-statement" style="font-size:52px">哪一条是对的？</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>上图是 x(t)，下图是两条各自与一个更精确的参考解（DOP853，rtol=1e-13）的距离。</p>
+    <p>抛出问题："哪一条是对的？" 停一下等观众回答。直觉的答案是容差紧的那条。这个答案在 t&lt;15 时对，在 t&gt;40 时没有意义。整个汇报就是解释为什么，以及失效之后还能主张什么。</p>
+  </aside>
+</section>
+
+<!-- 3 路线 -->
+<section class="slide" data-part="0" data-min="1.5" data-title="论证路线">
+  <header><p class="eyebrow">论证路线</p><h2>判断可信的标准随系统类型而变</h2></header>
+  <ol class="route">
+    <li><span class="n">①</span><span>Lorenz 是耗散系统，没有守恒量。<strong>靠不变量验证</strong>的办法在这里无从下手。</span><span class="ev">体积坍缩 · fig05</span></li>
+    <li><span class="n">②</span><span>可预报时间被 Lyapunov 指数锁死，<strong>精度只换来对数的时间</strong>。</span><span class="ev">容差扫描 · fig09</span></li>
+    <li><span class="n">③</span><span>尽管如此，<strong>长时间统计量对求解器不敏感</strong>。</span><span class="ev">Lorenz 映射 · fig10</span></li>
+    <li><span class="n">④</span><span>判据要换：守恒系统看不变量，<strong>混沌系统看统计量</strong>。</span><span class="ev">判据表</span></li>
+  </ol>
+  <aside class="notes">
+    <p>先把结论亮出来，后面每一步都有一张主图作为证据。页脚的四格会一直跟着，提示现在讲到哪一步。</p>
+    <p>强调第 ② 步有一张直线图作为定量证据，第 ③ 步是全场的中心实验。</p>
+  </aside>
+</section>
+
+<!-- 4 方程 -->
+<section class="slide" data-part="0" data-min="1.5" data-title="方程与它的边界">
+  <header><p class="eyebrow">背景</p><h2>三模截断的对流方程</h2></header>
+  <div class="split even">
+    <div class="col">
+      <div style="font-size:32px">$$\dot x = \sigma(y-x)$$ $$\dot y = x(\rho - z) - y$$ $$\dot z = xy - \beta z$$</div>
+      <ul class="plain" style="font-size:24px">
+        <li><strong>σ</strong>：Prandtl 数</li>
+        <li><strong>ρ</strong>：Rayleigh 数与临界值之比</li>
+        <li><strong>β</strong>：元胞的几何长宽比</li>
+      </ul>
+    </div>
+    <div class="col">
+      <p>Lorenz 1963 年从二维 Rayleigh–Bénard 对流出发作 Galerkin 展开，只保留三个模态。</p>
+      <div class="callout orbit-bg"><span class="tag orbit">局限</span>三模截断只在 ρ 略大于 1 时有渐近依据。ρ = 28 时被丢掉的高阶模态早已被激发，它是一个自洽的<strong>数学对象</strong>，不再是流体模型。</div>
+      <p class="muted" style="font-size:24px">后面所有结论都关于这个数学对象，不涉及流体或天气的主张。</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>很多科普会说"Lorenz 方程描述大气对流，所以天气不可预报"。正确的说法要弱得多：它展示了低维确定性系统也能有敏感依赖。这个定性教训可以迁移到大气，方程本身不能。</p>
+    <p>主动交代这个局限，后面讲的就都站得住。</p>
+  </aside>
+</section>
+
+<!-- 5 体积 -->
+<section class="slide" data-part="1" data-min="1.5" data-title="相空间体积">
+  <header><p class="eyebrow">① 没有不变量可查</p><h2>相空间体积以固定速率坍缩</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig05_volume.png" alt="Lorenz 与谐振子的 ln det M(t) 对比"><figcaption>lorenz63 figure fig05</figcaption></figure>
+    <div class="col">
+      <p>Jacobian 的迹在任何一点都相同：</p>
+      <div style="font-size:30px">$$\operatorname{tr} J = -(\sigma+1+\beta) = -13.667$$</div>
+      <div class="strip">
+        <div class="kv small"><span class="v">−13.6675</span><span class="k">拟合斜率</span></div>
+        <div class="kv small"><span class="v">6.1e−5</span><span class="k">相对误差</span></div>
+      </div>
+      <div class="callout navy-bg">谐振子贴在 0 上：辛结构保面积。Lorenz 没有守恒量、没有辛形式，<strong>"该用辛方法吗"在这里是个空问题</strong>。</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>由 Liouville 公式，体积按 e^(−13.667 t) 收缩，2 个时间单位缩到 1.35×10⁻¹²。验证方法：积分 M′ = JM，M(0)=I，det M 就是体积因子。</p>
+    <p>这一页是第 ① 步的全部前提：守恒系统可以监视能量、监视不变量，Lorenz 连出发点都没有。</p>
+  </aside>
+</section>
+
+<!-- 6 有界 -->
+<section class="slide" data-part="1" data-min="1" data-title="有界性">
+  <header><p class="eyebrow">① 没有不变量可查</p><h2>耗散，但有界</h2></header>
+  <div class="split even">
+    <div class="col">
+      <div style="font-size:28px">$$V = \rho x^2 + \sigma y^2 + \sigma (z-2\rho)^2$$
+      $$\frac{\mathrm dV}{\mathrm dt} = -2\sigma\left[\rho x^2 + y^2 + \beta(z-\rho)^2 - \beta\rho^2\right]$$</div>
+    </div>
+    <div class="col">
+      <p>方括号在椭球 \(\rho x^2 + y^2 + \beta(z-\rho)^2 = \beta\rho^2\) 之外为正，V 在那里单调下降。</p>
+      <p>所有轨道最终被困在一个有界区域里。</p>
+      <div class="callout navy-bg"><strong>局部指数分离 + 全局折叠回来</strong><br>这是混沌，不是发散。</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>耗散不等于收缩到一点，也不等于跑到无穷。这个 Lyapunov 函数说明轨道跑不掉；下一页说明它也停不下来。两者合起来就是奇怪吸引子。</p>
+  </aside>
+</section>
+
+<!-- 7 不动点 -->
+<section class="slide" data-part="1" data-min="1.5" data-title="不动点稳定性">
+  <header><p class="eyebrow">① 没有不变量可查</p><h2>三个不动点，ρ = 28 时全部不稳定</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig04_fixed_point_stability.png" alt="C+ 处 Jacobian 特征值最大实部随 ρ 的变化"><figcaption>lorenz63 figure fig04</figcaption></figure>
+    <div class="col">
+      <div style="font-size:24px">$$C_\pm = \left(\pm\sqrt{\beta(\rho-1)},\ \pm\sqrt{\beta(\rho-1)},\ \rho-1\right)$$</div>
+      <p class="mono navy" style="font-size:24px">= (±8.4853, ±8.4853, 27)</p>
+      <p>亚临界 Hopf 阈值有闭式：</p>
+      <div style="font-size:26px">$$\rho_H = \frac{\sigma(\sigma+\beta+3)}{\sigma-\beta-1} = 24.737$$</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>这张图是纯线性代数，不含任何积分：对每个 ρ 解析写出 C+，算 Jacobian 特征值，取实部最大者，它在 ρ_H 处穿零。</p>
+    <p>ρ = 28 在 ρ_H 右侧：三个不动点全不稳定，没有稳态可去。轨道停不下也跑不掉，只能在有界区域里永远游荡。</p>
+  </aside>
+</section>
+
+<!-- 8 分岔 -->
+<section class="slide" data-part="1" data-min="1.5" data-title="分岔图">
+  <header><p class="eyebrow">① 没有不变量可查</p><h2>动力学在代数预言的位置改变</h2></header>
+  <div class="full">
+    <figure class="fig"><img src="figures/fig03_bifurcation.png" alt="z 的局部极大值随 ρ 的分岔图"><figcaption>lorenz63 figure fig03</figcaption></figure>
+    <div class="strip">
+      <div class="kv small"><span class="v">ρ = 1</span><span class="k">叉式分岔，C± 诞生</span></div>
+      <div class="kv small"><span class="v">ρ ≈ 13.926</span><span class="k">同宿爆炸（Sparrow 1982）</span></div>
+      <div class="kv small"><span class="v">ρ_H = 24.737</span><span class="k">Hopf，C± 失稳</span></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>纵轴是 z 的局部极大值。ρ_H 以下极大值并没有变少，而是收敛到 ρ−1：轨道以衰减螺旋落向 C+，振幅趋于零。Hopf 点之后它们不再收敛，散成一条带。</p>
+    <p>同宿爆炸的值是文献值，不是闭式，这里注明出处。</p>
+  </aside>
+</section>
+
+<!-- 9 相图 -->
+<section class="slide" data-part="1" data-min="1.5" data-title="四个 ρ 下的相图">
+  <header><p class="eyebrow">① 没有不变量可查</p><h2>四个区间，四种相图</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig13_phase_portraits.png" alt="ρ=0.5, 10, 24.5, 28 四格相图"><figcaption>lorenz63 figure fig13</figcaption></figure>
+    <div class="col" style="font-size:24px">
+      <ul class="plain">
+        <li><strong class="mono">ρ = 0.5</strong>　只有原点，全局稳定。</li>
+        <li><strong class="mono">ρ = 10</strong>　原点成鞍点，轨道以衰减螺旋落向 C±。</li>
+        <li><strong class="mono">ρ = 24.5</strong>　C± 仍线性稳定，混沌吸引子已经存在。终点取决于吸引域。</li>
+        <li><strong class="mono">ρ = 28</strong>　三个不动点全不稳定，蝴蝶出现。</li>
+      </ul>
+      <p class="muted">这四格不丢瞬态：要看的就是轨道怎样落到吸引集上。</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>实心点稳定，空心点不稳定。ρ=24.5 这一格最有意思：蓝色轨道在两叶间游荡，绿色被困在 C+ 附近的小环里。这是亚临界 Hopf 的典型后果，在失稳阈值之下就已经有另一个吸引集。</p>
+    <p>其他所有图都先积 50 个时间单位再记录，只有这页保留瞬态。</p>
+  </aside>
+</section>
+
+<!-- 10 本征结构 -->
+<section class="slide" data-part="1" data-min="2" data-title="本征结构">
+  <header><p class="eyebrow">① 没有不变量可查</p><h2>吸引子的形状来自线性代数</h2></header>
+  <div class="full">
+    <figure class="fig"><img src="figures/fig15_eigen_structure.png" alt="特征值在复平面上随 ρ 的路径，以及相空间中的本征方向和不变平面"><figcaption>lorenz63 figure fig15</figcaption></figure>
+    <pre class="eig">原点  +11.827723   −2.666667   −22.827723           <span class="muted">一正二负 → 鞍点</span>
+C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收缩方向 + 向外旋的不变平面</span></pre>
+  </div>
+  <aside class="notes">
+    <p>左图：ρ 从 0 扫到 32，特征值在复平面上的路径。ρ=1 处原点一个实特征值穿过原点（叉式）；ρ_H 处 C± 一对复特征值穿过虚轴，穿越点 ±9.6246i（Hopf），失稳形式是旋转着往外走。穿越时第三个特征值恰好等于 tr J = −13.667。</p>
+    <p>右图：原点的不稳定方向（红）是两叶之间的通道；C± 处复特征值张成一张实的不变平面，轨道在平面内外旋，同时沿实特征方向被压进来。每一叶就是一张平面附近的螺旋外流。</p>
+  </aside>
+</section>
+
+<!-- 11 Poincaré -->
+<section class="slide" data-part="1" data-min="1.5" data-title="Poincaré 截面">
+  <header><p class="eyebrow">① 没有不变量可查</p><h2>三维流 → 二维截面 → 一维映射</h2></header>
+  <div class="full">
+    <figure class="fig"><img src="figures/fig14_poincare.png" alt="z=27 截面上的穿越点与回归映射"><figcaption>lorenz63 figure fig14</figcaption></figure>
+    <div class="strip">
+      <div class="kv small"><span class="v">3992</span><span class="k">T = 3000 内上行穿越 z = 27 的次数</span></div>
+      <div class="kv small"><span class="v">56.7%</span><span class="k">穿越后留在同一叶</span></div>
+      <p style="flex:1;min-width:12em;font-size:24px">截面上是两条细线，不是一片云。回归映射处处 |F′| &gt; 1，任何不动点都不可能稳定。</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>截面取在 C± 的高度 z = ρ−1 = 27。中间一格的两条细线，就是 Kaplan–Yorke 维数 2.06 的几何含义：横向厚度小到在这个尺度上看不见。</p>
+    <p>右格把截面压成一维：第 n 次穿越的 x 对第 n+1 次。后面第 ③ 步的 Lorenz 映射是另一条独立的降维路线，结论一致。</p>
+  </aside>
+</section>
+
+<!-- 12 两件事 -->
+<section class="slide" data-part="2" data-min="1" data-title="稳定性与 Lyapunov 指数">
+  <header><p class="eyebrow">② 精度只换来对数时间</p><h2>两件常被混为一谈的事</h2></header>
+  <div class="center">
+    <table class="data">
+      <thead><tr><th></th><th>是什么的性质</th><th>由什么决定</th><th>步长能改变吗</th></tr></thead>
+      <tbody>
+        <tr><td><strong>数值稳定性</strong></td><td>方法 + 步长</td><td>hλ<sub>J</sub> 是否落在稳定域内</td><td><strong class="stat">能</strong></td></tr>
+        <tr><td><strong>Lyapunov 指数</strong></td><td>流本身</td><td>方程</td><td><strong class="orbit">不能</strong></td></tr>
+      </tbody>
+    </table>
+    <p class="lede">真解自己就在指数分离。步长变小只减少<strong>注入的误差量</strong>，这些误差随后照样按 e<sup>λt</sup> 放大。</p>
+  </div>
+  <aside class="notes">
+    <p>这是第 ② 步的准备。混淆这两件事会让人以为"只要步长够小就能一直跟住轨道"。</p>
+  </aside>
+</section>
+
+<!-- 13 稳定域 -->
+<section class="slide" data-part="2" data-min="1.5" data-title="RK4 稳定域">
+  <header><p class="eyebrow">② 精度只换来对数时间</p><h2>瓶颈是精度，不是稳定性</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig06_stability.png" alt="吸引子上 Jacobian 特征值乘以 h 与 RK4 稳定域"><figcaption>lorenz63 figure fig06</figcaption></figure>
+    <div class="col">
+      <div class="strip" style="gap:40px">
+        <div class="kv small"><span class="v">0.1253</span><span class="k">RK4 稳定步长上限</span></div>
+        <div class="kv small"><span class="v">≈ 0.01</span><span class="k">实际用的步长</span></div>
+      </div>
+      <p style="font-size:24px">吸引子上采样的 Jacobian 谱：max |λ<sub>J</sub>| = 23.0，<span class="mono">36.3%</span> 的特征值实部为正。</p>
+      <div class="callout orbit-bg" style="font-size:23px"><span class="tag orbit">小心</span>红点（增长模）永远在稳定域外。那是格式在复现真实的增长方向。要求全谱 |R(hλ)| ≤ 1 只会得到 h = 0。<strong>稳定域只约束衰减模。</strong></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>左图 h=0.01：整个谱缩在原点附近，离边界还有一个数量级。右图 h=0.1253：衰减模正好顶到边界。经典估计 2.785/|min Re λ_J| = 0.1275，一致。</p>
+    <p>"我得限制 h 免得它炸掉"：动作对，理由错。这一条有测试守着：test_stability.py::test_expanding_modes_do_not_veto_every_step。</p>
+  </aside>
+</section>
+
+<!-- 14 正交化 -->
+<section class="slide" data-part="2" data-min="2" data-title="QR 重正交化">
+  <header><p class="eyebrow">② 精度只换来对数时间</p><h2>Lyapunov 谱为什么必须重正交</h2></header>
+  <div class="full">
+    <figure class="fig"><img src="figures/fig16_orthogonalisation.png" alt="运送的正交标架、不正交化时切向量夹角塌缩、log 范数斜率对照"><figcaption>lorenz63 figure fig16</figcaption></figure>
+    <div class="strip" style="gap:44px">
+      <div class="kv small"><span class="v orbit">3×10⁻¹⁴</span><span class="k">不做 QR，t = 30 时切向量夹角（弧度）</span></div>
+      <div class="kv small"><span class="v orbit">0.98 / 1.01 / 1.05</span><span class="k">不做 QR：三个"指数"全是 λ₁</span></div>
+      <div class="kv small"><span class="v stat">0.92 / −0.003 / −14.58</span><span class="k">做 QR 后分开</span></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>做法：沿轨道积分变分方程 Q′ = J(u)Q，带着三个切向量走，每隔一小段做 QR，把 log|R_ii| 累加。</p>
+    <p>不做 QR：任何一般向量都含最不稳定方向的分量，按 e^(λ₁t) 长，于是三个向量都倒向同一条线，λ₂、λ₃ 一点痕迹都没有。QR 每次把第 k 个向量投影到前 k−1 个的正交补上，是唯一让它们可见的机制。</p>
+    <p>附带好处：不归一化的话 e^1800 早就溢出了。右格是 T=200 的短跑，和下一页 T=2000 的谱在第二位小数上一致。</p>
+  </aside>
+</section>
+
+<!-- 15 谱 -->
+<section class="slide" data-part="2" data-min="2" data-title="Lyapunov 谱与自洽检验">
+  <header><p class="eyebrow">② 精度只换来对数时间</p><h2>λ₁ 是数值结果，凭什么信它</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig08_lyapunov.png" alt="Benettin 算法三个 Lyapunov 指数的收敛曲线"><figcaption>lorenz63 figure fig08</figcaption></figure>
+    <div class="col">
+      <p class="mono" style="font-size:26px">λ = (+0.903764, −0.000411, −14.570019)</p>
+      <p>对任何流 \(\sum_i \lambda_i = \langle \operatorname{tr} J\rangle\)，而 Lorenz 的 tr J 是常数。不需要拟合：</p>
+      <div class="callout stat-bg mono" style="font-size:23px;line-height:1.8">Σλᵢ　　= −13.666666669<br>tr J　　= −13.666666667<br><strong class="stat">偏差　　= 2.17e−09</strong></div>
+      <p class="muted" style="font-size:22px">D<sub>KY</sub> = 2 + λ₁/|λ₃| = 2.062：体积为零，却比曲面厚。</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Benettin 算法，T = 2000。λ₂ ≈ 0 是应该的：有界非定常流沿流方向总有一个零指数。</p>
+    <p>如果变分方程写错、QR 记账错、或者积分精度不够，这个和会明显偏掉。它对得上，λ₁ 就有了"看起来合理"之外的依据。这个恒等式就是测试 test_lyapunov.py::test_spectrum_sums_to_the_divergence 的断言。</p>
+  </aside>
+</section>
+
+<!-- 16 误差增长 -->
+<section class="slide" data-part="2" data-min="1.5" data-title="误差增长">
+  <header><p class="eyebrow">② 精度只换来对数时间</p><h2>误差按 λ₁ 增长，到吸引子尺度饱和</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig07_ensemble.png" alt="64 个扰动初值的分离度随时间增长"><figcaption>lorenz63 figure fig07</figcaption></figure>
+    <div class="col">
+      <p style="font-size:24px">64 个随机方向，扰动 δ₀ = 1e−9，全部用参考精度积分。</p>
+      <div class="kv small"><span class="v">0.9090</span><span class="k">t ∈ [5, 22] 的拟合斜率，与 Benettin 的 0.9038 相差 0.6%，两条路径没有共用代码</span></div>
+      <div class="kv small"><span class="v">0.767</span><span class="k">倍增时间 ln 2 / λ₁</span></div>
+      <div class="kv small"><span class="v orbit">40.76</span><span class="k">双精度预报极限 ln(10¹⁶) / λ₁</span></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>一个解变分方程，一个只是扰动初值，两种独立办法给出同一个 λ₁。</p>
+    <p>40.76 的意思：即便算法完美无误差，初值在双精度下只能表示到 10⁻¹⁶，超过约 41 个时间单位之后，你算的就不再是你想要的那条轨道。</p>
+  </aside>
+</section>
+
+<!-- 17 容差扫描 -->
+<section class="slide" data-part="2" data-min="2" data-title="容差扫描">
+  <header><p class="eyebrow">② 精度只换来对数时间 · 核心证据</p><h2>可分辨时间对 ln(1/rtol) 是一条直线</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig09_tolerance.png" alt="T_div 对 ln(1/rtol) 的直线拟合"><figcaption>lorenz63 figure fig09</figcaption></figure>
+    <div class="col">
+      <table class="data" style="font-size:24px">
+        <thead><tr><th>rtol</th><th>T<sub>div</sub></th></tr></thead>
+        <tbody>
+          <tr><td class="num">1e−4</td><td class="num">4.50</td></tr>
+          <tr><td class="num">1e−6</td><td class="num">11.51</td></tr>
+          <tr><td class="num">1e−8</td><td class="num">16.05</td></tr>
+          <tr><td class="num">1e−10</td><td class="num">19.41</td></tr>
+          <tr><td class="num">1e−12</td><td class="num">24.66</td></tr>
+        </tbody>
+      </table>
+      <div class="callout orbit-bg">容差收紧 <strong>8 个数量级</strong>，只多买到 <strong class="orbit">20.2</strong> 个时间单位（理论 8 ln 10 / λ₁ = 20.4）。</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>每个容差用 RK45 积分，与 DOP853@1e-13 的参考解比较，记录分离首次超过 1 的时刻 T_div，8 个起点平均。理论：T_div = λ₁⁻¹ ln(Δ/δ₀)，δ₀ ∝ rtol。</p>
+    <p>拟合斜率 1.0422，理论 1/λ₁ = 1.1065。拟合出的 λ₁ = 0.96 比 Benettin 高 6%，因为有效初始误差和 rtol 只是同阶，不严格成正比。</p>
+    <p>这条也是测试：test_predictability.py::test_divergence_time_grows_linearly_in_log_inverse_tolerance。</p>
+  </aside>
+</section>
+
+<!-- 18 回答 -->
+<section class="slide" data-part="2" data-min="0.5" data-title="回答开场的问题">
+  <header><p class="eyebrow">② 精度只换来对数时间</p><h2>回到开场的问题</h2></header>
+  <div class="center">
+    <p class="big-statement">t &gt; 41 时，<br>"哪条对"这个问题没有答案。</p>
+    <p class="lede">从 rtol = 1e−4 收紧到 1e−12，计算量增加上百倍，预报时间从 4.5 涨到 24.7。再要 20 个时间单位需要再收紧 8 个数量级，而双精度已经到头了。</p>
+  </div>
+  <aside class="notes">
+    <p>提高精度这条路的回报是对数的，走不通。到这里全是坏消息，下一页先看一个细节，然后进入第 ③ 步。</p>
+  </aside>
+</section>
+
+<!-- 19 FTLE -->
+<section class="slide" data-part="2" data-min="1.5" data-title="有限时间 Lyapunov 指数">
+  <header><p class="eyebrow">② 精度只换来对数时间</p><h2>局部拉伸率差别极大</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig12_ftle.png" alt="吸引子上按有限时间 λ₁ 着色，以及其分布"><figcaption>lorenz63 figure fig12</figcaption></figure>
+    <div class="col">
+      <p style="font-size:24px">窗口长 0.5 的有限时间 λ₁：</p>
+      <div class="strip" style="gap:36px">
+        <div class="kv small"><span class="v">0.908</span><span class="k">均值</span></div>
+        <div class="kv small"><span class="v">2.60</span><span class="k">标准差</span></div>
+      </div>
+      <div class="strip" style="gap:36px">
+        <div class="kv small"><span class="v">[−4.07, 9.79]</span><span class="k">取值范围</span></div>
+        <div class="kv small"><span class="v">42.7%</span><span class="k">局部收缩的窗口</span></div>
+      </div>
+      <p style="font-size:24px">在红色区域减小步长确实有用，理由是少注入误差，λ 本身改变不了。</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>全局 λ₁ = 0.904 是长时间平均。红色区域主要在两叶交界与外缘。自适应控制器在那里自动缩小步长，这符合前面那张表：它减少的是注入的误差量。</p>
+  </aside>
+</section>
+
+<!-- 20 影随 -->
+<section class="slide" data-part="3" data-min="1.5" data-title="影随">
+  <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>那还剩下什么可信？</h2></header>
+  <div class="split even">
+    <div class="col">
+      <p>直觉：局部误差很小的数值轨道，虽然不是你要的那条真解，可能紧跟着<strong>另一条</strong>初值稍有不同的真解。</p>
+      <p>那么画出来的蝴蝶是真的蝴蝶，只是不是"你那只"。</p>
+      <p class="muted" style="font-size:24px">对一致双曲系统，这是定理（影随引理）。</p>
+    </div>
+    <div class="col">
+      <div class="callout orbit-bg"><span class="tag orbit">局限</span>Lorenz 吸引子含有原点这个不动点，<strong>不是一致双曲的</strong>，严格的影随引理不适用。Tucker 2002 用计算机辅助证明它是奇异双曲吸引子，数值影随的结果多是有限时间、逐案验证的。</div>
+      <p><strong>影随只提示方向。真正的辩护必须可测量。</strong></p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Tucker 2002 解决的是 Smale 第 14 问题：证明 Lorenz 吸引子存在且结构稳定。</p>
+    <p class="q">可能被问："能不能直接把数值轨道修正成真轨道看看？" 回答：可以做多重打靶 + Newton 的有限时间影随实验，目前列在待补清单里。</p>
+  </aside>
+</section>
+
+<!-- 21 中心实验 -->
+<section class="slide" data-part="3" data-min="2.5" data-title="中心实验">
+  <header><p class="eyebrow">③ 统计量不随求解器变 · 中心实验</p><h2>同一组数据：<span class="orbit">左边报废</span>，<span class="stat">右边完好</span></h2></header>
+  <div class="full">
+    <figure class="fig"><img src="figures/fig10_trajectory_vs_statistics.png" alt="三次计算的 x(t) 与 Lorenz 映射"><figcaption>lorenz63 figure fig10</figcaption></figure>
+    <div class="strip" style="gap:48px">
+      <div class="kv small"><span class="v orbit">13.6 / 18.3</span><span class="k">RK45@1e−6 与 @1e−9 的脱钩时刻</span></div>
+      <div class="kv small"><span class="v orbit">33.3</span><span class="k">DOP853@1e−13 也会脱钩（只差 atol）</span></div>
+      <div class="kv small"><span class="v stat">8.6×10⁻⁵</span><span class="k">Lorenz 映射的厚度（占 z 值域）</span></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>三次计算：RK45@1e-6、RK45@1e-9、DOP853@1e-13，同一初值。左边按单条轨道的标准，前两次是废品。连最好的那次与参考解之间，只差 atol 取 1e-15 还是 1e-16，也撑不过 34 个时间单位，和双精度极限 40.76 是同一回事。</p>
+    <p>右边是 Lorenz 1963 原文的构造：z 的第 n 个极大对第 n+1 个。三种颜色重合到线宽以内。曲线斜率处处大于 1，所以任何不动点都不可能稳定，这就是混沌的来源。</p>
+    <p>这一页就是整个汇报的论点，多停一会儿。</p>
+  </aside>
+</section>
+
+<!-- 22 不变密度 -->
+<section class="slide" data-part="3" data-min="1" data-title="不变密度">
+  <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>不变密度同样不动</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig11_invariant_density.png" alt="三个容差下 z 的不变密度"><figcaption>lorenz63 figure fig11</figcaption></figure>
+    <div class="col">
+      <div class="kv"><span class="v stat">0.0182</span><span class="k">三种求解器之间 z 密度的最大总变差距离（T = 3000）</span></div>
+      <p style="font-size:24px">两条结论都写成了测试：</p>
+      <p class="mono" style="font-size:18px;line-height:1.8">test_statistics.py::<br>test_lorenz_map_is_solver_independent<br>test_invariant_density_is_solver_independent</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>1.8% 的残差主要来自有限采样，不是求解器差异。</p>
+    <p class="q">可能被问："你怎么知道 1.8% 是采样噪声？" 诚实回答：同一求解器两次独立长跑的噪声底实验还没做，列在待补清单里。也可能被问："统计量对错误的算法会不会也不动？" 同样是待补项：用大步长 Euler 或 ρ 的微扰当反例。</p>
+  </aside>
+</section>
+
+<!-- 23 吸引子 -->
+<section class="slide" data-part="3" data-min="0.5" data-title="吸引子">
+  <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>教科书上的蝴蝶不是幻觉</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig02_attractor.png" alt="Lorenz 吸引子三维图，标出三个不动点"><figcaption>lorenz63 figure fig02</figcaption></figure>
+    <div class="col">
+      <p>红点是三个不动点：原点是鞍点，C± 各自是一叶的中心。</p>
+      <p>两叶间的切换是非周期的，而切换序列正是 Lorenz 映射编码的东西。</p>
+      <p class="stat"><strong>可信的是这个形状和它的统计，不是其中任何一条轨道。</strong></p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>喘口气的一页。把第 ③ 步收一句话：蝴蝶是真的，可信的是它的形状和统计。</p>
+  </aside>
+</section>
+
+<!-- 24 判据表 -->
+<section class="slide" data-part="4" data-min="1.5" data-title="判据表">
+  <header><p class="eyebrow">④ 判据随系统类型变</p><h2>"可信吗"不能脱离系统类型回答</h2></header>
+  <div class="center">
+    <table class="data">
+      <thead><tr><th>系统类型</th><th>可保的结构</th><th>验证手段</th><th>长时间单条轨道</th></tr></thead>
+      <tbody>
+        <tr><td><strong>保守（哈密顿）</strong></td><td>辛形式、不变量</td><td>能量有界？辛 / 分裂格式</td><td class="stat"><strong>可信</strong>（相位误差线性增长）</td></tr>
+        <tr><td><strong>耗散、非混沌</strong></td><td>收敛到吸引子</td><td>是否收敛到正确的稳态或极限环</td><td class="stat"><strong>可信</strong></td></tr>
+        <tr class="hl"><td><strong>混沌</strong></td><td>无</td><td>统计量对方法不敏感？</td><td class="orbit"><strong>不可信</strong>（超过 1/λ₁ 量级）</td></tr>
+      </tbody>
+    </table>
+    <p class="lede">混沌问题的验证协议：容差扫几个数量级、方法换几种，检查 λ₁、D<sub>KY</sub>、不变密度、Lorenz 映射是否稳定。前面第 ③ 步就是在执行这套协议。</p>
+  </div>
+  <aside class="notes">
+    <p>第一行是分子动力学、天体力学的世界：H = T(p) + V(q) 可分离，于是有显式辛格式（Verlet、蛙跳、Yoshida 高阶复合），验证手段是监视能量有界震荡不漂移。</p>
+    <p class="q">可能被问："第一行的结论在这个仓库里验证过吗？" 回答：还没有，单摆或 Kepler 上 RK4 对 Verlet 的对照列在待补清单里。</p>
+  </aside>
+</section>
+
+<!-- 25 收敛性 -->
+<section class="slide" data-part="4" data-min="1" data-title="收敛性研究的推论">
+  <header><p class="eyebrow">④ 判据随系统类型变</p><h2>推论：混沌问题的收敛阶要在短窗口里验</h2></header>
+  <div class="split even">
+    <div class="col">
+      <p>画"误差 vs 步长"期待一条 O(h<sup>p</sup>) 直线？</p>
+      <p>超过可预报时间后误差饱和到吸引子直径，图会变成一条<strong class="orbit">水平线</strong>，看起来像格式失去了精度阶。</p>
+    </div>
+    <div class="col">
+      <div class="callout navy-bg">格式没有问题，是被测的量失去了意义。<br>收敛阶必须在 <strong>t ≪ 1/λ₁</strong> 的窗口内验证。</div>
+      <p class="mono muted" style="font-size:18px;line-height:1.8">test_integrate.py::<br>test_tighter_tolerance_is_more_accurate_before_saturation</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>测试里的比较放在饱和之前；同样的比较放到 t=30 就会失败。</p>
+    <p class="q">待补清单里有一张图会把这件事画出来：RK4 在 T=1/5/15/30 上的误差–步长图。</p>
+  </aside>
+</section>
+
+<!-- 26 声学 -->
+<section class="slide" data-part="4" data-min="1" data-title="回到声学">
+  <header><p class="eyebrow">④ 判据随系统类型变</p><h2>回到声学</h2></header>
+  <div class="split even">
+    <div class="col">
+      <p class="eyebrow" style="margin:0">表的第一行</p>
+      <p>无耗散波动方程是哈密顿系统。Yee 的 FDTD 格式里 E 与 H 在时间上交错半格，那<strong>就是蛙跳格式，也就是辛积分器</strong>。</p>
+      <p class="muted" style="font-size:24px">FDTD 能长时间运行而不出现数值能量爆炸或人工衰减，原因在结构。</p>
+    </div>
+    <div class="col">
+      <p class="eyebrow" style="margin:0">表的第三行</p>
+      <p>非线性声学、声致湍流一旦进入混沌，单次实现的波形不该当作可复现的预报。</p>
+      <p>该报告的是<strong class="stat">谱、相关函数、统计矩</strong>。</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>把结论连回课程本身。左边对应判据表的保守行，右边对应混沌行。</p>
+  </aside>
+</section>
+
+<!-- 27 结论 -->
+<section class="slide" data-part="4" data-min="1" data-title="结论与复现">
+  <header><p class="eyebrow">结论</p><h2>守恒系统看不变量，混沌系统看统计量</h2></header>
+  <div class="split even">
+    <div class="col">
+      <ul class="plain">
+        <li>Lorenz 没有守恒量，体积以 tr J = −13.667 坍缩。</li>
+        <li>可预报时间被 λ₁ = 0.904 锁死在约 41 个时间单位，精度只换来对数的时间。</li>
+        <li>Lyapunov 谱、不变密度、Lorenz 映射对求解器不敏感。</li>
+      </ul>
+    </div>
+    <div class="col">
+      <p class="muted" style="font-size:22px">全部数字与图都可复现，关键断言写成了 74 个测试：</p>
+      <pre class="eig" style="font-size:20px">uv sync --all-groups
+uv run pytest
+uv run lorenz63 info
+uv run lorenz63 figure all</pre>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>重复开头那句论点，收尾。然后进入提问。备用页是数字汇总，被问到具体数值时翻过去。</p>
+  </aside>
+</section>
+
+<!-- 28 备用 -->
+<section class="slide" data-part="0" data-min="0" data-title="备用：数字汇总">
+  <header><p class="eyebrow">备用</p><h2>数字汇总</h2></header>
+  <div class="split even" style="font-size:21px">
+    <table class="data" style="font-size:21px">
+      <tbody>
+        <tr><td>tr J</td><td class="num">−13.6666666667</td><td class="muted">闭式</td></tr>
+        <tr><td>C±</td><td class="num">(±8.4853, ±8.4853, 27)</td><td class="muted">闭式</td></tr>
+        <tr><td>ρ_Hopf</td><td class="num">24.7368421053</td><td class="muted">闭式</td></tr>
+        <tr><td>λ₁ / λ₂ / λ₃</td><td class="num">0.9038 / −0.0004 / −14.5700</td><td class="muted">T=2000</td></tr>
+        <tr><td>Σλ − tr J</td><td class="num">2.17e−9</td><td class="muted">自洽检验</td></tr>
+        <tr><td>D_KY</td><td class="num">2.062001</td><td class="muted">λ 谱</td></tr>
+        <tr><td>倍增时间</td><td class="num">0.767</td><td class="muted">ln2/λ₁</td></tr>
+      </tbody>
+    </table>
+    <table class="data" style="font-size:21px">
+      <tbody>
+        <tr><td>双精度预报极限</td><td class="num">40.76</td><td class="muted">ln(10¹⁶)/λ₁</td></tr>
+        <tr><td>λ₁（系综）</td><td class="num">0.9090</td><td class="muted">64 个扰动</td></tr>
+        <tr><td>λ₁（容差斜率）</td><td class="num">0.9595</td><td class="muted">T_div 拟合</td></tr>
+        <tr><td>RK4 稳定步长上限</td><td class="num">0.1253</td><td class="muted">仅衰减模</td></tr>
+        <tr><td>Lorenz 映射厚度</td><td class="num">8.6e−5</td><td class="muted">z 值域比例</td></tr>
+        <tr><td>不变密度最大总变差</td><td class="num">0.0182</td><td class="muted">三种求解器</td></tr>
+        <tr><td>有限时间 λ₁ 标准差</td><td class="num">2.60</td><td class="muted">窗口 0.5</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <aside class="notes">
+    <p>只在提问环节用。完整表在 report.md 附录 B。</p>
+  </aside>
+</section>
+
+      <footer class="foot" aria-hidden="true">
+        <span>Lorenz 63 · 数值结果的可信度</span>
+        <span class="chain" id="chain"><span data-p="1">① 无不变量</span><span data-p="2">② 对数时间</span><span data-p="3">③ 统计量</span><span data-p="4">④ 判据</span></span>
+        <span class="pg" id="pg"></span>
+      </footer>
+    </div>
+  </div>
+
+  <div class="notes-panel" id="notesPanel" hidden>
+    <div class="meta"><span id="nTime"></span><span id="nNext"></span></div>
+    <div id="nBody"></div>
+  </div>
+
+  <div class="bar">
+    <button type="button" id="prev" aria-label="上一页">←</button>
+    <span class="count" id="count"></span>
+    <button type="button" id="next" aria-label="下一页">→</button>
+    <button type="button" id="notesBtn" aria-pressed="false">讲稿 N</button>
+    <button type="button" id="fsBtn">全屏 F</button>
+    <span class="hint">← → 翻页 · N 讲稿 · F 全屏</span>
+  </div>
+</div>
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [["\\(", "\\)"]], displayMath: [["$$", "$$"]] },
+  svg: { fontCache: "global" }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js" async></script>
+<script>
+(function () {
+  const stage = document.getElementById("stage");
+  const area = document.getElementById("stageArea");
+  const slides = Array.from(document.querySelectorAll(".slide"));
+  const chips = Array.from(document.querySelectorAll("#chain span"));
+  const panel = document.getElementById("notesPanel");
+  const notesBtn = document.getElementById("notesBtn");
+  const N = slides.length;
+
+  const minutes = slides.map(s => parseFloat(s.dataset.min) || 0);
+  const cumulative = minutes.reduce((acc, m, k) => (acc.push((acc[k - 1] || 0) + m), acc), []);
+  const total = cumulative[N - 1];
+
+  let cur = 0;
+  const fromHash = /^#s(\d+)$/.exec(location.hash || "");
+  if (fromHash) cur = Math.min(N - 1, Math.max(0, parseInt(fromHash[1], 10) - 1));
+
+  function fit() {
+    const r = area.getBoundingClientRect();
+    const s = Math.max(0.05, Math.min(r.width / 1600, r.height / 900));
+    stage.style.setProperty("--s", s);
+  }
+
+  function fmt(m) { return (Math.round(m * 2) / 2).toFixed(1).replace(/\.0$/, ""); }
+
+  function go(n) {
+    cur = Math.min(N - 1, Math.max(0, n));
+    slides.forEach((s, k) => s.classList.toggle("active", k === cur));
+    const sl = slides[cur];
+    const part = sl.dataset.part;
+    chips.forEach(c => c.classList.toggle("on", c.dataset.p === part));
+    stage.classList.toggle("is-cover", sl.classList.contains("cover"));
+    document.getElementById("pg").textContent = (cur + 1) + " / " + N;
+    document.getElementById("count").textContent = (cur + 1) + " / " + N;
+    const notes = sl.querySelector(".notes");
+    document.getElementById("nBody").innerHTML = notes ? notes.innerHTML : "";
+    document.getElementById("nTime").textContent =
+      "本页约 " + fmt(minutes[cur]) + " 分钟 · 讲到这里累计 " + fmt(cumulative[cur]) + " / " + fmt(total) + " 分钟";
+    document.getElementById("nNext").textContent =
+      cur < N - 1 ? "下一页：" + slides[cur + 1].dataset.title : "最后一页";
+    try { history.replaceState(null, "", "#s" + (cur + 1)); } catch (e) {}
+    hero.toggle(sl.classList.contains("cover"));
+  }
+
+  function toggleNotes(force) {
+    const show = typeof force === "boolean" ? force : panel.hidden;
+    panel.hidden = !show;
+    notesBtn.setAttribute("aria-pressed", String(show));
+    try { localStorage.setItem("lorenz-slides-notes", show ? "1" : "0"); } catch (e) {}
+    fit();
+  }
+
+  function toggleFullscreen() {
+    const d = document;
+    try {
+      if (d.fullscreenElement) d.exitFullscreen().catch(() => {});
+      else if (d.documentElement.requestFullscreen) d.documentElement.requestFullscreen().catch(() => {});
+    } catch (e) {}
+  }
+
+  document.getElementById("prev").addEventListener("click", () => go(cur - 1));
+  document.getElementById("next").addEventListener("click", () => go(cur + 1));
+  notesBtn.addEventListener("click", () => toggleNotes());
+  document.getElementById("fsBtn").addEventListener("click", toggleFullscreen);
+
+  document.addEventListener("keydown", e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key;
+    if (k === "ArrowRight" || k === "ArrowDown" || k === "PageDown" || k === " ") { e.preventDefault(); go(cur + 1); }
+    else if (k === "ArrowLeft" || k === "ArrowUp" || k === "PageUp") { e.preventDefault(); go(cur - 1); }
+    else if (k === "Home") go(0);
+    else if (k === "End") go(N - 1);
+    else if (k === "n" || k === "N") toggleNotes();
+    else if (k === "f" || k === "F") toggleFullscreen();
+  });
+
+  let tx = null, ty = null;
+  area.addEventListener("touchstart", e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
+  area.addEventListener("touchend", e => {
+    if (tx === null) return;
+    const dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) go(cur + (dx < 0 ? 1 : -1));
+    tx = ty = null;
+  });
+
+  if (window.ResizeObserver) new ResizeObserver(fit).observe(area);
+  window.addEventListener("resize", fit);
+
+  /* ---------- 封面：两条初值相差 1e-5 的轨道，RK4 实时积分 ---------- */
+  const hero = (function () {
+    const cv = document.getElementById("hero");
+    const ctx = cv.getContext("2d");
+    const css = getComputedStyle(document.documentElement);
+    const colA = css.getPropertyValue("--navy").trim();
+    const colB = css.getPropertyValue("--orbit").trim();
+    const S = 10, R = 28, B = 8 / 3, H = 0.005, STEPS = 8, KEEP = 420, DELTA = 1e-5;
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function f(u) { return [S * (u[1] - u[0]), u[0] * (R - u[2]) - u[1], u[0] * u[1] - B * u[2]]; }
+    function rk4(u) {
+      const k1 = f(u);
+      const k2 = f(u.map((v, i) => v + 0.5 * H * k1[i]));
+      const k3 = f(u.map((v, i) => v + 0.5 * H * k2[i]));
+      const k4 = f(u.map((v, i) => v + H * k3[i]));
+      return u.map((v, i) => v + H / 6 * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]));
+    }
+
+    let a, b, t, ta, tb, raf = null;
+    function reset() {
+      a = [1, 1, 1];
+      for (let k = 0; k < 4000; k++) a = rk4(a);   // 丢掉 20 个时间单位的瞬态
+      b = [a[0] + DELTA, a[1], a[2]];
+      t = 0; ta = [a]; tb = [b];
+    }
+    const px = x => (x + 24) / 48 * cv.width;
+    const pz = z => cv.height - (z - 2) / 52 * cv.height;
+
+    function trail(pts, col) {
+      ctx.strokeStyle = col; ctx.lineWidth = 2.4; ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      pts.forEach((p, k) => (k ? ctx.lineTo(px(p[0]), pz(p[2])) : ctx.moveTo(px(p[0]), pz(p[2]))));
+      ctx.stroke();
+      const e = pts[pts.length - 1];
+      ctx.globalAlpha = 1; ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(px(e[0]), pz(e[2]), 7, 0, 2 * Math.PI); ctx.fill();
+    }
+    function draw() {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      trail(ta, colA); trail(tb, colB);
+      const d = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+      document.getElementById("heroT").textContent = "t = " + t.toFixed(1);
+      document.getElementById("heroD").textContent = "|Δ| = " + d.toExponential(1).replace("-", "−");
+    }
+    function advance() {
+      for (let k = 0; k < STEPS; k++) { a = rk4(a); b = rk4(b); t += H; }
+      ta.push(a); tb.push(b);
+      if (ta.length > KEEP) { ta.shift(); tb.shift(); }
+    }
+    function frame() {
+      advance(); draw();
+      if (t > 60) reset();
+      raf = requestAnimationFrame(frame);
+    }
+    reset();
+    if (reduce) { for (let k = 0; k < 900; k++) advance(); draw(); }
+    else draw();
+
+    return {
+      toggle(on) {
+        if (reduce) return;
+        if (on && raf === null) raf = requestAnimationFrame(frame);
+        if (!on && raf !== null) { cancelAnimationFrame(raf); raf = null; }
+      }
+    };
+  })();
+
+  try { if (localStorage.getItem("lorenz-slides-notes") === "1") toggleNotes(true); } catch (e) {}
+  fit();
+  go(cur);
+})();
+</script>

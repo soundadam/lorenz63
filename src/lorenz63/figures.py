@@ -1,0 +1,1217 @@
+"""Every figure in ``report/report.md``, one function each.
+
+Each figure is a computation, not an illustration: the numbers annotated on the
+axes are produced by the run that draws them. Expensive intermediates are cached
+under ``.cache/`` so that re-drawing is fast, but deleting the cache and
+re-running must reproduce the figures exactly -- every random draw is seeded.
+"""
+
+from __future__ import annotations
+
+import os
+from collections.abc import Callable
+from pathlib import Path
+
+import matplotlib
+
+matplotlib.use("Agg")
+
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+from numpy.typing import NDArray  # noqa: E402
+from scipy.integrate import solve_ivp  # noqa: E402
+
+from lorenz63.bifurcation import (  # noqa: E402
+    c_plus_stability,
+    eigenvalue_locus,
+    rho_sweep,
+)
+from lorenz63.integrate import (  # noqa: E402
+    on_attractor,
+    reference_trajectory,
+    solve_adaptive,
+)
+from lorenz63.lyapunov import (  # noqa: E402
+    benettin_spectrum,
+    finite_time_exponents,
+    tangent_frames,
+    unrenormalised_tangents,
+)
+from lorenz63.portrait import (  # noqa: E402
+    all_eigen_structures,
+    plane_patch,
+    regime_trajectory,
+)
+from lorenz63.predictability import (  # noqa: E402
+    divergence_time,
+    ensemble_growth,
+    separation,
+    tolerance_sweep,
+)
+from lorenz63.stability import (  # noqa: E402
+    attractor_eigenvalues,
+    max_stable_step,
+    rk4_stability_mask,
+)
+from lorenz63.statistics import (  # noqa: E402
+    invariant_density,
+    lorenz_map,
+    poincare_section,
+    section_return_map,
+)
+from lorenz63.system import (  # noqa: E402
+    RHO_HOMOCLINIC,
+    LorenzParams,
+    divergence,
+    hopf_rho,
+    jacobian,
+    rhs,
+)
+
+DPI = 150
+CLASSICAL = LorenzParams()
+
+#: Labels are Chinese, so matplotlib needs a CJK face or it renders tofu boxes.
+#: Tried in order; the first one installed wins. If none is present the figures
+#: still draw (with missing glyphs) and a warning is emitted -- the committed
+#: PNGs in report/figures/ are the deliverable, so a fontless CI box is fine.
+CJK_FONT_CANDIDATES = (
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Heiti SC",
+    "Noto Sans CJK SC",
+    "Source Han Sans SC",
+    "Microsoft YaHei",
+    "SimHei",
+    "Arial Unicode MS",
+)
+
+
+def setup_fonts() -> str | None:
+    """Point matplotlib at an installed CJK font. Returns the one chosen."""
+    from matplotlib import font_manager
+
+    installed = {f.name for f in font_manager.fontManager.ttflist}
+    for candidate in CJK_FONT_CANDIDATES:
+        if candidate in installed:
+            plt.rcParams["font.sans-serif"] = [candidate, *plt.rcParams["font.sans-serif"]]
+            # A CJK face renders U+2212 as a full-width glyph; use ASCII hyphen.
+            plt.rcParams["axes.unicode_minus"] = False
+            return candidate
+
+    import warnings
+
+    warnings.warn(
+        "No CJK font found; Chinese labels will render as boxes. "
+        f"Install one of: {', '.join(CJK_FONT_CANDIDATES)}",
+        RuntimeWarning,
+        stacklevel=2,
+    )
+    return None
+
+
+setup_fonts()
+
+# A consistent, colour-blind-safe set used across every figure.
+C_REF = "#1f3b73"
+C_LOOSE = "#c1440e"
+C_MID = "#0d7d6f"
+C_ACCENT = "#8b3a8b"
+C_MUTED = "#8a8a8a"
+
+
+def _style(ax: plt.Axes) -> plt.Axes:
+    ax.grid(True, alpha=0.25, linewidth=0.6)
+    ax.set_axisbelow(True)
+    return ax
+
+
+def _finish(fig: plt.Figure, output: Path, name: str) -> Path:
+    output.mkdir(parents=True, exist_ok=True)
+    path = output / f"{name}.png"
+    fig.tight_layout()
+    fig.savefig(path, dpi=DPI)
+    plt.close(fig)
+    return path
+
+
+def _cache_dir() -> Path:
+    return Path(os.environ.get("LORENZ63_CACHE", ".cache"))
+
+
+def _cached(name: str, compute: Callable[[], dict[str, NDArray]]) -> dict[str, NDArray]:
+    """Memoise an expensive array computation to ``.cache/<name>.npz``."""
+    path = _cache_dir() / f"{name}.npz"
+    if path.exists():
+        with np.load(path) as data:
+            return {k: data[k] for k in data.files}
+    result = compute()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(path, **result)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# 01 — the opening paradox
+# ---------------------------------------------------------------------------
+
+
+def fig01_paradox(output: Path) -> Path:
+    """Same equation, same initial state, two tolerances, two different answers."""
+    u0 = on_attractor(CLASSICAL)
+    t_end = 60.0
+    truth = reference_trajectory(CLASSICAL, u0, t_end, dt_out=0.005)
+    loose = solve_adaptive(
+        CLASSICAL, u0, t_end, method="RK45", rtol=1e-6, atol=1e-9, dt_out=0.005
+    )
+    tight = solve_adaptive(
+        CLASSICAL, u0, t_end, method="RK45", rtol=1e-12, atol=1e-15, dt_out=0.005
+    )
+
+    fig, axes = plt.subplots(2, 1, figsize=(9.5, 6.0), sharex=True)
+
+    ax = _style(axes[0])
+    ax.plot(loose.t, loose.x, color=C_LOOSE, lw=1.0, label="RK45  rtol=1e-6")
+    ax.plot(tight.t, tight.x, color=C_REF, lw=1.0, label="RK45  rtol=1e-12")
+    ax.set_ylabel("x(t)")
+    ax.set_title("同一方程、同一初值、两个容差：谁是对的？")
+    ax.legend(loc="upper left", fontsize=9)
+
+    ax = _style(axes[1])
+    ax.semilogy(truth.t, np.maximum(separation(truth, loose), 1e-18), color=C_LOOSE, lw=1.0)
+    ax.semilogy(truth.t, np.maximum(separation(truth, tight), 1e-18), color=C_REF, lw=1.0)
+    ax.axhline(1.0, color=C_MUTED, ls="--", lw=0.9)
+    ax.text(1.0, 1.4, "可分辨阈值 = 1", fontsize=8, color=C_MUTED)
+    ax.set_xlabel("t")
+    ax.set_ylabel("与参考解的距离")
+    ax.set_ylim(1e-16, 1e2)
+
+    return _finish(fig, output, "fig01_paradox")
+
+
+# ---------------------------------------------------------------------------
+# 02 — the attractor
+# ---------------------------------------------------------------------------
+
+
+def fig02_attractor(output: Path) -> Path:
+    traj = reference_trajectory(CLASSICAL, on_attractor(CLASSICAL), 100.0, dt_out=0.002)
+    fps = np.array([[0, 0, 0], [np.sqrt(72), np.sqrt(72), 27], [-np.sqrt(72), -np.sqrt(72), 27]])
+
+    fig = plt.figure(figsize=(10.0, 7.5))
+    ax3d = fig.add_subplot(2, 2, 1, projection="3d")
+    ax3d.plot(traj.x, traj.y, traj.z, color=C_REF, lw=0.35, alpha=0.85)
+    ax3d.scatter(*fps.T, color=C_LOOSE, s=22, depthshade=False, zorder=5)
+    ax3d.set_xlabel("x", labelpad=-6)
+    ax3d.set_ylabel("y", labelpad=-6)
+    ax3d.set_zlabel("z", labelpad=-6)
+    ax3d.tick_params(labelsize=7)
+    ax3d.set_title("吸引子", fontsize=10)
+
+    for k, (i, j, li, lj) in enumerate(
+        [(0, 1, "x", "y"), (0, 2, "x", "z"), (1, 2, "y", "z")], start=2
+    ):
+        ax = _style(fig.add_subplot(2, 2, k))
+        ax.plot(traj.u[:, i], traj.u[:, j], color=C_REF, lw=0.3, alpha=0.8)
+        ax.scatter(fps[:, i], fps[:, j], color=C_LOOSE, s=20, zorder=5)
+        ax.set_xlabel(li)
+        ax.set_ylabel(lj)
+        ax.set_title(f"{li}–{lj} 投影", fontsize=10)
+
+    fig.suptitle(
+        "Lorenz 吸引子（σ=10, ρ=28, β=8/3），红点为三个不动点", fontsize=11
+    )
+    return _finish(fig, output, "fig02_attractor")
+
+
+# ---------------------------------------------------------------------------
+# 03 / 04 — bifurcation structure
+# ---------------------------------------------------------------------------
+
+
+def fig03_bifurcation(output: Path) -> Path:
+    data = _cached(
+        "bifurcation",
+        lambda: _bifurcation_data(),
+    )
+    fig, ax = plt.subplots(figsize=(9.5, 5.2))
+    _style(ax)
+    ax.plot(data["rho"], data["z_max"], ".", color=C_REF, ms=0.7, alpha=0.5)
+
+    for value, label, colour in [
+        (1.0, "ρ=1\n叉式分岔", C_MID),
+        (RHO_HOMOCLINIC, f"ρ≈{RHO_HOMOCLINIC}\n同宿爆炸", C_ACCENT),
+        (hopf_rho(CLASSICAL), f"ρ_H={hopf_rho(CLASSICAL):.3f}\n亚临界 Hopf", C_LOOSE),
+    ]:
+        ax.axvline(value, color=colour, ls="--", lw=1.1)
+        ax.text(value + 0.25, ax.get_ylim()[1] * 0.02, label, fontsize=8, color=colour)
+
+    ax.set_xlabel("ρ")
+    ax.set_ylabel("z 的局部极大")
+    ax.set_title("分岔图：σ=10, β=8/3 固定，ρ 扫描")
+    return _finish(fig, output, "fig03_bifurcation")
+
+
+def _bifurcation_data() -> dict[str, NDArray]:
+    scan = rho_sweep(np.linspace(0.5, 32.0, 240), t_end=50.0, transient=140.0)
+    return {"rho": scan.rho, "z_max": scan.z_max}
+
+
+def fig04_fixed_point_stability(output: Path) -> Path:
+    branch = c_plus_stability(np.linspace(1.01, 32.0, 800))
+    fig, ax = plt.subplots(figsize=(9.0, 4.4))
+    _style(ax)
+    ax.plot(branch.rho, branch.max_real, color=C_REF, lw=1.6)
+    ax.axhline(0.0, color="k", lw=0.9)
+    ax.axvline(branch.hopf, color=C_LOOSE, ls="--", lw=1.2)
+    ax.annotate(
+        f"ρ_H = {branch.hopf:.4f}\n实部穿零，C± 失稳",
+        xy=(branch.hopf, 0.0),
+        xytext=(branch.hopf - 11.0, 1.2),
+        fontsize=9,
+        color=C_LOOSE,
+        arrowprops={"arrowstyle": "->", "color": C_LOOSE, "lw": 1.0},
+    )
+    ax.set_xlabel("ρ")
+    ax.set_ylabel("C+ 处特征值实部的最大值")
+    ax.set_title("不动点 C± 的线性稳定性（纯代数，不含任何积分）")
+    ax.set_ylim(-2.0, 2.5)
+    return _finish(fig, output, "fig04_fixed_point_stability")
+
+
+# ---------------------------------------------------------------------------
+# 05 — there is no structure to preserve
+# ---------------------------------------------------------------------------
+
+
+def _volume_factor(
+    f_jac: Callable[[NDArray], NDArray],
+    f_rhs: Callable[[float, NDArray], NDArray],
+    u0: NDArray,
+    t_end: float,
+    n_out: int = 400,
+) -> tuple[NDArray, NDArray]:
+    """log|det M(t)| where M' = J M, M(0) = I. This is the volume growth factor."""
+    dim = u0.size
+
+    def coupled(t: float, w: NDArray) -> NDArray:
+        u = w[:dim]
+        m = w[dim:].reshape(dim, dim)
+        return np.concatenate([f_rhs(t, u), (f_jac(u) @ m).ravel()])
+
+    w0 = np.concatenate([u0, np.eye(dim).ravel()])
+    t_eval = np.linspace(0.0, t_end, n_out)
+    sol = solve_ivp(
+        coupled, (0.0, t_end), w0, t_eval=t_eval, method="DOP853", rtol=1e-12, atol=1e-14
+    )
+    dets = np.array(
+        [np.linalg.slogdet(sol.y[dim:, k].reshape(dim, dim))[1] for k in range(sol.t.size)]
+    )
+    return sol.t, dets
+
+
+def fig05_volume(output: Path) -> Path:
+    """Hamiltonian: volume exactly preserved. Lorenz: exponentially destroyed."""
+    omega = 1.0
+    t_end = 2.0
+
+    t_h, log_h = _volume_factor(
+        lambda u: np.array([[0.0, 1.0], [-(omega**2), 0.0]]),
+        lambda t, u: np.array([u[1], -(omega**2) * u[0]]),
+        np.array([1.0, 0.0]),
+        t_end,
+    )
+    t_l, log_l = _volume_factor(
+        lambda u: jacobian(u, CLASSICAL),
+        lambda t, u: rhs(t, u, CLASSICAL),
+        on_attractor(CLASSICAL),
+        t_end,
+    )
+
+    fig, ax = plt.subplots(figsize=(9.0, 4.8))
+    _style(ax)
+    ax.plot(t_h, log_h, color=C_MID, lw=2.0, label="谐振子（哈密顿）：tr J = 0")
+    ax.plot(t_l, log_l, color=C_LOOSE, lw=2.0, label="Lorenz：数值计算的 log|det M|")
+    exact = divergence(CLASSICAL) * t_l
+    ax.plot(t_l, exact, color="k", ls="--", lw=1.1, label=f"精确 {divergence(CLASSICAL):.4f}·t")
+
+    ax.set_xlabel("t")
+    ax.set_ylabel("log |det M(t)|   （相空间体积的对数）")
+    ax.set_title("有没有结构可保？谐振子体积守恒，Lorenz 体积以固定指数率坍缩")
+    ax.legend(loc="lower left", fontsize=9)
+    # Quote the fitted slope, not the raw deviation in the log: log|det M|
+    # reaches -27 here, so an absolute gap of 1e-2 there is a relative error of
+    # 5e-4 and reads as much worse than it is. The slope is the claim.
+    fitted_slope = float(np.polyfit(t_l, log_l, 1)[0])
+    ax.text(
+        0.97,
+        0.72,
+        f"数值拟合斜率 {fitted_slope:.6f}\n"
+        f"精确值      {divergence(CLASSICAL):.6f}   (相对误差 "
+        f"{abs(fitted_slope - divergence(CLASSICAL)) / abs(divergence(CLASSICAL)):.1e})\n"
+        f"2 个时间单位内体积缩小 {np.exp(-exact[-1]):.2e} 倍\n"
+        f"守恒系统靠不变量验证这条路，在 Lorenz 上没有起点",
+        transform=ax.transAxes,
+        fontsize=9,
+        ha="right",
+        va="top",
+        bbox={"boxstyle": "round", "fc": "white", "ec": C_MUTED, "alpha": 0.95},
+    )
+    return _finish(fig, output, "fig05_volume")
+
+
+# ---------------------------------------------------------------------------
+# 06 — stability is not the binding constraint
+# ---------------------------------------------------------------------------
+
+
+def fig06_stability(output: Path) -> Path:
+    eigs = attractor_eigenvalues(CLASSICAL, t_end=150.0, dt_out=0.02)
+    h_max = max_stable_step(CLASSICAL, t_end=150.0)
+
+    re = np.linspace(-3.5, 1.5, 500)
+    im = np.linspace(-3.5, 3.5, 700)
+    mask = rk4_stability_mask(re, im)
+
+    fig, axes = plt.subplots(1, 2, figsize=(11.0, 4.9))
+    for ax, h, title in (
+        (axes[0], 0.01, "实用步长 h = 0.01"),
+        (axes[1], h_max, f"稳定性上限 h = {h_max:.3f}"),
+    ):
+        _style(ax)
+        ax.contourf(re, im, mask, levels=[0.5, 1.5], colors=[C_MID], alpha=0.18)
+        ax.contour(re, im, mask, levels=[0.5], colors=[C_MID], linewidths=1.4)
+        scaled = h * eigs
+        damped = scaled[scaled.real < 0.0]
+        growing = scaled[scaled.real >= 0.0]
+        ax.plot(damped.real, damped.imag, ".", color=C_REF, ms=1.2, alpha=0.5)
+        ax.plot(growing.real, growing.imag, ".", color=C_LOOSE, ms=1.2, alpha=0.5)
+        ax.axhline(0, color="k", lw=0.6)
+        ax.axvline(0, color="k", lw=0.6)
+        ax.set_xlabel("Re(h·λ_J)")
+        ax.set_ylabel("Im(h·λ_J)")
+        ax.set_title(title, fontsize=10)
+        ax.set_xlim(re[0], re[-1])
+        ax.set_ylim(im[0], im[-1])
+
+    axes[0].text(
+        0.03,
+        0.95,
+        "蓝：衰减模 Re λ<0\n红：增长模 Re λ>0（物理的，\n步长改变不了）",
+        transform=axes[0].transAxes,
+        fontsize=8,
+        va="top",
+        bbox={"boxstyle": "round", "fc": "white", "ec": C_MUTED, "alpha": 0.9},
+    )
+    fig.suptitle(
+        "RK4 稳定域与吸引子上的 Jacobian 谱：实用步长离稳定性边界还差一个数量级",
+        fontsize=11,
+    )
+    return _finish(fig, output, "fig06_stability")
+
+
+# ---------------------------------------------------------------------------
+# 07 / 08 — how fast, and how do we know
+# ---------------------------------------------------------------------------
+
+
+def fig07_ensemble(output: Path) -> Path:
+    data = _cached("ensemble", _ensemble_data)
+    t = data["t"]
+    median = data["median"]
+    lo, hi = data["lo"], data["hi"]
+    slope, intercept = float(data["slope"]), float(data["intercept"])
+
+    fig, ax = plt.subplots(figsize=(9.0, 5.0))
+    _style(ax)
+    ax.fill_between(t, lo, hi, color=C_REF, alpha=0.18, label="10–90 分位")
+    ax.semilogy(t, median, color=C_REF, lw=1.6, label="中位分离度")
+    fit_window = (t >= 5.0) & (t <= 22.0)
+    ax.semilogy(
+        t[fit_window],
+        np.exp(intercept + slope * t[fit_window]),
+        color=C_LOOSE,
+        ls="--",
+        lw=1.8,
+        label=f"指数拟合  λ = {slope:.4f}",
+    )
+    ax.set_xlabel("t")
+    ax.set_ylabel("‖δ(t)‖")
+    ax.set_title("64 个扰动初值（δ₀ = 1e-9）的分离：指数增长，然后在吸引子尺度饱和")
+    ax.legend(loc="lower right", fontsize=9)
+    return _finish(fig, output, "fig07_ensemble")
+
+
+def _ensemble_data() -> dict[str, NDArray]:
+    growth = ensemble_growth(CLASSICAL, n_members=64, delta0=1e-9, t_end=40.0, dt_out=0.02)
+    lo, hi = growth.quantiles()
+    slope, intercept = growth.fit_exponent(5.0, 22.0)
+    return {
+        "t": growth.t,
+        "median": growth.median,
+        "lo": lo,
+        "hi": hi,
+        "slope": np.array(slope),
+        "intercept": np.array(intercept),
+    }
+
+
+def fig08_lyapunov(output: Path) -> Path:
+    data = _cached("lyapunov", _lyapunov_data)
+    times, history, spectrum = data["times"], data["history"], data["spectrum"]
+
+    fig = plt.figure(figsize=(11.5, 5.2))
+    grid = fig.add_gridspec(2, 2, hspace=0.12, wspace=0.28)
+
+    # lambda_3 is ~16x larger in magnitude than lambda_1, so a shared y-axis
+    # would flatten the two interesting curves into a single line at zero.
+    ax_top = _style(fig.add_subplot(grid[0, 0]))
+    ax_bot = _style(fig.add_subplot(grid[1, 0], sharex=ax_top))
+
+    for k, ax, colour in ((0, ax_top, C_LOOSE), (1, ax_top, C_MID), (2, ax_bot, C_REF)):
+        ax.plot(times, history[:, k], color=colour, lw=1.2)
+        ax.axhline(spectrum[k], color=colour, ls=":", lw=1.0)
+        ax.text(
+            times[-1] * 0.99,
+            spectrum[k],
+            f" λ{k + 1} = {spectrum[k]:.4f} ",
+            fontsize=9,
+            color=colour,
+            va="bottom",
+            ha="right",
+        )
+    ax_top.set_ylim(-0.45, 1.35)
+    ax_bot.set_ylim(-15.3, -14.1)
+    ax_top.tick_params(labelbottom=False)
+    ax_bot.set_xlabel("积分时间")
+    ax_top.set_ylabel("λ₁, λ₂ 的运行估计")
+    ax_bot.set_ylabel("λ₃")
+    ax_top.set_title("Benettin 算法的收敛", fontsize=10)
+
+    ax = _style(fig.add_subplot(grid[:, 1]))
+    running_sum = history.sum(axis=1)
+    exact = divergence(CLASSICAL)
+    ax.semilogy(times, np.abs(running_sum - exact), color=C_ACCENT, lw=1.3)
+    ax.set_xlabel("积分时间")
+    ax.set_ylabel("|Σλ − tr J|")
+    ax.set_title("与精确恒等式的偏差", fontsize=10)
+    ax.text(
+        0.04,
+        0.06,
+        f"sum lambda = {spectrum.sum():.9f}\n"
+        f"tr J       = {exact:.9f}\n"
+        f"difference = {abs(spectrum.sum() - exact):.2e}",
+        transform=ax.transAxes,
+        fontsize=9,
+        family="monospace",
+        va="bottom",
+        bbox={"boxstyle": "round", "fc": "white", "ec": C_MUTED, "alpha": 0.9},
+    )
+
+    fig.suptitle("Lyapunov 谱，以及凭什么相信它：Σλ 必须等于常数 tr J", fontsize=11)
+    return _finish(fig, output, "fig08_lyapunov")
+
+
+def _lyapunov_data() -> dict[str, NDArray]:
+    res = benettin_spectrum(CLASSICAL, total_time=2000.0, renorm_interval=1.0)
+    return {
+        "times": res.times,
+        "history": res.history,
+        "spectrum": res.spectrum,
+        "kaplan_yorke": np.array(res.kaplan_yorke),
+    }
+
+
+# ---------------------------------------------------------------------------
+# 09 — the core figure
+# ---------------------------------------------------------------------------
+
+
+def fig09_tolerance(output: Path) -> Path:
+    """Predictable time is linear in ln(1/tol). Slope is 1/lambda_1."""
+    data = _cached("tolerance", _tolerance_data)
+    x = data["log_inv_tol"]
+    mean, std = data["mean"], data["std"]
+    slope, intercept = float(data["slope"]), float(data["intercept"])
+    lam = float(data["lambda_benettin"])
+
+    fig, ax = plt.subplots(figsize=(9.2, 5.4))
+    _style(ax)
+    ax.errorbar(
+        x,
+        mean,
+        yerr=std,
+        fmt="o",
+        color=C_REF,
+        ms=6,
+        capsize=3,
+        lw=1.2,
+        label="测量值（8 个初值平均）",
+    )
+    xs = np.linspace(x.min() - 1.0, x.max() + 1.0, 10)
+    ax.plot(
+        xs,
+        intercept + slope * xs,
+        color=C_LOOSE,
+        lw=1.8,
+        label=f"最小二乘拟合  斜率 = {slope:.4f}",
+    )
+    ax.plot(
+        xs,
+        intercept + xs / lam,
+        color=C_MID,
+        ls="--",
+        lw=1.6,
+        label=f"理论斜率 1/λ₁ = {1 / lam:.4f}",
+    )
+
+    top = ax.twiny()
+    top.set_xlim(ax.get_xlim())
+    decades = np.arange(4, 13, 2)
+    top.set_xticks(np.log(10.0**decades))
+    top.set_xticklabels([f"1e-{d}" for d in decades])
+    top.set_xlabel("rtol")
+
+    ax.set_xlabel("ln(1/rtol)")
+    ax.set_ylabel("可分辨时间 T_div")
+    ax.set_title("精度只换来对数的预报时间", fontsize=12)
+    ax.legend(loc="upper left", fontsize=9)
+    gained = mean[-1] - mean[0]
+    orders = np.log10(1.0 / data["tolerances"][-1]) - np.log10(1.0 / data["tolerances"][0])
+    ax.text(
+        0.97,
+        0.06,
+        f"容差收紧 {orders:.0f} 个数量级\n只买到 {gained:.1f} 个时间单位\n"
+        f"（理论值 {orders * np.log(10) / lam:.1f}）",
+        transform=ax.transAxes,
+        fontsize=9.5,
+        ha="right",
+        va="bottom",
+        bbox={"boxstyle": "round", "fc": "#fff6ef", "ec": C_LOOSE, "alpha": 0.95},
+    )
+    return _finish(fig, output, "fig09_tolerance")
+
+
+def _tolerance_data() -> dict[str, NDArray]:
+    tols = np.logspace(-4, -12, 9)
+    sweep = tolerance_sweep(CLASSICAL, tols, t_end=80.0, n_samples=8)
+    slope, intercept = sweep.fit()
+    # Same integration length as `lorenz63 info` and figure 08, so the report
+    # and the figures quote one lambda_1, not two slightly different ones.
+    lam = benettin_spectrum(CLASSICAL, total_time=2000.0).largest
+    return {
+        "tolerances": sweep.tolerances,
+        "log_inv_tol": sweep.log_inverse_tol,
+        "mean": sweep.mean_times,
+        "std": sweep.std_times,
+        "slope": np.array(slope),
+        "intercept": np.array(intercept),
+        "lambda_benettin": np.array(lam),
+    }
+
+
+# ---------------------------------------------------------------------------
+# 10 — the thesis in one picture
+# ---------------------------------------------------------------------------
+
+
+def fig10_trajectory_vs_statistics(output: Path) -> Path:
+    """Left: the trajectories are unrelated. Right: the return map is identical."""
+    data = _cached("thesis", _thesis_data)
+
+    fig, axes = plt.subplots(1, 2, figsize=(12.0, 5.0))
+    labels = ["RK45 rtol=1e-6", "RK45 rtol=1e-9", "DOP853 rtol=1e-13"]
+    colours = [C_LOOSE, C_MID, C_REF]
+
+    ax = _style(axes[0])
+    t_div = data["t_div"]
+    for k, (label, colour) in enumerate(zip(labels, colours, strict=True)):
+        ax.plot(data["t_short"], data[f"x{k}"], color=colour, lw=1.0, label=label)
+    # Mark where each run stops tracking the reference, measured not asserted.
+    for k, (colour, height) in enumerate(zip(colours[:2], (19.8, 16.8), strict=True)):
+        ax.axvline(t_div[k], color=colour, ls="--", lw=1.2, alpha=0.8)
+        ax.text(
+            t_div[k] + 0.5,
+            height,
+            f"T_div = {t_div[k]:.1f}",
+            fontsize=8.5,
+            color=colour,
+            va="top",
+        )
+    ax.set_xlim(0.0, 45.0)
+    ax.set_ylim(-21.0, 21.0)
+    ax.set_xlabel("t")
+    ax.set_ylabel("x(t)")
+    ax.set_title("单条轨道：各自在 T_div 后与参考解脱钩", fontsize=11)
+    ax.legend(loc="lower left", fontsize=8.5, ncols=3, columnspacing=0.9)
+
+    ax = _style(axes[1])
+    for k, (label, colour) in enumerate(zip(labels, colours, strict=True)):
+        ax.plot(
+            data[f"zn{k}"], data[f"znext{k}"], ".", color=colour, ms=2.2, alpha=0.55, label=label
+        )
+    lo = min(data["zn0"].min(), data["zn2"].min())
+    hi = max(data["zn0"].max(), data["zn2"].max())
+    ax.plot([lo, hi], [lo, hi], color="k", ls=":", lw=0.9)
+    ax.set_xlabel("z 的第 n 个极大")
+    ax.set_ylabel("第 n+1 个极大")
+    ax.set_title("同样三次计算的 Lorenz 映射：重合到线宽以内", fontsize=11)
+    ax.legend(loc="lower center", fontsize=8.5, markerscale=4)
+
+    fig.suptitle(
+        "混沌计算里什么不可信、什么可信：同一组解，左边报废，右边完好", fontsize=12
+    )
+    return _finish(fig, output, "fig10_trajectory_vs_statistics")
+
+
+def _thesis_data() -> dict[str, NDArray]:
+    u0 = on_attractor(CLASSICAL)
+    settings = [("RK45", 1e-6), ("RK45", 1e-9), ("DOP853", 1e-13)]
+    truth = reference_trajectory(CLASSICAL, u0, 60.0, dt_out=0.005)
+    out: dict[str, NDArray] = {"t_short": truth.t}
+    t_div = []
+    for k, (method, rtol) in enumerate(settings):
+        short = solve_adaptive(
+            CLASSICAL, u0, 60.0, method=method, rtol=rtol, atol=rtol * 1e-3, dt_out=0.005
+        )
+        long = solve_adaptive(
+            CLASSICAL, u0, 3000.0, method=method, rtol=rtol, atol=rtol * 1e-3, dt_out=0.002
+        )
+        lmap = lorenz_map(long)
+        out[f"x{k}"] = short.x
+        out[f"zn{k}"] = lmap.z_n
+        out[f"znext{k}"] = lmap.z_next
+        t_div.append(divergence_time(truth.t, separation(truth, short)))
+    out["t_div"] = np.array(t_div)
+    return out
+
+
+# ---------------------------------------------------------------------------
+# 11 / 12 — the rest of the statistical case
+# ---------------------------------------------------------------------------
+
+
+def fig11_invariant_density(output: Path) -> Path:
+    data = _cached("density", _density_data)
+    labels = ["RK45 rtol=1e-6", "RK45 rtol=1e-9", "DOP853 rtol=1e-13"]
+    colours = [C_LOOSE, C_MID, C_REF]
+
+    fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.7))
+
+    ax = _style(axes[0])
+    for k, (label, colour) in enumerate(zip(labels, colours, strict=True)):
+        ax.plot(data["centres"], data[f"density{k}"], color=colour, lw=1.4, label=label)
+    ax.set_xlabel("z")
+    ax.set_ylabel("不变密度 p(z)")
+    ax.set_title("z 的不变密度（T = 3000）", fontsize=10)
+    ax.legend(fontsize=8.5)
+
+    ax = _style(axes[1])
+    ax.plot(data["sec_x"], data["sec_y"], ".", color=C_REF, ms=1.0, alpha=0.5)
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_title(f"Poincaré 截面 z = ρ−1 = {CLASSICAL.rho - 1:.0f}（上行穿越）", fontsize=10)
+
+    tv = float(data["max_total_variation"])
+    fig.suptitle(
+        f"统计量对求解器不敏感：三条密度的最大总变差距离 {tv:.4f}", fontsize=11
+    )
+    return _finish(fig, output, "fig11_invariant_density")
+
+
+def _density_data() -> dict[str, NDArray]:
+    u0 = on_attractor(CLASSICAL)
+    settings = [("RK45", 1e-6), ("RK45", 1e-9), ("DOP853", 1e-13)]
+    span = (0.0, 52.0)
+    bins = 130
+    out: dict[str, NDArray] = {}
+    densities = []
+    for k, (method, rtol) in enumerate(settings):
+        traj = solve_adaptive(
+            CLASSICAL, u0, 3000.0, method=method, rtol=rtol, atol=rtol * 1e-3, dt_out=0.002
+        )
+        centres, density = invariant_density(traj.z, bins=bins, value_range=span)
+        out["centres"] = centres
+        out[f"density{k}"] = density
+        densities.append(density)
+        if k == len(settings) - 1:
+            section = poincare_section(traj, plane_z=CLASSICAL.rho - 1.0)
+            out["sec_x"] = section[:, 0]
+            out["sec_y"] = section[:, 1]
+
+    width = (span[1] - span[0]) / bins
+    worst = max(
+        0.5 * np.abs(a - b).sum() * width
+        for i, a in enumerate(densities)
+        for b in densities[i + 1 :]
+    )
+    out["max_total_variation"] = np.array(worst)
+    return out
+
+
+def fig12_ftle(output: Path) -> Path:
+    """Local stretching varies wildly even though its average is a single number."""
+    data = _cached("ftle", _ftle_data)
+    points, values = data["points"], data["values"]
+
+    fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.8))
+
+    ax = _style(axes[0])
+    limit = float(np.abs(values).max())
+    sc = ax.scatter(
+        points[:, 0], points[:, 2], c=values, s=4.0, cmap="coolwarm", vmin=-limit, vmax=limit
+    )
+    fig.colorbar(sc, ax=ax, label="有限时间 λ₁（窗口 0.5）")
+    ax.set_xlabel("x")
+    ax.set_ylabel("z")
+    ax.set_title("局部拉伸率在吸引子上的分布", fontsize=10)
+
+    ax = _style(axes[1])
+    ax.hist(values, bins=70, color=C_REF, alpha=0.8)
+    ax.axvline(values.mean(), color=C_LOOSE, lw=1.8)
+    ax.text(
+        values.mean() + 0.2,
+        ax.get_ylim()[1] * 0.85,
+        f"均值 = {values.mean():.3f}\n(= 全局 λ₁)",
+        fontsize=9,
+        color=C_LOOSE,
+    )
+    ax.axvline(0.0, color="k", lw=0.9, ls="--")
+    ax.set_xlabel("有限时间 λ₁")
+    ax.set_ylabel("计数")
+    ax.set_title(
+        f"标准差 {values.std():.2f}，{(values < 0).mean() * 100:.0f}% 的窗口局部收缩",
+        fontsize=10,
+    )
+
+    fig.suptitle("「局部 Lyapunov 指数」：它是流的性质，步长改变不了它", fontsize=11)
+    return _finish(fig, output, "fig12_ftle")
+
+
+def _ftle_data() -> dict[str, NDArray]:
+    ftle = finite_time_exponents(CLASSICAL, total_time=1500.0, window=0.5)
+    return {"points": ftle.points, "values": ftle.values}
+
+
+# ---------------------------------------------------------------------------
+# 13-16 — the phase-portrait section
+# ---------------------------------------------------------------------------
+
+
+def _mark_fixed_points(ax: plt.Axes, p: LorenzParams) -> None:
+    """Scatter the fixed points: filled if stable, hollow if not."""
+    for es in all_eigen_structures(p):
+        stable = es.is_stable
+        ax.scatter(
+            *es.point,
+            s=46,
+            facecolor=C_MID if stable else "none",
+            edgecolor=C_MID if stable else C_LOOSE,
+            linewidths=1.6,
+            depthshade=False,
+            zorder=6,
+        )
+
+
+def _portrait_axes(ax: plt.Axes, title: str) -> plt.Axes:
+    ax.set_xlabel("x", labelpad=-8)
+    ax.set_ylabel("y", labelpad=-8)
+    ax.set_zlabel("z", labelpad=-8)
+    ax.tick_params(labelsize=6.5, pad=-1)
+    ax.set_title(title, fontsize=10)
+    return ax
+
+
+def fig13_phase_portraits(output: Path) -> Path:
+    """Four regimes in one plate: what the flow does as rho crosses its thresholds."""
+    fig = plt.figure(figsize=(11.0, 8.4))
+
+    panels = [
+        (
+            0.5,
+            "ρ = 0.5 < 1：原点全局稳定",
+            [(np.array([12.0, 10.0, 22.0]), C_REF), (np.array([-9.0, -14.0, 5.0]), C_LOOSE)],
+            8.0,
+        ),
+        (
+            10.0,
+            "ρ = 10：C± 稳定，衰减螺旋",
+            [(np.array([1.0, 1.0, 1.0]), C_REF), (np.array([-1.0, -1.0, 1.0]), C_LOOSE)],
+            30.0,
+        ),
+        (
+            24.5,
+            f"ρ = 24.5 < ρ_H={hopf_rho(CLASSICAL):.2f}：双稳\n蓝 = 混沌吸引子，绿 = 落回 C+",
+            None,  # built below: one orbit to C+, one on the chaotic set
+            70.0,
+        ),
+        (
+            28.0,
+            "ρ = 28 > ρ_H：三个不动点全不稳定",
+            None,
+            60.0,
+        ),
+    ]
+
+    for k, (rho, title, starts, t_end) in enumerate(panels, start=1):
+        p = LorenzParams(rho=rho)
+        ax = _portrait_axes(fig.add_subplot(2, 2, k, projection="3d"), title)
+
+        if starts is None and rho == 24.5:
+            # Bistability: C+ is still linearly stable here, yet a chaotic
+            # attractor already coexists with it. Which one a trajectory ends on
+            # is a question about basins, not about rho. The converging orbit is
+            # drawn last and thicker, or the chaotic one buries it.
+            near_c_plus = all_eigen_structures(p)[1].point + np.array([4.0, 0.0, 0.0])
+            starts = [(np.array([1.0, 1.0, 1.0]), C_REF), (near_c_plus, C_MID)]
+        elif starts is None:
+            starts = [(on_attractor(p), C_REF)]
+
+        for j, (u0, colour) in enumerate(starts):
+            traj = regime_trajectory(rho, u0, t_end)
+            last = j == len(starts) - 1
+            ax.plot(
+                traj.x,
+                traj.y,
+                traj.z,
+                color=colour,
+                lw=1.4 if (rho == 24.5 and last) else 0.45,
+                alpha=0.4 if (rho == 24.5 and not last) else 0.9,
+            )
+            ax.scatter(*u0, color=colour, s=14, marker="^", depthshade=False, zorder=6)
+        _mark_fixed_points(ax, p)
+
+    fig.suptitle(
+        "四个 ρ 下的相图：▲ 起点，实心 = 稳定不动点，空心 = 不稳定（σ=10, β=8/3）",
+        fontsize=11,
+    )
+    return _finish(fig, output, "fig13_phase_portraits")
+
+
+def fig14_poincare(output: Path) -> Path:
+    """The section turns the 3D flow into a 2D map, and that map into a 1D curve."""
+    data = _cached("section", _section_data)
+    plane_z = CLASSICAL.rho - 1.0
+
+    fig = plt.figure(figsize=(13.0, 4.6))
+
+    ax = _portrait_axes(
+        fig.add_subplot(1, 3, 1, projection="3d"), f"截面 z = ρ−1 = {plane_z:.0f}"
+    )
+    ax.plot(data["orbit_x"], data["orbit_y"], data["orbit_z"], color=C_MUTED, lw=0.3, alpha=0.7)
+    xs, ys, zs = plane_patch(
+        np.array([0.0, 0.0, plane_z]),
+        np.array([1.0, 0.0, 0.0]),
+        np.array([0.0, 1.0, 0.0]),
+        26.0,
+    )
+    ax.plot_surface(xs, ys, zs, color=C_ACCENT, alpha=0.16, shade=False)
+    show = slice(0, 260)
+    ax.scatter(
+        data["sec_x"][show],
+        data["sec_y"][show],
+        np.full(data["sec_x"][show].size, plane_z),
+        color=C_LOOSE,
+        s=3.0,
+        depthshade=False,
+    )
+
+    ax = _style(fig.add_subplot(1, 3, 2))
+    right = data["sec_x"] > 0.0
+    ax.plot(data["sec_x"][right], data["sec_y"][right], ".", color=C_REF, ms=1.1, alpha=0.5)
+    ax.plot(data["sec_x"][~right], data["sec_y"][~right], ".", color=C_LOOSE, ms=1.1, alpha=0.5)
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_title(
+        f"截面上的 {data['sec_x'].size} 个穿越点（上行）\n两支分别绕 C+ 与 C−", fontsize=10
+    )
+
+    ax = _style(fig.add_subplot(1, 3, 3))
+    same_wing = np.sign(data["map_n"]) == np.sign(data["map_next"])
+    for mask, colour, label in (
+        (same_wing, C_MID, "留在同一叶"),
+        (~same_wing, C_ACCENT, "换到另一叶"),
+    ):
+        ax.plot(
+            data["map_n"][mask],
+            data["map_next"][mask],
+            ".",
+            color=colour,
+            ms=1.3,
+            alpha=0.55,
+            label=label,
+        )
+    lo = float(min(data["map_n"].min(), data["map_next"].min()))
+    hi = float(max(data["map_n"].max(), data["map_next"].max()))
+    ax.plot([lo, hi], [lo, hi], color="k", ls=":", lw=0.9)
+    ax.set_xlabel("第 n 次穿越的 x")
+    ax.set_ylabel("第 n+1 次穿越的 x")
+    ax.set_title(
+        f"截面上的一维回归映射（{same_wing.mean() * 100:.0f}% 的穿越不换叶）", fontsize=10
+    )
+    ax.legend(loc="upper left", fontsize=8, markerscale=6)
+
+    fig.suptitle(
+        "Poincaré 截面：三维流 → 二维映射 → 一条一维曲线（吸引子横向厚度近乎为零）",
+        fontsize=11,
+    )
+    return _finish(fig, output, "fig14_poincare")
+
+
+def _section_data() -> dict[str, NDArray]:
+    u0 = on_attractor(CLASSICAL)
+    short = reference_trajectory(CLASSICAL, u0, 60.0, dt_out=0.002)
+    long = reference_trajectory(CLASSICAL, u0, 3000.0, dt_out=0.002)
+    section = poincare_section(long, plane_z=CLASSICAL.rho - 1.0)
+    map_n, map_next = section_return_map(section, coord=0)
+    return {
+        "orbit_x": short.x,
+        "orbit_y": short.y,
+        "orbit_z": short.z,
+        "sec_x": section[:, 0],
+        "sec_y": section[:, 1],
+        "map_n": map_n,
+        "map_next": map_next,
+    }
+
+
+def fig15_eigen_structure(output: Path) -> Path:
+    """Left: where the eigenvalues go as rho grows. Right: where they point at rho=28."""
+    rho_values = np.linspace(0.02, 32.0, 900)
+    origin_locus = eigenvalue_locus(rho_values, which="origin")
+    c_locus = eigenvalue_locus(rho_values[rho_values > 1.0], which="C+")
+    rho_h = hopf_rho(CLASSICAL)
+
+    fig = plt.figure(figsize=(12.8, 5.6))
+
+    ax = _style(fig.add_subplot(1, 2, 1))
+    ax.axvline(0.0, color="k", lw=1.0)
+    for k in range(3):
+        branch = origin_locus.branch(k)
+        ax.plot(branch.real, branch.imag, color=C_MUTED, lw=2.6, alpha=0.35, solid_capstyle="butt")
+        branch = c_locus.branch(k)
+        ax.plot(branch.real, branch.imag, color=C_MUTED, lw=2.6, alpha=0.35)
+        # Colour by rho so the direction of travel is readable without arrows.
+        scatter = ax.scatter(
+            c_locus.branch(k).real,
+            c_locus.branch(k).imag,
+            c=c_locus.rho,
+            cmap="viridis",
+            s=3.0,
+            zorder=4,
+        )
+    fig.colorbar(scatter, ax=ax, label="ρ（C± 分支的着色）", pad=0.02)
+
+    for rho_mark, colour, text, text_xy in [
+        (1.0, C_MID, "ρ=1：原点的实特征值穿零\n（叉式分岔，C± 诞生）", (-22.0, 4.6)),
+        (rho_h, C_LOOSE, f"ρ_H={rho_h:.3f}：复对穿越虚轴\n（亚临界 Hopf）", (2.6, 6.6)),
+    ]:
+        locus = origin_locus if rho_mark == 1.0 else c_locus
+        i = int(np.argmin(np.abs(locus.rho - rho_mark)))
+        pts = locus.values[i]
+        # The one that is on the imaginary axis at this rho -- for the Hopf
+        # point, the member of the pair with positive imaginary part.
+        crossing = sorted(pts, key=lambda v: (abs(v.real), -v.imag))[0]
+        ax.plot(pts.real, pts.imag, "o", color=colour, ms=6, mfc="none", mew=1.6, zorder=6)
+        ax.annotate(
+            text,
+            xy=(float(crossing.real), float(crossing.imag)),
+            xytext=text_xy,
+            fontsize=8.5,
+            color=colour,
+            arrowprops={"arrowstyle": "->", "color": colour, "lw": 1.0},
+        )
+
+    for which, marker_label in (("origin", "原点 @ ρ=28"), ("C+", "C± @ ρ=28")):
+        pts = eigenvalue_locus(np.array([CLASSICAL.rho]), which=which).values[0]
+        ax.plot(
+            pts.real,
+            pts.imag,
+            "*",
+            color=C_ACCENT if which == "C+" else "k",
+            ms=12,
+            zorder=7,
+            label=marker_label,
+        )
+    ax.set_xlabel("Re λ")
+    ax.set_ylabel("Im λ")
+    ax.set_xlim(-25.0, 14.0)
+    ax.set_ylim(-13.5, 13.5)
+    ax.set_title("特征值随 ρ 在复平面上的走向（灰=原点，彩=C±）", fontsize=10.5)
+    ax.legend(loc="upper left", fontsize=8.5)
+
+    ax = _portrait_axes(
+        fig.add_subplot(1, 2, 2, projection="3d"), "ρ=28 处的本征方向与不变平面"
+    )
+    traj = reference_trajectory(CLASSICAL, on_attractor(CLASSICAL), 12.0, dt_out=0.002)
+    ax.plot(traj.x, traj.y, traj.z, color=C_MUTED, lw=0.5, alpha=0.75)
+
+    for es in all_eigen_structures(CLASSICAL):
+        ax.scatter(*es.point, color="k", s=28, depthshade=False, zorder=6)
+        if es.kind == "real":
+            for value, direction in zip(es.eigenvalues, es.directions, strict=True):
+                unstable = value.real > 0.0
+                arrow = (16.0 if unstable else 11.0) * direction
+                ax.plot(
+                    *np.array([es.point - arrow, es.point + arrow]).T,
+                    color=C_LOOSE if unstable else C_REF,
+                    lw=2.0 if unstable else 1.4,
+                    zorder=5,
+                )
+        else:
+            u_axis, v_axis = _orthonormal_pair(es.spiral_plane)
+            xs, ys, zs = plane_patch(es.point, u_axis, v_axis, 8.0)
+            ax.plot_surface(xs, ys, zs, color=C_LOOSE, alpha=0.22, shade=False)
+            arrow = 8.0 * es.directions[0]
+            ax.plot(*np.array([es.point - arrow, es.point + arrow]).T, color=C_REF, lw=1.6)
+
+    origin_eigs = all_eigen_structures(CLASSICAL)[0].eigenvalues.real
+    c_eigs = all_eigen_structures(CLASSICAL)[1].eigenvalues
+    handles = [
+        (C_LOOSE, 2.0, f"原点的不稳定方向  λ={origin_eigs[0]:+.2f}"),
+        (C_REF, 1.4, f"原点的稳定方向  λ={origin_eigs[1]:+.2f}, {origin_eigs[2]:+.2f}"),
+        (C_REF, 1.6, f"C± 的收缩方向  λ={c_eigs[0].real:+.2f}"),
+    ]
+    for colour, width, label in handles:
+        ax.plot([], [], color=colour, lw=width, label=label)
+    ax.plot(
+        [],
+        [],
+        color=C_LOOSE,
+        lw=6,
+        alpha=0.3,
+        label=f"C± 的不变平面  Re λ={c_eigs[1].real:+.3f}, Im λ=±{abs(c_eigs[1].imag):.2f}",
+    )
+    ax.legend(loc="upper left", fontsize=7.5, framealpha=0.85)
+
+    fig.suptitle(
+        "原点是鞍点（一正二负的实特征值）；C± 有一个实收缩方向和一个向外旋的不变平面——"
+        "轨道正是被这套结构推来推去",
+        fontsize=11,
+    )
+    return _finish(fig, output, "fig15_eigen_structure")
+
+
+def _orthonormal_pair(axes: NDArray) -> tuple[NDArray, NDArray]:
+    """Gram-Schmidt the two spanning vectors, so the drawn patch is a square."""
+    u = axes[0] / np.linalg.norm(axes[0])
+    v = axes[1] - (axes[1] @ u) * u
+    return u, v / np.linalg.norm(v)
+
+
+def fig16_orthogonalisation(output: Path) -> Path:
+    """Why the Benettin loop re-orthonormalises: without it the frame collapses."""
+    data = _cached("frames", _frames_data)
+
+    fig = plt.figure(figsize=(13.0, 4.7))
+
+    ax = _portrait_axes(
+        fig.add_subplot(1, 3, 1, projection="3d"), "沿轨道运送的正交标架"
+    )
+    ax.plot(data["orbit_x"], data["orbit_y"], data["orbit_z"], color=C_MUTED, lw=0.5, alpha=0.7)
+    # Only the stretch of frames that lies on the drawn orbit segment.
+    on_orbit = data["times"] <= float(data["collapse_t"][-1])
+    states, frames = data["states"][on_orbit], data["frames"][on_orbit]
+    every = max(1, states.shape[0] // 18)
+    colours = (C_LOOSE, C_MID, C_REF)
+    for k in range(0, states.shape[0], every):
+        base = states[k]
+        for j, colour in enumerate(colours):
+            tip = base + 5.5 * frames[k][:, j]
+            ax.plot(*np.array([base, tip]).T, color=colour, lw=1.1)
+    for colour, label in zip(colours, ("e₁", "e₂", "e₃"), strict=True):
+        ax.plot([], [], color=colour, lw=1.4, label=label)
+    ax.legend(loc="upper left", fontsize=8)
+
+    ax = _style(fig.add_subplot(1, 3, 2))
+    pair_colours = (C_REF, C_LOOSE, C_ACCENT)
+    for k, (label, colour) in enumerate(
+        zip(("v₁∠v₂", "v₁∠v₃", "v₂∠v₃"), pair_colours, strict=True)
+    ):
+        ax.semilogy(data["collapse_t"], data["angles"][:, k], color=colour, lw=1.1, label=label)
+    ax.axhline(np.pi / 2, color=C_MID, lw=1.8, ls="--")
+    ax.text(9.0, 5.6, "重正交化后：恒为 90°", fontsize=8.5, color=C_MID)
+    ax.set_xlabel("t")
+    ax.set_ylabel("切向量之间的夹角 (rad)")
+    ax.set_ylim(1e-15, 12.0)
+    ax.set_title("不重正交化：标架塌成一条线", fontsize=10)
+    ax.legend(loc="lower left", fontsize=8.5)
+
+    ax = _style(fig.add_subplot(1, 3, 3))
+    for k, colour in enumerate(colours):
+        ax.plot(
+            data["collapse_t"],
+            data["log_norms"][:, k],
+            color=colour,
+            ls="--",
+            lw=1.2,
+            label="不正交化：log|v₁|,|v₂|,|v₃|（三条重合）" if k == 0 else None,
+        )
+    for k, colour in enumerate(colours):
+        ax.plot(
+            data["times"],
+            data["accumulated"][:, k],
+            color=colour,
+            lw=1.6,
+            label=f"Σ log|R_{k + 1}{k + 1}|",
+        )
+    ax.set_xlim(0.0, float(data["collapse_t"][-1]))
+    ax.set_ylim(-470.0, 70.0)
+    ax.set_xlabel("t")
+    ax.set_ylabel("累积对数伸长")
+    naive = data["naive"]
+    ax.set_title(
+        f"三条虚线斜率全是 λ₁（{naive.min():.2f}…{naive.max():.2f}）\n"
+        f"实线斜率才是 {data['spectrum'][0]:.2f} / {data['spectrum'][1]:.3f} / "
+        f"{data['spectrum'][2]:.2f}",
+        fontsize=9.5,
+    )
+    ax.legend(loc="lower left", fontsize=8)
+
+    fig.suptitle(
+        "每一步做正交化到底在做什么：不做，三个方向都倒向最不稳定的那个，只剩 λ₁",
+        fontsize=11,
+    )
+    return _finish(fig, output, "fig16_orthogonalisation")
+
+
+def _frames_data() -> dict[str, NDArray]:
+    history = tangent_frames(CLASSICAL, total_time=200.0, renorm_interval=0.5)
+    collapse = unrenormalised_tangents(CLASSICAL, total_time=30.0)
+    orbit = reference_trajectory(CLASSICAL, history.states[0], 30.0, dt_out=0.002)
+    return {
+        "times": history.times,
+        "states": history.states,
+        "frames": history.frames,
+        "accumulated": np.cumsum(history.log_stretch, axis=0),
+        "spectrum": history.spectrum,
+        "collapse_t": collapse.times,
+        "angles": collapse.angles,
+        "log_norms": collapse.log_norms,
+        "naive": collapse.naive_exponents,
+        "orbit_x": orbit.x,
+        "orbit_y": orbit.y,
+        "orbit_z": orbit.z,
+    }
+
+
+# ---------------------------------------------------------------------------
+
+FIGURES: dict[str, Callable[[Path], Path]] = {
+    "fig01": fig01_paradox,
+    "fig02": fig02_attractor,
+    "fig03": fig03_bifurcation,
+    "fig04": fig04_fixed_point_stability,
+    "fig05": fig05_volume,
+    "fig06": fig06_stability,
+    "fig07": fig07_ensemble,
+    "fig08": fig08_lyapunov,
+    "fig09": fig09_tolerance,
+    "fig10": fig10_trajectory_vs_statistics,
+    "fig11": fig11_invariant_density,
+    "fig12": fig12_ftle,
+    "fig13": fig13_phase_portraits,
+    "fig14": fig14_poincare,
+    "fig15": fig15_eigen_structure,
+    "fig16": fig16_orthogonalisation,
+}
