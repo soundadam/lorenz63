@@ -42,6 +42,7 @@ uv run ruff check src tests
 ```
 src/lorenz63/
   system.py         向量场、Jacobian、不动点、分岔阈值（全闭式）
+  convection.py     x、y、z 还原成对流卷的流场与温度场；Nusselt 数
   integrate.py      自实现定步长 RK4；solve_ivp 包装，暴露内部步长 h(t)
   lyapunov.py       Benettin 全谱、Kaplan–Yorke 维数、有限时间指数、正交化对照
   predictability.py 可分辨时间、容差扫描、系综误差增长      ← 核心实验

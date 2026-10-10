@@ -30,21 +30,89 @@
 
 ## 1. 方程从哪里来，以及它不是什么
 
-Lorenz 1963 年从二维 Rayleigh–Bénard 对流出发，把流函数和温度场作 Galerkin 展开，**只保留三个模态**，得到
+### 1.1 一层从下面加热的流体
+
+厚度为 H 的流体层夹在两块水平板之间，底板比顶板热 ΔT。底部流体受热膨胀变轻、想上浮，顶部冷流体想下沉；粘性和热扩散抵抗这种翻动。两者之比是 Rayleigh 数
+
+$$
+\mathrm{Ra} = \frac{g\,\alpha\,\Delta T\,H^3}{\nu\,\kappa},
+$$
+
+g 为重力加速度，α 为热膨胀系数，ν 为运动粘度，κ 为热扩散率。Ra 低于临界值 Ra<sub>c</sub> 时流体静止、热量只靠传导；高于 Ra<sub>c</sub> 时静止态失稳，长出一排对流卷。另一个无量纲数是 Prandtl 数 Pr = ν/κ，即动量与热量各自扩散的快慢之比。
+
+Boussinesq 近似下，沿卷轴方向均匀的二维流动由流函数 ψ（u = −∂ψ/∂Z，w = ∂ψ/∂X）和温度偏离线性传导剖面的部分 θ 描述（Lorenz 1963 式 17–18）：
+
+$$
+\frac{\partial}{\partial t}\nabla^2\psi = -\frac{\partial(\psi,\nabla^2\psi)}{\partial(X,Z)} + \nu\nabla^4\psi + g\alpha\frac{\partial\theta}{\partial X},\qquad
+\frac{\partial\theta}{\partial t} = -\frac{\partial(\psi,\theta)}{\partial(X,Z)} + \frac{\Delta T}{H}\frac{\partial\psi}{\partial X} + \kappa\nabla^2\theta .
+$$
+
+这里用大写 X、Z 表示空间坐标，小写 x、y、z 留给 Lorenz 变量。
+
+### 1.2 三个变量：三种空间花样的振幅
+
+上下板取自由滑移边界（Saltzman 1962），Lorenz 把 ψ 与 θ 展开成 Fourier 级数，只保留三项：
+
+$$
+\frac{a}{(1+a^2)\kappa}\,\psi = \sqrt2\,x\,\sin\frac{\pi a X}{H}\sin\frac{\pi Z}{H},\qquad
+\frac{\pi\,\mathrm{Ra}}{\mathrm{Ra}_c\,\Delta T}\,\theta = \sqrt2\,y\,\cos\frac{\pi a X}{H}\sin\frac{\pi Z}{H} - z\,\sin\frac{2\pi Z}{H},
+$$
+
+a 是卷的水平波数（以 π/H 为单位）。代回上面两式、向这三个模态投影，在时间 τ = π²(1+a²)κt/H² 下得到
 
 $$
 \dot x = \sigma(y-x),\qquad
 \dot y = x(\rho - z) - y,\qquad
-\dot z = xy - \beta z
+\dot z = xy - \beta z,
 $$
 
-其中 σ 是 Prandtl 数，ρ 正比于 Rayleigh 数与其临界值之比，β 来自元胞的几何长宽比。
+$$
+\sigma = \frac{\nu}{\kappa},\qquad
+\rho = \frac{\mathrm{Ra}}{\mathrm{Ra}_c},\qquad
+\beta = \frac{4}{1+a^2}.
+$$
+
+于是每个变量都是一种空间花样的振幅（图 18 上排）：
+
+- **x**：对流卷翻滚得多快，正负是转向；
+- **y**：上升流与下沉流之间的温差；
+- **z**：水平平均温度剖面弯离直线的程度。它水平均匀，只把剖面在上下板附近变陡、中段拉平，也就是对流额外运走的热。在上式的标度下，板面热流与纯传导热流之比（Nusselt 数）为 **Nu = 1 + 2z/ρ**。
+
+三者在不动点 C<sub>+</sub> 合起来是一对定常对流卷，热流体在两侧上升、冷流体在中间下沉（图 18 下排）。`tests/test_convection.py` 从重建的场直接检查两件事：板面温度梯度等于 1 + 2z/ρ；C<sub>±</sub> 处层平均的对流热流 ⟨wT⟩ 恰好补足 Nu − 1。
+
+![x、y、z 对应的流场与温度场](figures/fig18_convection.png)
+
+### 1.3 每一项都是一个物理过程
+
+| 方程 | 项 | 物理过程 |
+|---|---|---|
+| ẋ = σ(y − x) | +σy | 浮力：热的一侧轻、冷的一侧重，温差推着卷转 |
+| | −σx | 粘性给翻滚刹车 |
+| ẏ = ρx − y − xz | +ρx | 卷把底部热流体搬上去、顶部冷流体搬下来，制造水平温差；背景梯度越陡（ρ 越大）搬出的温差越大 |
+| | −y | 热扩散把水平温差抹平 |
+| | −xz | 剖面中段已被拉平，同样的翻滚搬来的温差打了折扣 |
+| ż = xy − βz | +xy | 热的上升、冷的下沉，净效果是向上运热，把剖面拉弯 |
+| | −βz | 热扩散把剖面拉回直线 |
+
+线性项都是驱动或扩散；仅有的两个非线性项 −xz 与 xy 都来自平流 u·∇θ，即流体搬运温度。时间以热扩散为单位：a² = 1/2 时 π²(1+a²) ≈ 14.8，Lorenz 的 1 个时间单位约为 H²/κ 的 1/15。
+
+### 1.4 经典参数 σ=10, β=8/3, ρ=28 的来由
+
+三个数都出自 Lorenz 1963 原文，此后的文献几乎都沿用，本文所有实验也用这一组。
+
+- **β = 8/3**：自由滑移边界下，波数为 a 的卷在 Ra<sub>c</sub>(a) = π⁴(1+a²)³/a² 失稳，最小值在 a² = 1/2，Ra<sub>c</sub> = 27π⁴/4 ≈ 657.5。取最先失稳的那种卷，β = 4/(1 + ½) = 8/3，卷宽 √2 H。`tests/test_convection.py` 对 Ra<sub>c</sub>(a) 数值求最小，检查它落在 β = 8/3 上。
+- **σ = 10**：与水同一量级（室温约 7）。它还须大于 β + 1 = 11/3：§2.3 的 Hopf 阈值 ρ<sub>H</sub> 的分母是 σ − β − 1，非正时 C<sub>±</sub> 永不失稳，没有混沌吸引子。
+- **ρ = 28**：Ra 是临界值的 28 倍，略高于 ρ<sub>H</sub> = 470/19 ≈ 24.74，三个不动点全部不稳定（§2.3）。
+
+### 1.5 它不是什么
 
 **诚实点 1：ρ=28 时这个截断早已不再忠实于对流。**
 
 三模截断只在 ρ 略大于 1（刚过对流失稳阈值）时有渐近依据。到了 ρ=28，被丢掉的高阶模态在真实流体里已经被强烈激发，Lorenz 方程与 Rayleigh–Bénard 的定量联系断了。它此后是一个**自洽的数学对象**，不是一个流体模型。
 
 这一点值得强调，因为大量介绍性材料会说"Lorenz 方程描述大气对流，所以天气不可预报"。正确的说法要弱得多：Lorenz 方程展示了**低维确定性系统也能有敏感依赖**，这个定性教训可以迁移到大气；方程本身不能。本文后面所有结论都是关于这个数学对象的，不涉及任何流体主张。
+
+另一方面，确有几个物理系统化简后**恰好**是这组方程，变量重新标度后对应关系是精确的，只是 σ、β、ρ 换成装置自己的参数：Malkus 水车（x 是转速，y、z 是桶中水量分布的一阶 Fourier 系数）、竖直圆环热虹吸管（x 是环流速度）、单模激光（Haken 1975：x 是光场，y 是极化，z 是粒子数反转）。
 
 ---
 
@@ -404,7 +472,7 @@ uv sync --all-groups
 uv run pytest                  # 全部断言，含 Σλ 恒等式与 T_div 斜率
 uv run ruff check src tests
 uv run lorenz63 info           # 本文引用的全部数字
-uv run lorenz63 figure all     # 重建 report/figures/ 下 17 张图
+uv run lorenz63 figure all     # 重建 report/figures/ 下全部图
 ```
 
 删除 `.cache/` 后重跑 `figure all` 应得到相同结果——所有随机扰动方向与随机起点都由固定 seed 生成。全部图约 4.3 分钟（约 260 s，其中 fig03 分岔扫描一个人就占 54 s，fig17 的 Kepler 长跑占 36 s）。
@@ -452,3 +520,7 @@ uv run lorenz63 figure all     # 重建 report/figures/ 下 17 张图
 4. G. Benettin et al., *Lyapunov Characteristic Exponents for Smooth Dynamical Systems*, Meccanica **15**, 9 (1980).
 5. E. Hairer, C. Lubich, G. Wanner, *Geometric Numerical Integration*, 2nd ed., Springer (2006).
 6. J. C. Sprott, *Chaos and Time-Series Analysis*, Oxford (2003).
+7. B. Saltzman, *Finite Amplitude Free Convection as an Initial Value Problem — I*, J. Atmos. Sci. **19**, 329 (1962).
+8. H. Haken, *Analogy between Higher Instabilities in Fluids and Lasers*, Phys. Lett. A **53**, 77 (1975).
+9. M. Gorman, P. J. Widmann, K. A. Robbins, *Nonlinear Dynamics of a Convection Loop*, Physica D **19**, 45 (1986).
+10. S. H. Strogatz, *Nonlinear Dynamics and Chaos*, 2nd ed., Westview (2015), §9.1（Malkus 水车）.

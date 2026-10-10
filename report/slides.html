@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
 /* 布局：1600×900 的 16:9 画布按窗口等比缩放；固定页脚是四步论证链，当前所在步骤高亮。
-   单一浅色主题：17 张 matplotlib 图都是白底，投影仪上也最稳。
+   单一浅色主题：matplotlib 图都是白底，投影仪上也最稳。
    颜色语义沿用图里的配色：朱红 = 单条轨道（不可信），青绿 = 统计量（可信），藏青 = 结构与参考解。 */
 :root {
   color-scheme: light;
@@ -125,6 +125,7 @@ table.data th, table.data td { text-align: left; padding: 14px 18px; border-bott
 table.data th { font-size: 19px; font-weight: 700; letter-spacing: .08em; color: var(--ink-2); border-bottom: 2px solid var(--ink); }
 table.data td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 table.data tr.hl td { background: var(--wash-orbit); }
+table.data.tight th, table.data.tight td { padding: 8px 18px; }
 
 pre.eig {
   margin: 0; font-family: var(--mono); font-size: 22px; line-height: 1.7;
@@ -254,31 +255,141 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 4 方程 -->
-<section class="slide" data-part="0" data-min="1.5" data-title="方程与它的边界">
-  <header><p class="eyebrow">背景</p><h2>三模截断的对流方程</h2></header>
+<!-- 4 物理图景 -->
+<section class="slide" data-part="0" data-min="1.5" data-title="从哪里来">
+  <header><p class="eyebrow">背景 · 方程从哪里来</p><h2>一层从下面加热的流体</h2></header>
   <div class="split even">
     <div class="col">
-      <div style="font-size:32px">$$\dot x = \sigma(y-x)$$ $$\dot y = x(\rho - z) - y$$ $$\dot z = xy - \beta z$$</div>
-      <ul class="plain" style="font-size:24px">
-        <li><strong>σ</strong>：Prandtl 数</li>
-        <li><strong>ρ</strong>：Rayleigh 数与临界值之比</li>
-        <li><strong>β</strong>：元胞的几何长宽比</li>
-      </ul>
+      <svg viewBox="0 0 600 360" role="img" aria-label="Rayleigh–Bénard 对流示意：底板热、顶板冷，中间一对反向旋转的对流卷" style="width:100%;height:auto">
+        <defs><marker id="rb-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"/></marker></defs>
+        <rect x="20" y="20" width="560" height="22" fill="var(--navy)"/>
+        <rect x="20" y="298" width="560" height="22" fill="var(--orbit)"/>
+        <text x="300" y="37" fill="#fff" font-size="16" text-anchor="middle">冷板 · 温度 T</text>
+        <text x="300" y="315" fill="#fff" font-size="16" text-anchor="middle">热板 · 温度 T + ΔT</text>
+        <ellipse cx="160" cy="170" rx="118" ry="92" fill="none" stroke="var(--ink)" stroke-width="2.5"/>
+        <ellipse cx="440" cy="170" rx="118" ry="92" fill="none" stroke="var(--ink)" stroke-width="2.5"/>
+        <path d="M42,180 L42,150" stroke="var(--ink)" stroke-width="2.5" marker-end="url(#rb-arrow)"/>
+        <path d="M558,180 L558,150" stroke="var(--ink)" stroke-width="2.5" marker-end="url(#rb-arrow)"/>
+        <path d="M300,150 L300,190" stroke="var(--ink)" stroke-width="2.5" marker-end="url(#rb-arrow)"/>
+        <text x="62" y="286" font-size="17" fill="var(--orbit)" text-anchor="middle">热的上升</text>
+        <text x="300" y="286" font-size="17" fill="var(--navy)" text-anchor="middle">冷的下沉</text>
+        <text x="538" y="286" font-size="17" fill="var(--orbit)" text-anchor="middle">热的上升</text>
+        <path d="M592,44 L592,296" stroke="var(--ink-2)" stroke-width="1.5"/>
+        <text x="572" y="176" font-size="18" fill="var(--ink-2)">H</text>
+      </svg>
+      <p class="muted" style="font-size:22px">底下的流体受热变轻想上浮，上面的冷流体想下沉。粘性和热扩散会抵抗这种翻动。</p>
     </div>
     <div class="col">
-      <p>Lorenz 1963 年从二维 Rayleigh–Bénard 对流出发作 Galerkin 展开，只保留三个模态。</p>
+      <p>两股力量之比叫 Rayleigh 数：</p>
+      <div style="font-size:30px">$$\mathrm{Ra} = \frac{g\,\alpha\,\Delta T\,H^3}{\nu\,\kappa} = \frac{\text{浮力}}{\text{粘性}\times\text{热扩散}}$$</div>
+      <ul class="plain" style="font-size:24px">
+        <li>Ra 小于临界值 Ra<sub>c</sub>：流体静止，热量只靠传导</li>
+        <li>Ra 大于 Ra<sub>c</sub>：静止失稳，长出一排<strong>对流卷</strong></li>
+        <li>另一个无量纲数 Pr = ν/κ：动量与热量各自扩散的快慢之比</li>
+      </ul>
+      <p style="font-size:24px">Saltzman（1962）、Lorenz（1963）研究的就是这个 Rayleigh–Bénard 问题，只看一个方向上的二维卷。</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>先讲一个能想象的东西：锅里的水从下面加热。g 是重力加速度，α 是热膨胀系数，ν 是运动粘度，κ 是热扩散率，H 是层厚。</p>
+    <p>Boussinesq 近似下，二维流动用流函数 ψ 和温度偏离线性剖面的部分 θ 写成两条偏微分方程（Lorenz 1963 式 17–18）：涡量方程里浮力 gα∂θ/∂x 驱动、ν∇⁴ψ 耗散；温度方程里流体把背景温度梯度往上搬、κ∇²θ 抹平，两条都有平流项 J(ψ,·)。这是无穷维的系统。</p>
+  </aside>
+</section>
+
+<!-- 5 三个变量 -->
+<section class="slide" data-part="0" data-min="2" data-title="三个变量">
+  <header><p class="eyebrow">背景 · 方程从哪里来</p><h2>x、y、z 是三种空间花样的振幅</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig18_convection.png" alt="三个模态各自的空间形状，以及三者在 C+ 处合成的定常对流卷"><figcaption>lorenz63 figure fig18</figcaption></figure>
+    <div class="col">
+      <p style="font-size:24px">Lorenz 把流函数和温度各展开成 Fourier 级数，<strong>只留三项</strong>：</p>
+      <div style="font-size:22px">$$\psi \propto x\,\sin\tfrac{\pi a X}{H}\sin\tfrac{\pi Z}{H}$$ $$\theta \propto y\,\cos\tfrac{\pi a X}{H}\sin\tfrac{\pi Z}{H} - z\,\sin\tfrac{2\pi Z}{H}$$</div>
+      <ul class="plain" style="font-size:23px">
+        <li><strong class="navy">x</strong>：卷翻滚得多快，正负是转向</li>
+        <li><strong class="navy">y</strong>：上升流与下沉流之间的温差</li>
+        <li><strong class="navy">z</strong>：平均温度剖面弯离直线的程度，也就是对流额外运走的热：<span class="mono">Nu = 1 + 2z/ρ</span></li>
+      </ul>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>这里大写 X、Z 是空间坐标，小写 x、y、z 是 Lorenz 变量，别混。a 是卷的水平波数。比例系数和时间单位在报告 §1.2 里写全了。</p>
+    <p>看图：左上是 x 单独的样子，就是一对反向旋转的卷；中上是 y，左右边缘热、中间冷；右上是 z，水平均匀，只改竖直剖面，靠近上下板变陡、中间变平。下面是三者在不动点 C+ 合起来的样子：热流体在两边升起，冷流体在中间沉下，一对定常卷。</p>
+    <p>Nu 是 Nusselt 数，实际热流与纯传导热流之比。所以 z 有个很直接的读法：它就是这层流体在多大程度上靠对流在运热。</p>
+  </aside>
+</section>
+
+<!-- 6 每一项 -->
+<section class="slide" data-part="0" data-min="2" data-title="每一项的物理">
+  <header><p class="eyebrow">背景 · 方程从哪里来</p><h2>代回去，每一项都是一个物理过程</h2></header>
+  <div class="center">
+    <table class="data tight" style="font-size:23px">
+      <thead><tr><th>方程</th><th>项</th><th>物理过程</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="2">\(\dot x = \sigma(y - x)\)</td><td>\(+\sigma y\)</td><td>浮力：热的一侧轻、冷的一侧重，温差推着卷转</td></tr>
+        <tr><td>\(-\sigma x\)</td><td>粘性给翻滚刹车</td></tr>
+        <tr><td rowspan="3">\(\dot y = \rho x - y - xz\)</td><td>\(+\rho x\)</td><td>卷把底部热流体搬上去、顶部冷流体搬下来，制造水平温差</td></tr>
+        <tr><td>\(-y\)</td><td>热扩散把水平温差抹平</td></tr>
+        <tr class="hl"><td>\(-xz\)</td><td>剖面中段已被拉平，同样的翻滚搬来的温差打了折扣</td></tr>
+        <tr class="hl"><td rowspan="2">\(\dot z = xy - \beta z\)</td><td>\(+xy\)</td><td>热的上升、冷的下沉，净效果是向上运热，把剖面拉弯</td></tr>
+        <tr><td>\(-\beta z\)</td><td>热扩散把剖面拉回直线</td></tr>
+      </tbody>
+    </table>
+    <p class="lede" style="font-size:26px">非线性只有标色的两项，都来自<strong>流体搬运温度</strong>（平流 u·∇θ）。时间以热扩散为单位，Lorenz 的 1 个时间单位约等于 H²/κ 的 1/15。</p>
+  </div>
+  <aside class="notes">
+    <p>这一页是想让方程不再是三个抽象的字母：线性项都是"驱动"或"扩散"，非线性项都是"搬运"。</p>
+    <p>ρx 那一项里的 ρ 就是 Ra/Ra_c：背景温度梯度越陡，同样的翻滚搬出的温差越大，所以 ρ 是驱动强度的旋钮。</p>
+    <p>时间单位：τ = π²(1+a²)κt/H²，a² = 1/2 时系数约 14.8。量级感：1 cm 厚的水层 H²/κ 约 700 秒，一个 Lorenz 时间单位约一分钟。</p>
+  </aside>
+</section>
+
+<!-- 7 经典参数 -->
+<section class="slide" data-part="0" data-min="2" data-title="经典的那一组数">
+  <header><p class="eyebrow">背景 · 方程从哪里来</p><h2>经典的那一组数，每个都有来由</h2></header>
+  <div class="full" style="justify-content:center;gap:40px">
+    <div class="strip" style="gap:72px">
+      <div class="kv"><span class="v navy">σ = 10</span><span class="k">Prandtl 数 ν/κ</span></div>
+      <div class="kv"><span class="v navy">β = 8/3</span><span class="k">卷的几何：4/(1+a²)</span></div>
+      <div class="kv"><span class="v orbit">ρ = 28</span><span class="k">Ra / Ra<sub>c</sub></span></div>
+    </div>
+    <ul class="plain" style="font-size:27px;gap:26px">
+      <li><strong>β = 8/3</strong>：宽度不同的卷各有各的失稳阈值 \(\mathrm{Ra}_c(a) = \pi^4(1+a^2)^3/a^2\)，在 a² = 1/2 最低（27π⁴/4 ≈ 657.5）。取最先失稳的那种卷，β = 4/(1 + ½) = 8/3，卷宽 √2 H。</li>
+      <li><strong>σ = 10</strong>：和水同一量级（室温约 7）。它还得大于 β + 1 = 11/3，否则 C± 永远不会失稳，就没有后面的混沌。</li>
+      <li><strong>ρ = 28</strong>：Ra 是临界值的 28 倍。ρ 超过 \(\rho_H = \sigma(\sigma+\beta+3)/(\sigma-\beta-1) = 470/19 \approx 24.74\) 时 C± 失稳；Lorenz 取了一个稍高于它的整数。</li>
+    </ul>
+    <p class="muted" style="font-size:23px">三个数都出自 Lorenz 1963 原文，此后的文献几乎都沿用，后面所有实验也都用这一组。ρ_H 在 ① 里会再出现。</p>
+  </div>
+  <aside class="notes">
+    <p>经常有人问"为什么是 8/3 这么怪的数"。答案是几何：它对应最容易被激发的那种卷的宽高比。Ra_c 那个公式是上下自由滑移边界的线性稳定性结果，仓库里有测试对它求最小值，检查恰好得到 β = 8/3。</p>
+    <p>σ 的条件 σ &gt; β+1 来自 ρ_H 分母：分母非正时没有 Hopf 分岔。</p>
+    <p>量级感（粗略，用室温水的物性）：1 cm 水层上下温差 1 K，Ra 约 1.5×10⁴，是自由边界临界值 657 的二十多倍；真实刚性板的临界值是 1708，倍数要小一些。</p>
+  </aside>
+</section>
+
+<!-- 8 边界 -->
+<section class="slide" data-part="0" data-min="1" data-title="方程与它的边界">
+  <header><p class="eyebrow">背景 · 方程从哪里来</p><h2>推导到这里就断了</h2></header>
+  <div class="split even">
+    <div class="col">
       <div class="callout orbit-bg"><span class="tag orbit">局限</span>三模截断只在 ρ 略大于 1 时有渐近依据。ρ = 28 时被丢掉的高阶模态早已被激发，它是一个自洽的<strong>数学对象</strong>，不再是流体模型。</div>
       <p class="muted" style="font-size:24px">后面所有结论都关于这个数学对象，不涉及流体或天气的主张。</p>
+    </div>
+    <div class="col">
+      <p>但有几个物理系统，化简后<strong>恰好</strong>就是这组方程：</p>
+      <ul class="plain" style="font-size:24px">
+        <li><strong>Malkus 水车</strong>：x 是转速，y、z 是桶中水量分布的一阶 Fourier 系数</li>
+        <li><strong>热虹吸环</strong>：竖直圆环管里的对流，x 是环流速度</li>
+        <li><strong>单模激光</strong>（Haken 1975）：x 是光场，y 是极化，z 是粒子数反转</li>
+      </ul>
     </div>
   </div>
   <aside class="notes">
     <p>很多科普会说"Lorenz 方程描述大气对流，所以天气不可预报"。正确的说法要弱得多：它展示了低维确定性系统也能有敏感依赖。这个定性教训可以迁移到大气，方程本身不能。</p>
-    <p>主动交代这个局限，后面讲的就都站得住。</p>
+    <p>右边几个系统是给"有没有一个物理量对应"的回答：对流里这种对应只在近阈值成立，而在水车、热虹吸环、激光里，变量重新标度后方程是精确的，只是 σ、β、ρ 换成那些装置自己的参数。</p>
   </aside>
 </section>
 
-<!-- 5 体积 -->
+<!-- 9 体积 -->
 <section class="slide" data-part="1" data-min="1.5" data-title="相空间体积">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>相空间体积以固定速率坍缩</h2></header>
   <div class="split">
@@ -299,7 +410,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 6 有界 -->
+<!-- 10 有界 -->
 <section class="slide" data-part="1" data-min="1" data-title="有界性">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>耗散，但有界</h2></header>
   <div class="split even">
@@ -318,7 +429,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 7 不动点 -->
+<!-- 11 不动点 -->
 <section class="slide" data-part="1" data-min="1.5" data-title="不动点稳定性">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>三个不动点，ρ = 28 时全部不稳定</h2></header>
   <div class="split">
@@ -336,7 +447,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 8 分岔 -->
+<!-- 12 分岔 -->
 <section class="slide" data-part="1" data-min="1.5" data-title="分岔图">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>动力学在代数预言的位置改变</h2></header>
   <div class="full">
@@ -353,7 +464,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 9 相图 -->
+<!-- 13 相图 -->
 <section class="slide" data-part="1" data-min="1.5" data-title="四个 ρ 下的相图">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>四个区间，四种相图</h2></header>
   <div class="split">
@@ -374,7 +485,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 10 本征结构 -->
+<!-- 14 本征结构 -->
 <section class="slide" data-part="1" data-min="2" data-title="本征结构">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>吸引子的形状来自线性代数</h2></header>
   <div class="full">
@@ -388,7 +499,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 11 Poincaré -->
+<!-- 15 Poincaré -->
 <section class="slide" data-part="1" data-min="1.5" data-title="Poincaré 截面">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>三维流 → 二维截面 → 一维映射</h2></header>
   <div class="full">
@@ -405,7 +516,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 12 两件事 -->
+<!-- 16 两件事 -->
 <section class="slide" data-part="2" data-min="1" data-title="稳定性与 Lyapunov 指数">
   <header><p class="eyebrow">② 精度只换来对数时间</p><h2>两件常被混为一谈的事</h2></header>
   <div class="center">
@@ -423,7 +534,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 13 稳定域 -->
+<!-- 17 稳定域 -->
 <section class="slide" data-part="2" data-min="1.5" data-title="RK4 稳定域">
   <header><p class="eyebrow">② 精度只换来对数时间</p><h2>瓶颈是精度，不是稳定性</h2></header>
   <div class="split">
@@ -443,7 +554,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 14 正交化 -->
+<!-- 18 正交化 -->
 <section class="slide" data-part="2" data-min="2" data-title="QR 重正交化">
   <header><p class="eyebrow">② 精度只换来对数时间</p><h2>Lyapunov 谱为什么必须重正交</h2></header>
   <div class="full">
@@ -461,7 +572,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 15 谱 -->
+<!-- 19 谱 -->
 <section class="slide" data-part="2" data-min="2" data-title="Lyapunov 谱与自洽检验">
   <header><p class="eyebrow">② 精度只换来对数时间</p><h2>λ₁ 是数值结果，凭什么信它</h2></header>
   <div class="split">
@@ -479,7 +590,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 16 误差增长 -->
+<!-- 20 误差增长 -->
 <section class="slide" data-part="2" data-min="1.5" data-title="误差增长">
   <header><p class="eyebrow">② 精度只换来对数时间</p><h2>误差按 λ₁ 增长，到吸引子尺度饱和</h2></header>
   <div class="split">
@@ -497,7 +608,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 17 容差扫描 -->
+<!-- 21 容差扫描 -->
 <section class="slide" data-part="2" data-min="2" data-title="容差扫描">
   <header><p class="eyebrow">② 精度只换来对数时间 · 核心证据</p><h2>可分辨时间对 ln(1/rtol) 是一条直线</h2></header>
   <div class="split">
@@ -523,7 +634,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 18 回答 -->
+<!-- 22 回答 -->
 <section class="slide" data-part="2" data-min="0.5" data-title="回答开场的问题">
   <header><p class="eyebrow">② 精度只换来对数时间</p><h2>回到开场的问题</h2></header>
   <div class="center">
@@ -535,7 +646,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 19 FTLE -->
+<!-- 23 FTLE -->
 <section class="slide" data-part="2" data-min="1.5" data-title="有限时间 Lyapunov 指数">
   <header><p class="eyebrow">② 精度只换来对数时间</p><h2>局部拉伸率差别极大</h2></header>
   <div class="split">
@@ -558,7 +669,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 20 影随 -->
+<!-- 24 影随 -->
 <section class="slide" data-part="3" data-min="1.5" data-title="影随">
   <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>那还剩下什么可信？</h2></header>
   <div class="split even">
@@ -578,7 +689,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 21 中心实验 -->
+<!-- 25 中心实验 -->
 <section class="slide" data-part="3" data-min="2.5" data-title="中心实验">
   <header><p class="eyebrow">③ 统计量不随求解器变 · 中心实验</p><h2>同一组数据：<span class="orbit">左边报废</span>，<span class="stat">右边完好</span></h2></header>
   <div class="full">
@@ -596,7 +707,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 22 不变密度 -->
+<!-- 26 不变密度 -->
 <section class="slide" data-part="3" data-min="1" data-title="不变密度">
   <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>不变密度同样不动</h2></header>
   <div class="split">
@@ -613,7 +724,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 23 吸引子 -->
+<!-- 27 吸引子 -->
 <section class="slide" data-part="3" data-min="0.5" data-title="吸引子">
   <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>教科书上的蝴蝶不是幻觉</h2></header>
   <div class="split">
@@ -629,7 +740,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 24 判据表 -->
+<!-- 28 判据表 -->
 <section class="slide" data-part="4" data-min="1.5" data-title="判据表">
   <header><p class="eyebrow">④ 判据随系统类型变</p><h2>"可信吗"不能脱离系统类型回答</h2></header>
   <div class="center">
@@ -649,7 +760,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 25 守恒对照 -->
+<!-- 29 守恒对照 -->
 <section class="slide" data-part="4" data-min="2" data-title="守恒系统对照">
   <header><p class="eyebrow">④ 判据随系统类型变</p><h2>守恒系统里，精度换来成倍的时间</h2></header>
   <div class="full">
@@ -668,7 +779,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 26 收敛性 -->
+<!-- 30 收敛性 -->
 <section class="slide" data-part="4" data-min="1" data-title="收敛性研究的推论">
   <header><p class="eyebrow">④ 判据随系统类型变</p><h2>推论：混沌问题的收敛阶要在短窗口里验</h2></header>
   <div class="split even">
@@ -687,7 +798,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 27 声学 -->
+<!-- 31 声学 -->
 <section class="slide" data-part="4" data-min="1" data-title="回到声学">
   <header><p class="eyebrow">④ 判据随系统类型变</p><h2>回到声学</h2></header>
   <div class="split even">
@@ -707,7 +818,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 28 结论 -->
+<!-- 32 结论 -->
 <section class="slide" data-part="4" data-min="1" data-title="结论与复现">
   <header><p class="eyebrow">结论</p><h2>守恒系统看不变量，混沌系统看统计量</h2></header>
   <div class="split even">
@@ -731,7 +842,7 @@ uv run lorenz63 figure all</pre>
   </aside>
 </section>
 
-<!-- 29 备用 -->
+<!-- 33 备用 -->
 <section class="slide" data-part="0" data-min="0" data-title="备用：数字汇总">
   <header><p class="eyebrow">备用</p><h2>数字汇总</h2></header>
   <div class="split even" style="font-size:21px">
