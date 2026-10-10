@@ -26,6 +26,18 @@ from lorenz63.bifurcation import (  # noqa: E402
     eigenvalue_locus,
     rho_sweep,
 )
+from lorenz63.hamiltonian import (  # noqa: E402
+    DEFAULT_ECCENTRICITY,
+    KEPLER_PERIOD,
+    RK4_STAGES,
+    angular_momentum,
+    horizon,
+    kepler_energy,
+    kepler_rk4,
+    kepler_verlet,
+    position_error,
+    running_max,
+)
 from lorenz63.integrate import (  # noqa: E402
     on_attractor,
     reference_trajectory,
@@ -1196,6 +1208,135 @@ def _frames_data() -> dict[str, NDArray]:
 
 
 # ---------------------------------------------------------------------------
+# 17 — the conservative control: where a long single trajectory is trustworthy
+# ---------------------------------------------------------------------------
+
+#: Verlet step for panels (a) and (b); RK4 runs at RK4_STAGES times this, so the
+#: two methods spend the same number of force evaluations.
+KEPLER_H = 0.01
+KEPLER_PERIODS = 1000
+#: Position error that counts as "the phase is lost" in panel (c).
+KEPLER_THRESHOLD = 0.1
+
+
+def fig17_conservative(output: Path) -> Path:
+    """Kepler: Verlet's energy stays bounded, RK4's drifts; both horizons are power laws."""
+    data = _cached("conservative", _conservative_data)
+    fig, axes = plt.subplots(1, 3, figsize=(15.0, 4.9))
+    runs = (("verlet", "Störmer–Verlet（辛）", C_MID), ("rk4", "RK4（非辛）", C_LOOSE))
+    cost = f"同等代价：h_Verlet = {KEPLER_H:g}，h_RK4 = {RK4_STAGES * KEPLER_H:g}"
+    fig.suptitle(f"守恒系统对照：Kepler 问题（偏心率 {DEFAULT_ECCENTRICITY}）", fontsize=12.5)
+
+    ax = _style(axes[0])
+    for key, label, colour in runs:
+        ax.loglog(data["periods"], data[f"{key}_energy"], color=colour, lw=1.6, label=label)
+    cross = float(data["energy_crossover"])
+    ax.axvline(cross, color=C_MUTED, ls=":", lw=1.0)
+    ax.text(
+        cross * 1.15,
+        ax.get_ylim()[0] * 3,
+        f"{cross:.0f} 周期后 RK4 的\n能量误差超过 Verlet",
+        fontsize=8.5,
+        color=C_MUTED,
+    )
+    ax.set_xlabel("时间（轨道周期）")
+    ax.set_ylabel("|H − H₀| / |H₀|  （至今最大值）")
+    ax.set_title("(a) 能量：有界震荡 vs 线性漂移", fontsize=11)
+    ax.legend(loc="upper left", fontsize=8.5, title=cost, title_fontsize=8)
+    ax.text(
+        0.97,
+        0.04,
+        f"Verlet 角动量漂移 {float(data['verlet_angular_drift']):.0e}\n（中心力下精确守恒）",
+        transform=ax.transAxes,
+        fontsize=8.5,
+        ha="right",
+        va="bottom",
+        bbox={"boxstyle": "round", "fc": "#effaf7", "ec": C_MID, "alpha": 0.95},
+    )
+
+    ax = _style(axes[1])
+    periods = data["periods"]
+    for key, label, colour in runs:
+        ax.loglog(periods, data[f"{key}_error"], color=colour, lw=1.6, label=label)
+    # Slope guides sit a factor 3 below each curve, anchored at period 10 where
+    # RK4 has left its short linear transient.
+    guide = periods[(periods >= 3.0) & (periods <= 30.0)]
+    for power, key, colour in ((1, "verlet", C_MID), (2, "rk4", C_LOOSE)):
+        anchor = float(np.interp(10.0, periods, data[f"{key}_error"])) / 3.0
+        line = anchor * (guide / 10.0) ** power
+        ax.loglog(guide, line, color=colour, ls="--", lw=1.0, alpha=0.8)
+        ax.text(guide[0] / 1.15, line[0], f"∝ t{'²' if power == 2 else ''}", fontsize=9.5,
+                color=colour, ha="right", va="center")
+    ax.axhline(2.0, color=C_MUTED, ls=":", lw=1.0)
+    ax.text(periods[0], 2.3, "轨道长轴 = 2：相位全丢，轨道形状仍在", fontsize=8, color=C_MUTED)
+    ax.set_ylim(top=8.0)
+    ax.set_xlabel("时间（轨道周期）")
+    ax.set_ylabel("位置误差 |q − q_exact|  （至今最大值）")
+    ax.set_title("(b) 相位误差：多项式增长，不是指数", fontsize=11)
+    ax.legend(loc="lower right", fontsize=8.5)
+
+    ax = _style(axes[2])
+    for key, label, colour in runs:
+        evals, reach = data[f"{key}_evals"], data[f"{key}_horizon"]
+        slope = np.polyfit(np.log(evals), np.log(reach), 1)[0]
+        ax.loglog(evals, reach, "o-", color=colour, ms=6, lw=1.4,
+                  label=f"{label}  斜率 {slope:.1f}")
+    ax.set_xticks(data["verlet_evals"])
+    ax.set_xticklabels([f"{e:.0f}" for e in data["verlet_evals"]])
+    ax.minorticks_off()
+    ax.set_xlabel("每单位时间的力计算次数（代价）")
+    ax.set_ylabel(f"位置误差到 {KEPLER_THRESHOLD:g} 的时间（周期）")
+    ax.set_title("(c) 代价换来的时间是幂律", fontsize=11)
+    ax.legend(loc="upper left", fontsize=8.5)
+    ax.text(
+        0.97,
+        0.04,
+        "同一个问题在 Lorenz 上\n只有对数关系（图 9）",
+        transform=ax.transAxes,
+        fontsize=8.5,
+        ha="right",
+        va="bottom",
+        bbox={"boxstyle": "round", "fc": "#fff6ef", "ec": C_LOOSE, "alpha": 0.95},
+    )
+    return _finish(fig, output, "fig17_conservative")
+
+
+def _conservative_data() -> dict[str, NDArray]:
+    t_end = KEPLER_PERIODS * KEPLER_PERIOD
+    runs = {
+        "verlet": kepler_verlet(t_end, KEPLER_H),
+        "rk4": kepler_rk4(t_end, RK4_STAGES * KEPLER_H),
+    }
+    # One sample per period: the envelopes are monotone, so nothing is lost.
+    periods = np.arange(1, KEPLER_PERIODS + 1, dtype=float)
+    out: dict[str, NDArray] = {"periods": periods}
+    for key, traj in runs.items():
+        idx = np.searchsorted(traj.t, periods * KEPLER_PERIOD - 1e-9)
+        h0 = kepler_energy(traj.q[0], traj.p[0])
+        energy = running_max(np.abs(kepler_energy(traj.q, traj.p) - h0) / abs(h0))
+        out[f"{key}_energy"] = energy[idx]
+        out[f"{key}_error"] = running_max(position_error(traj))[idx]
+    ahead = np.flatnonzero(out["rk4_energy"] > out["verlet_energy"])
+    out["energy_crossover"] = np.array(periods[ahead[0]] if ahead.size else np.inf)
+    momentum = angular_momentum(runs["verlet"].q, runs["verlet"].p)
+    out["verlet_angular_drift"] = np.array(np.ptp(momentum))
+
+    # Horizon against cost. Each run is long enough to reach the threshold; the
+    # last RK4 point needs ~700 periods.
+    verlet_steps = np.array([0.02, 0.01, 0.005, 0.0025])
+    out["verlet_evals"] = 1.0 / verlet_steps
+    out["verlet_horizon"] = np.array(
+        [horizon(kepler_verlet(400 * KEPLER_PERIOD, h), KEPLER_THRESHOLD) for h in verlet_steps]
+    ) / KEPLER_PERIOD
+    rk4_steps = RK4_STAGES * verlet_steps
+    out["rk4_evals"] = RK4_STAGES / rk4_steps
+    out["rk4_horizon"] = np.array(
+        [horizon(kepler_rk4(1500 * KEPLER_PERIOD, h), KEPLER_THRESHOLD) for h in rk4_steps]
+    ) / KEPLER_PERIOD
+    return out
+
+
+# ---------------------------------------------------------------------------
 
 FIGURES: dict[str, Callable[[Path], Path]] = {
     "fig01": fig01_paradox,
@@ -1214,4 +1355,5 @@ FIGURES: dict[str, Callable[[Path], Path]] = {
     "fig14": fig14_poincare,
     "fig15": fig15_eigen_structure,
     "fig16": fig16_orthogonalisation,
+    "fig17": fig17_conservative,
 }
