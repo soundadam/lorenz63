@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
 /* 布局：1600×900 的 16:9 画布按窗口等比缩放；固定页脚是四步论证链，当前所在步骤高亮。
-   单一浅色主题：16 张 matplotlib 图都是白底，投影仪上也最稳。
+   单一浅色主题：17 张 matplotlib 图都是白底，投影仪上也最稳。
    颜色语义沿用图里的配色：朱红 = 单条轨道（不可信），青绿 = 统计量（可信），藏青 = 结构与参考解。 */
 :root {
   color-scheme: light;
@@ -636,7 +636,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
     <table class="data">
       <thead><tr><th>系统类型</th><th>可保的结构</th><th>验证手段</th><th>长时间单条轨道</th></tr></thead>
       <tbody>
-        <tr><td><strong>保守（哈密顿）</strong></td><td>辛形式、不变量</td><td>能量有界？辛 / 分裂格式</td><td class="stat"><strong>可信</strong>（相位误差线性增长）</td></tr>
+        <tr><td><strong>保守（哈密顿）</strong></td><td>辛形式、不变量</td><td>能量有界？辛 / 分裂格式</td><td class="stat"><strong>可信</strong>（误差多项式增长，辛格式下线性）</td></tr>
         <tr><td><strong>耗散、非混沌</strong></td><td>收敛到吸引子</td><td>是否收敛到正确的稳态或极限环</td><td class="stat"><strong>可信</strong></td></tr>
         <tr class="hl"><td><strong>混沌</strong></td><td>无</td><td>统计量对方法不敏感？</td><td class="orbit"><strong>不可信</strong>（超过 1/λ₁ 量级）</td></tr>
       </tbody>
@@ -645,11 +645,30 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </div>
   <aside class="notes">
     <p>第一行是分子动力学、天体力学的世界：H = T(p) + V(q) 可分离，于是有显式辛格式（Verlet、蛙跳、Yoshida 高阶复合），验证手段是监视能量有界震荡不漂移。</p>
-    <p class="q">可能被问："第一行的结论在这个仓库里验证过吗？" 回答：还没有，单摆或 Kepler 上 RK4 对 Verlet 的对照列在待补清单里。</p>
+    <p>第一行在这个仓库里有对照实验，就是下一页。</p>
   </aside>
 </section>
 
-<!-- 25 收敛性 -->
+<!-- 25 守恒对照 -->
+<section class="slide" data-part="4" data-min="2" data-title="守恒系统对照">
+  <header><p class="eyebrow">④ 判据随系统类型变</p><h2>守恒系统里，精度换来成倍的时间</h2></header>
+  <div class="full">
+    <figure class="fig"><img src="figures/fig17_conservative.png" alt="Kepler 问题上 RK4 与 Verlet 的能量误差、位置误差随时间的增长，以及误差到 0.1 的时间对代价的幂律"><figcaption>lorenz63 figure fig17</figcaption></figure>
+    <div class="strip" style="gap:44px">
+      <div class="kv small"><span class="v stat">7.4×10⁻⁴</span><span class="k">Verlet 能量误差，1000 周期不涨</span></div>
+      <div class="kv small"><span class="v orbit">第 33 周期</span><span class="k">RK4 能量误差超过 Verlet</span></div>
+      <div class="kv small"><span class="v navy">斜率 2.0 / 2.5</span><span class="k">可信时间对代价是幂律</span></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>RK4 每步算四次力、Verlet 一次，所以取 h_RK4 = 4 h_Verlet，代价相同。偏心率 0.6，Hairer–Lubich–Wanner 书里的标准例子。</p>
+    <p>(a) 能量：Verlet 有界震荡，RK4 线性漂移。Verlet 的角动量漂移 8×10⁻¹⁴，中心力下精确守恒。(b) 位置误差：Verlet ∝ t，RK4 趋向 ∝ t²；两者最后都饱和在轨道长轴 2，相位丢了，轨道形状还在。</p>
+    <p>(c) 要老实讲：RK4 的线在 Verlet 上面，同等代价下四阶方法的相位反而保持得更久。辛格式买到的不是更准，而是不漂，跑得越久越占优。对论点要紧的是两条线都是幂律：步长减半，Verlet 的可信时间翻四倍。对照图 9 的 Lorenz，8 个数量级只换来 20 个时间单位。</p>
+    <p class="q">可能被问："那 Verlet 到底好在哪？" 回答：能量和角动量不漂，所以轨道的形状永远对；误差是线性而不是平方增长，时间够长它一定反超。</p>
+  </aside>
+</section>
+
+<!-- 26 收敛性 -->
 <section class="slide" data-part="4" data-min="1" data-title="收敛性研究的推论">
   <header><p class="eyebrow">④ 判据随系统类型变</p><h2>推论：混沌问题的收敛阶要在短窗口里验</h2></header>
   <div class="split even">
@@ -668,7 +687,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 26 声学 -->
+<!-- 27 声学 -->
 <section class="slide" data-part="4" data-min="1" data-title="回到声学">
   <header><p class="eyebrow">④ 判据随系统类型变</p><h2>回到声学</h2></header>
   <div class="split even">
@@ -688,7 +707,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 27 结论 -->
+<!-- 28 结论 -->
 <section class="slide" data-part="4" data-min="1" data-title="结论与复现">
   <header><p class="eyebrow">结论</p><h2>守恒系统看不变量，混沌系统看统计量</h2></header>
   <div class="split even">
@@ -712,7 +731,7 @@ uv run lorenz63 figure all</pre>
   </aside>
 </section>
 
-<!-- 28 备用 -->
+<!-- 29 备用 -->
 <section class="slide" data-part="0" data-min="0" data-title="备用：数字汇总">
   <header><p class="eyebrow">备用</p><h2>数字汇总</h2></header>
   <div class="split even" style="font-size:21px">
