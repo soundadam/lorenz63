@@ -125,6 +125,7 @@ table.data th, table.data td { text-align: left; padding: 14px 18px; border-bott
 table.data th { font-size: 19px; font-weight: 700; letter-spacing: .08em; color: var(--ink-2); border-bottom: 2px solid var(--ink); }
 table.data td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 table.data tr.hl td { background: var(--wash-orbit); }
+table.data tr.hl-navy td { background: var(--wash-navy); }
 table.data.tight th, table.data.tight td { padding: 8px 18px; }
 
 pre.eig {
@@ -169,6 +170,20 @@ pre.eig {
 .ctrl button:hover { border-color: var(--navy); color: var(--navy); }
 .ctrl button:focus-visible, .ctrl input:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
 .demo .fitline { font-size: 23px; line-height: 1.5; }
+
+/* 演示①：左边对流层与 x(t)，右边 ρ 滑块与 x–z 相平面 */
+.demo.roll { grid-template-columns: 1fr 440px; }
+.demo.roll .pane { gap: 12px; }
+.rho-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 21px; }
+.rho-head .eps { font-family: var(--mono); font-weight: 500; font-size: 30px; color: var(--orbit); font-variant-numeric: tabular-nums; }
+.demo.roll input[type="range"] { width: 100%; height: 30px; margin: 0; accent-color: var(--orbit); cursor: pointer; }
+.ruler { position: relative; height: 46px; font-size: 16px; line-height: 1.3; color: var(--ink-2); }
+.ruler span { position: absolute; top: 6px; left: calc(9px + (100% - 18px) * var(--at)); transform: translateX(-50%); text-align: center; white-space: nowrap; }
+.ruler span::before { content: ""; position: absolute; left: 50%; top: -8px; height: 7px; border-left: 2px solid var(--ink-2); }
+.regime { font-size: 22px; line-height: 1.45; min-height: 2.9em; }
+.demo.roll .ctrl { gap: 10px; flex-wrap: wrap; }
+.demo.roll .ctrl button { padding: 4px 12px; }
+#rollNu { font-family: var(--mono); font-size: 19px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 
 /* 目录思维导图：左边一个问题，右边五行按讲的顺序排；分隔页复用同一张图，只高亮当前一行 */
 .map-host { flex: 1; min-height: 0; display: flex; align-items: center; }
@@ -258,7 +273,7 @@ pre.eig {
 <section class="slide cover" data-part="0" data-min="0.5" data-title="封面">
   <div class="left">
     <p class="eyebrow">计算物理 · 课程汇报</p>
-    <h1>什么样的数值结果<br>值得相信</h1>
+    <h1>从对流方程<br>到可信的数值解</h1>
     <p class="sub">以 Lorenz 系统为例</p>
     <p class="params"><span>σ = 10</span><span>ρ = 28</span><span>β = 8/3</span></p>
   </div>
@@ -274,10 +289,10 @@ pre.eig {
 
 <!-- 2 目录 -->
 <section class="slide" data-part="0" data-min="1" data-title="目录">
-  <header><p class="eyebrow">目录</p><h2>先看方程从哪来，再回答四个问题</h2></header>
+  <header><p class="eyebrow">目录</p><h2>先推导、离散，再检验算出来的结果</h2></header>
   <div class="map-host"></div>
   <aside class="notes">
-    <p>先把整张地图亮出来：中间是一个问题，右边五行从上往下就是讲的顺序。每一行左边是用大白话问的问题，右边是答案和拿来作证的图或演示。现在不用解释答案，只念问题。</p>
+    <p>先把整张地图亮出来：左边是题目，右边五行从上往下就是讲的顺序。绪论把方程从流体力学推出来、放进计算机；后面四问检验算出来的东西。每一行左边是用大白话问的问题，右边是答案和拿来作证的图或演示。现在不用解释答案，只念问题。</p>
     <p>每一段开头会再回到这张图，高亮要讲的那一行。页脚的格子一直跟着，提示讲到哪一步。点任一行可以直接跳到那一段。</p>
   </aside>
 </section>
@@ -300,18 +315,18 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 4 分隔：背景 -->
-<section class="slide" data-part="bg" data-min="0.25" data-title="分隔：背景">
-  <header><p class="eyebrow">背景</p><h2>这组方程描述的是什么？</h2></header>
+<!-- 4 分隔：绪论 -->
+<section class="slide" data-part="bg" data-min="0.25" data-title="分隔：绪论">
+  <header><p class="eyebrow">绪论</p><h2>方程从哪来，怎么放进计算机？</h2></header>
   <div class="map-host" data-focus="bg"></div>
   <aside class="notes">
-    <p>先不谈数值，花几分钟让 x、y、z 和 σ、ρ、β 都有一个看得见的物理意思。</p>
+    <p>这一段走一遍计算物理的完整流程：从流体力学的基本方程出发，第 1 步把空间离散成三个模态，得到三行 ODE；第 2 步把 ODE 写成迭代。途中让 x、y、z 和 σ、ρ、β 都有一个看得见的物理意思。</p>
   </aside>
 </section>
 
 <!-- 5 物理图景 -->
 <section class="slide" data-part="bg" data-min="1.5" data-title="从哪里来">
-  <header><p class="eyebrow">背景 · 方程从哪里来</p><h2>一层从下面加热的流体</h2></header>
+  <header><p class="eyebrow">绪论 · 物理图景</p><h2>一层从下面加热的流体</h2></header>
   <div class="split even">
     <div class="col">
       <svg viewBox="0 0 600 360" role="img" aria-label="Rayleigh–Bénard 对流示意：底板热、顶板冷，中间一对反向旋转的对流卷" style="width:100%;height:auto">
@@ -346,17 +361,68 @@ pre.eig {
   </div>
   <aside class="notes">
     <p>先讲一个能想象的东西：锅里的水从下面加热。g 是重力加速度，α 是热膨胀系数，ν 是运动粘度，κ 是热扩散率，H 是层厚。</p>
-    <p>Boussinesq 近似下，二维流动用流函数 ψ 和温度偏离线性剖面的部分 θ 写成两条偏微分方程（Lorenz 1963 式 17–18）：涡量方程里浮力 gα∂θ/∂x 驱动、ν∇⁴ψ 耗散；温度方程里流体把背景温度梯度往上搬、κ∇²θ 抹平，两条都有平流项 J(ψ,·)。这是无穷维的系统。</p>
+    <p>后面会反复用到一句话：ΔT 是我们能拧的旋钮，Ra 正比于 ΔT。下一页把这幅图写成方程。</p>
   </aside>
 </section>
 
-<!-- 6 三个变量 -->
+<!-- 6 出发点 -->
+<section class="slide" data-part="bg" data-min="2" data-title="出发点：两条偏微分方程">
+  <header><p class="eyebrow">绪论 · 出发点</p><h2>从流体力学的基本方程出发</h2></header>
+  <div class="split even">
+    <div class="col">
+      <p style="font-size:24px">Boussinesq 近似：密度只在浮力项里随温度变，其余地方当常数。</p>
+      <div style="font-size:22px">$$\begin{aligned}
+        &\nabla\cdot\mathbf u = 0 &&\text{质量}\\
+        &\partial_t\mathbf u + (\mathbf u\cdot\nabla)\mathbf u = -\tfrac{1}{\rho_0}\nabla p + \nu\nabla^2\mathbf u + g\alpha T\,\hat{\mathbf z} &&\text{动量}\\
+        &\partial_t T + (\mathbf u\cdot\nabla)T = \kappa\nabla^2 T &&\text{热量}
+      \end{aligned}$$</div>
+      <ul class="plain" style="font-size:23px">
+        <li>只看 X–Z 平面里的二维卷：令 \(u = -\partial_Z\psi,\ w = \partial_X\psi\)，质量守恒自动满足</li>
+        <li>对动量方程取旋度，压力 p 消掉</li>
+        <li>温度写成线性传导剖面加偏离：\(T = T_0 + \Delta T\,(1 - Z/H) + \theta\)</li>
+      </ul>
+    </div>
+    <div class="col">
+      <p style="font-size:24px">剩下两个未知场 ψ(X, Z, t) 和 θ(X, Z, t)：</p>
+      <div style="font-size:23px">$$\partial_t\nabla^2\psi = \underbrace{-J(\psi,\nabla^2\psi)}_{\text{平流}} + \underbrace{\nu\nabla^4\psi}_{\text{粘性}} + \underbrace{g\alpha\,\partial_X\theta}_{\text{浮力}}$$
+      $$\partial_t\theta = \underbrace{-J(\psi,\theta)}_{\text{平流}} + \underbrace{\tfrac{\Delta T}{H}\,\partial_X\psi}_{\text{搬运背景温度}} + \underbrace{\kappa\nabla^2\theta}_{\text{热扩散}}$$</div>
+      <p class="muted" style="font-size:22px">\(J(a,b) = \partial_X a\,\partial_Z b - \partial_Z a\,\partial_X b\)，就是 \(\mathbf u\cdot\nabla b\)。这是 Lorenz 1963 的式 (17)–(18)。未知量是两个函数，所以是<strong>无穷维</strong>的。</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>左边三条就是课上见过的不可压 Navier–Stokes 加热传导方程，Boussinesq 近似只在浮力里保留密度随温度的变化。T 取相对参考温度的偏离，静水压的那部分并进 p。</p>
+    <p>两步化简：二维流动用流函数，质量守恒自动成立；对动量方程取旋度，压力消失，得到涡量 ∇²ψ 的方程。温度减去线性传导剖面后剩 θ，背景剖面被流体搬运就是 (ΔT/H)∂ψ/∂X 那一项。</p>
+    <p>落脚点：右边两条 PDE 的未知量是函数，要放进计算机，第一件事就是把它变成有限个数。下一页讲一般路线。</p>
+  </aside>
+</section>
+
+<!-- 7 数值路线 -->
+<section class="slide" data-part="bg" data-min="1.5" data-title="数值求解的路线">
+  <header><p class="eyebrow">绪论 · 怎么放进计算机</p><h2>先离散空间，再一步步推进时间</h2></header>
+  <div class="center">
+    <table class="data" style="font-size:24px">
+      <thead><tr><th></th><th>偏微分方程</th><th>第 1 步：空间离散</th><th>常微分方程组</th><th>第 2 步：时间推进</th></tr></thead>
+      <tbody>
+        <tr><td><strong>一般形式</strong></td><td>未知量是场，无穷维</td><td>选基函数或网格，只留 N 个数</td><td>\(\dot{\mathbf u} = \mathbf f(\mathbf u),\ \mathbf u\in\mathbb R^N\)</td><td>\(\mathbf u_{n+1} = \Phi_h(\mathbf u_n)\)</td></tr>
+        <tr><td><strong>声场 FDTD</strong></td><td>波动方程 \(p_{tt} = c^2\nabla^2 p\)</td><td>差分网格，N 动辄上百万</td><td>线性</td><td>蛙跳格式</td></tr>
+        <tr class="hl-navy"><td><strong>Lorenz</strong></td><td>二维 Boussinesq 对流</td><td>3 个 Fourier 模态，N = 3</td><td>非线性，3 行</td><td>RK4 · RK45 · DOP853</td></tr>
+      </tbody>
+    </table>
+    <p class="lede" style="max-width:none">这条路线叫线方法（method of lines）。Lorenz 是它最小的例子：N&nbsp;=&nbsp;3，小到每一步都能看清。<br>后面四个问题都落在第 2 步上：每一步的误差会怎样累积。</p>
+  </div>
+  <aside class="notes">
+    <p>用大家熟悉的声学 FDTD 做对照：波动方程先在网格上差分，变成一个很大的线性 ODE 组，再用蛙跳格式推进。Lorenz 走的是同一条路，只是第 1 步用的是 Fourier 模态而不是网格，而且只留了 3 个。</p>
+    <p>接下来两页讲第 1 步，再一页讲第 2 步。</p>
+  </aside>
+</section>
+
+<!-- 8 三个变量 -->
 <section class="slide" data-part="bg" data-min="2" data-title="三个变量">
-  <header><p class="eyebrow">背景 · 方程从哪里来</p><h2>x、y、z 是三种空间花样的振幅</h2></header>
+  <header><p class="eyebrow">绪论 · 第 1 步 空间离散</p><h2>只留三个模态：x、y、z 是它们的振幅</h2></header>
   <div class="split">
     <figure class="fig"><img src="figures/fig18_convection.png" alt="三个模态各自的空间形状，以及三者在 C+ 处合成的定常对流卷"><figcaption>lorenz63 figure fig18</figcaption></figure>
     <div class="col">
-      <p style="font-size:24px">Lorenz 把流函数和温度各展开成 Fourier 级数，<strong>只留三项</strong>：</p>
+      <p style="font-size:24px">把 ψ、θ 按满足边界条件的正弦展开（谱方法），Lorenz <strong>只留三项</strong>：</p>
       <div style="font-size:22px">$$\psi \propto x\,\sin\tfrac{\pi a X}{H}\sin\tfrac{\pi Z}{H}$$ $$\theta \propto y\,\cos\tfrac{\pi a X}{H}\sin\tfrac{\pi Z}{H} - z\,\sin\tfrac{2\pi Z}{H}$$</div>
       <ul class="plain" style="font-size:23px">
         <li><strong class="navy">x</strong>：卷翻滚得多快，正负是转向</li>
@@ -372,9 +438,30 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 7 每一项 -->
+<!-- 9 Galerkin -->
+<section class="slide" data-part="bg" data-min="2" data-title="截断丢掉了什么">
+  <header><p class="eyebrow">绪论 · 第 1 步 空间离散</p><h2>代回去、投影：截断丢掉了什么</h2></header>
+  <div class="full" style="justify-content:center;gap:30px">
+    <p style="font-size:26px">Galerkin 做法：把三项展开代入两条 PDE，乘以每个模态、在一个卷上积分，每个模态得到一条 ODE。线性项各回各的模态，要算的只有平流 J。取 H = 1，k = πa：</p>
+    <table class="data tight" style="font-size:24px">
+      <thead><tr><th>平流里相乘的两样</th><th>乘出来的空间花样</th><th>去向</th></tr></thead>
+      <tbody>
+        <tr><td>卷 × 卷　\(J(\psi,\nabla^2\psi)\)</td><td>0：单个模态的 \(\nabla^2\psi \propto \psi\)</td><td>\(\dot x\) 方程是线性的</td></tr>
+        <tr><td>卷 x × 温差 y</td><td>\(\tfrac{k\pi}{2}\sin 2\pi Z\)，<strong>恰好</strong>是 z 的花样</td><td>\(\dot z\) 里的 \(+xy\)</td></tr>
+        <tr class="hl"><td>卷 x × 剖面 z</td><td>\(k\pi\cos kX\,(\sin 3\pi Z - \sin\pi Z)\)</td><td>\(\sin\pi Z\) 回到 y：\(\dot y\) 里的 \(-xz\)<br><strong class="orbit">\(\sin 3\pi Z\) 不在三个模态里，扔掉</strong></td></tr>
+      </tbody>
+    </table>
+    <p class="lede" style="font-size:26px;max-width:none">截断就是扔掉 sin 3πZ 这一类高阶项。z 必须留：它是 x·y 直接生出来的。不留 z，方程只剩线性部分，ρ &gt; 1 时振幅指数增长、停不下来。</p>
+  </div>
+  <aside class="notes">
+    <p>这页是给"三个模态为什么能自己闭合"的回答。两个乘积可以直接用积化和差验证：x 的卷与 y 的温差相乘，含 cos 2kX 的项正好抵消，只剩水平均匀的 sin 2πZ，所以 xy 只喂 z。x 与 z 相乘生出 sin πZ 和 sin 3πZ 两部分，前者落回 y，后者被丢掉。</p>
+    <p>对计算方法的读法：这就是谱 Galerkin 方法，模态取得越多越接近原 PDE。Lorenz 取到最少，换来一个能整个看清的三维系统，代价是 ρ 大了以后和流体对不上（后面"推导到这里就断了"那页）。</p>
+  </aside>
+</section>
+
+<!-- 10 每一项 -->
 <section class="slide" data-part="bg" data-min="2" data-title="每一项的物理">
-  <header><p class="eyebrow">背景 · 方程从哪里来</p><h2>代回去，每一项都是一个物理过程</h2></header>
+  <header><p class="eyebrow">绪论 · 得到的 ODE</p><h2>三行 ODE，每一项都是一个物理过程</h2></header>
   <div class="center">
     <table class="data tight" style="font-size:23px">
       <thead><tr><th>方程</th><th>项</th><th>物理过程</th></tr></thead>
@@ -397,14 +484,14 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 8 经典参数 -->
+<!-- 11 经典参数 -->
 <section class="slide" data-part="bg" data-min="2" data-title="经典的那一组数">
-  <header><p class="eyebrow">背景 · 方程从哪里来</p><h2>经典的那一组数，每个都有来由</h2></header>
+  <header><p class="eyebrow">绪论 · 参数</p><h2>经典的那一组数，每个都有来由</h2></header>
   <div class="full" style="justify-content:center;gap:40px">
     <div class="strip" style="gap:72px">
       <div class="kv"><span class="v navy">σ = 10</span><span class="k">Prandtl 数 ν/κ</span></div>
       <div class="kv"><span class="v navy">β = 8/3</span><span class="k">卷的几何：4/(1+a²)</span></div>
-      <div class="kv"><span class="v orbit">ρ = 28</span><span class="k">Ra / Ra<sub>c</sub></span></div>
+      <div class="kv"><span class="v orbit">ρ = 28</span><span class="k">Ra / Ra<sub>c</sub>：加热是起对流的几倍</span></div>
     </div>
     <ul class="plain" style="font-size:27px;gap:26px">
       <li><strong>β = 8/3</strong>：宽度不同的卷各有各的失稳阈值 \(\mathrm{Ra}_c(a) = \pi^4(1+a^2)^3/a^2\)，在 a² = 1/2 最低（27π⁴/4 ≈ 657.5）。取最先失稳的那种卷，β = 4/(1 + ½) = 8/3，卷宽 √2 H。</li>
@@ -420,9 +507,9 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 9 边界 -->
+<!-- 12 边界 -->
 <section class="slide" data-part="bg" data-min="1" data-title="方程与它的边界">
-  <header><p class="eyebrow">背景 · 方程从哪里来</p><h2>推导到这里就断了</h2></header>
+  <header><p class="eyebrow">绪论 · 模型的边界</p><h2>推导到这里就断了</h2></header>
   <div class="split even">
     <div class="col">
       <div class="callout orbit-bg"><span class="tag orbit">局限</span>三模截断只在 ρ 略大于 1 时有渐近依据。ρ = 28 时被丢掉的高阶模态早已被激发，它是一个自洽的<strong>数学对象</strong>，不再是流体模型。</div>
@@ -443,26 +530,99 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 10 分隔：第 ① 问 -->
+<!-- 13 时间推进 -->
+<section class="slide" data-part="bg" data-min="2" data-title="把 ODE 变成迭代">
+  <header><p class="eyebrow">绪论 · 第 2 步 时间推进</p><h2>把三行 ODE 写成一步一步的迭代</h2></header>
+  <div class="split even">
+    <div class="col">
+<pre class="eig" style="font-size:19px;line-height:1.6">def f(u):                <span class="muted"># 就是那三行方程</span>
+    x, y, z = u
+    return np.array([σ*(y-x), x*(ρ-z) - y, x*y - β*z])
+
+u = u0                   <span class="muted"># 显式 Euler：一阶</span>
+for n in range(N):
+    u = u + h * f(u)
+
+def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
+    k1 = f(u)
+    k2 = f(u + h/2 * k1)
+    k3 = f(u + h/2 * k2)
+    k4 = f(u + h * k3)
+    return u + h/6 * (k1 + 2*k2 + 2*k3 + k4)</pre>
+      <p class="muted" style="font-size:20px">仓库里的 <code>integrate.rk4_step</code> 就是这几行（多一个时间参数）。幻灯片里的演示也用同一个 RK4，h = 0.005，在浏览器里现算。</p>
+    </div>
+    <div class="col">
+      <table class="data tight" style="font-size:22px">
+        <thead><tr><th>后面用到的积分器</th><th>步长怎么定</th></tr></thead>
+        <tbody>
+          <tr><td><strong>RK4</strong></td><td>固定 h；h 减半，误差约缩小 16 倍</td></tr>
+          <tr><td><strong>RK45</strong>（solve_ivp 默认）</td><td>每步估计局部误差，按 rtol 自动调 h</td></tr>
+          <tr><td><strong>DOP853</strong>，rtol = 1e-13</td><td>8 阶，当作参考解</td></tr>
+        </tbody>
+      </table>
+      <div class="callout navy-bg">开场那两条曲线，就是同一个 RK45 只把 rtol 从 1e-6 换成 1e-12。每一步的误差都很小，<strong>问题是这些误差怎么累积</strong>。</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>这是整个计算的全部代码：一个右端函数，一个循环。Euler 每步只看起点的斜率；RK4 在一步里取四个斜率加权平均，误差阶从 1 提到 4。仓库里有一个测试，用有解析解的问题检查 RK4 确实是四阶。</p>
+    <p>RK45 和 DOP853 是 scipy 的自适应方法：每步同时算两个不同阶的结果，用它们的差估计误差，误差超过 rtol 就缩小步长重来。</p>
+    <p>过渡到第 ① 问：学数值方法时，检验一个积分器最常用的办法是看守恒量漂不漂。Lorenz 能不能这样查？</p>
+  </aside>
+</section>
+
+<!-- 14 分隔：第 ① 问 -->
 <section class="slide" data-part="1" data-min="0.25" data-title="分隔：第 ① 问">
   <header><p class="eyebrow">第 ① 问</p><h2>能像检查能量守恒那样检查它吗？</h2></header>
   <div class="map-host" data-focus="1"></div>
   <aside class="notes">
-    <p>学数值方法时最常用的验证是看守恒量漂不漂。这一段先看 ρ 变大时相图怎么变，再说明 Lorenz 为什么没有这样的量可查。</p>
+    <p>学数值方法时最常用的验证是看守恒量漂不漂。这一段先现场拧 ρ 这个加热旋钮，看对流卷怎样从无到有、再到停不下来；然后看四个 ρ 下的相图，再说明 Lorenz 为什么没有守恒量可查。</p>
   </aside>
 </section>
 
-<!-- 11 相图 -->
+<!-- 15 演示：加热强度 ρ -->
+<section class="slide" id="rollSlide" data-part="1" data-min="3" data-title="现场演示：加热强度 ρ">
+  <header><p class="eyebrow">① 没有不变量可查 · 现场演示</p><h2>把底板加热到起对流时的 ρ 倍</h2></header>
+  <div class="demo roll">
+    <div class="pane">
+      <canvas id="rollCell" width="1840" height="740" aria-label="由当前 x、y、z 重建的对流层：颜色是温度，短线是流动"></canvas>
+      <canvas id="rollX" width="1840" height="380" aria-label="x 随时间变化，正负号是卷的转向"></canvas>
+    </div>
+    <div class="pane">
+      <div class="rho-head"><span>加热强度 ρ = Ra / Ra<sub>c</sub></span><span class="eps" id="rollRhoV">0.5</span></div>
+      <input type="range" id="rollRho" min="0.2" max="30" step="0.1" value="0.5" aria-label="ρ">
+      <div class="ruler"><span style="--at:0.0268">1<br>开始对流</span><span style="--at:0.8234">24.74<br>定常卷失稳</span></div>
+      <div class="ctrl">
+        <span class="muted" style="font-size:19px">下一页的四个 ρ</span>
+        <button type="button" data-rho="0.5">0.5</button><button type="button" data-rho="10">10</button><button type="button" data-rho="24.5">24.5</button><button type="button" data-rho="28">28</button>
+      </div>
+      <p class="regime" id="rollRegime"></p>
+      <canvas id="rollPhase" width="880" height="470" aria-label="x–z 相平面上的轨道与不动点"></canvas>
+      <div class="ctrl">
+        <button type="button" id="rollKick">推一下</button><button type="button" id="rollReset">回到静止</button>
+        <span class="readout" id="rollNu"></span>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>左上是对流层本身：颜色是温度（底热顶冷），短线是流体往哪走。它不是另算的流体，而是用 x、y、z 按绪论里那三个模态拼回去的场。左下是 x(t)：x &gt; 0 时热流体在两侧上升、中间下沉，x &lt; 0 时反过来。右下是同一条轨道在 x–z 平面上，实心点稳定，空心点不稳定。</p>
+    <p>讲法：从 ρ = 0.5 开始，什么都不动，热只靠传导。慢慢拖过 1，卷自己长出来，停在一个转向上，Nu 大于 1。拖到 10，还是一对定常卷。拖过 24.74，卷开始不规则地翻转，x 在正负之间跳，再也停不下来，这就是蝴蝶。</p>
+    <p>可选：先停在 24.5，卷是定常的（ρ 接近 24.74，螺旋收得很慢）；点"推一下"（把 z 突然加 15），同样的 ρ 下它就不再回来，一直乱翻。说明 ρ = 24.5 时两种结局并存，取决于初值。下一页的四格相图就是这四个 ρ。</p>
+    <p>流体里总有微小扰动，演示每一帧给 x 加 10⁻³ 量级的噪声，所以 ρ 刚过 1 时卷能从静止长出来；"回到静止"把状态放回原点附近。短线按真实流速的 0.15 倍画，只示意方向和快慢。</p>
+  </aside>
+</section>
+
+<!-- 16 相图 -->
 <section class="slide" data-part="1" data-min="1.5" data-title="四个 ρ 下的相图">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>四个区间，四种相图</h2></header>
   <div class="split">
     <figure class="fig"><img src="figures/fig13_phase_portraits.png" alt="ρ=0.5, 10, 24.5, 28 四格相图"><figcaption>lorenz63 figure fig13</figcaption></figure>
     <div class="col" style="font-size:24px">
+      <p class="muted">ρ 是加热旋钮：底板温差是刚好起对流时的 ρ 倍。</p>
       <ul class="plain">
-        <li><strong class="mono">ρ = 0.5</strong>　只有原点，全局稳定。</li>
-        <li><strong class="mono">ρ = 10</strong>　原点成鞍点，轨道以衰减螺旋落向 C±。</li>
-        <li><strong class="mono">ρ = 24.5</strong>　C± 仍线性稳定，混沌吸引子已经存在。终点取决于吸引域。</li>
-        <li><strong class="mono">ρ = 28</strong>　三个不动点全不稳定，蝴蝶出现。</li>
+        <li><strong class="mono">ρ = 0.5</strong>　静止。只有原点，全局稳定。</li>
+        <li><strong class="mono">ρ = 10</strong>　定常卷。原点成鞍点，轨道以衰减螺旋落向 C±。</li>
+        <li><strong class="mono">ρ = 24.5</strong>　两种结局并存。C± 仍线性稳定，混沌吸引子已经存在，终点取决于初值。</li>
+        <li><strong class="mono">ρ = 28</strong>　卷不停翻转。三个不动点全不稳定，蝴蝶出现。</li>
       </ul>
       <p class="muted">这四格不丢瞬态：要看的就是轨道怎样落到吸引集上。</p>
     </div>
@@ -473,7 +633,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 12 不动点 -->
+<!-- 17 不动点 -->
 <section class="slide" data-part="1" data-min="1.5" data-title="不动点稳定性">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>三个不动点，ρ = 28 时全部不稳定</h2></header>
   <div class="split">
@@ -491,7 +651,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 13 有界 -->
+<!-- 18 有界 -->
 <section class="slide" data-part="1" data-min="1" data-title="有界性">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>耗散，但有界</h2></header>
   <div class="split even">
@@ -510,7 +670,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 14 体积 -->
+<!-- 19 体积 -->
 <section class="slide" data-part="1" data-min="1.5" data-title="相空间体积">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>相空间体积以固定速率坍缩</h2></header>
   <div class="split">
@@ -531,7 +691,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 15 分隔：第 ② 问 -->
+<!-- 20 分隔：第 ② 问 -->
 <section class="slide" data-part="2" data-min="0.25" data-title="分隔：第 ② 问">
   <header><p class="eyebrow">第 ② 问</p><h2>算得更准，能多算多久？</h2></header>
   <div class="map-host" data-focus="2"></div>
@@ -540,7 +700,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 16 演示：缩小 ε 能多看多久 -->
+<!-- 21 演示：缩小 ε 能多看多久 -->
 <section class="slide" id="splitSlide" data-part="2" data-min="3" data-title="现场演示：缩小初值差">
   <header><p class="eyebrow">② 精度只换来对数时间 · 现场演示</p><h2>初值差缩小 10 倍，能多看多久？</h2></header>
   <div class="demo">
@@ -573,7 +733,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 17 误差增长 -->
+<!-- 22 误差增长 -->
 <section class="slide" data-part="2" data-min="1.5" data-title="误差增长">
   <header><p class="eyebrow">② 精度只换来对数时间</p><h2>误差按 λ₁ 增长，到吸引子尺度饱和</h2></header>
   <div class="split">
@@ -591,7 +751,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 18 容差扫描 -->
+<!-- 23 容差扫描 -->
 <section class="slide" data-part="2" data-min="2" data-title="容差扫描">
   <header><p class="eyebrow">② 精度只换来对数时间 · 核心证据</p><h2>可分辨时间对 ln(1/rtol) 是一条直线</h2></header>
   <div class="split">
@@ -617,7 +777,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 19 回答 -->
+<!-- 24 回答 -->
 <section class="slide" data-part="2" data-min="0.5" data-title="回答开场的问题">
   <header><p class="eyebrow">② 精度只换来对数时间</p><h2>回到开场的问题</h2></header>
   <div class="center">
@@ -629,7 +789,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 20 分隔：第 ③ 问 -->
+<!-- 25 分隔：第 ③ 问 -->
 <section class="slide" data-part="3" data-min="0.25" data-title="分隔：第 ③ 问">
   <header><p class="eyebrow">第 ③ 问</p><h2>单条轨道不可信，那还有什么可信？</h2></header>
   <div class="map-host" data-focus="3"></div>
@@ -638,7 +798,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 21 影随 -->
+<!-- 26 影随 -->
 <section class="slide" data-part="3" data-min="1.5" data-title="影随">
   <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>那还剩下什么可信？</h2></header>
   <div class="split even">
@@ -658,7 +818,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 22 中心实验 -->
+<!-- 27 中心实验 -->
 <section class="slide" data-part="3" data-min="2.5" data-title="中心实验">
   <header><p class="eyebrow">③ 统计量不随求解器变 · 中心实验</p><h2>同一组数据：<span class="orbit">左边报废</span>，<span class="stat">右边完好</span></h2></header>
   <div class="full">
@@ -676,7 +836,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 23 不变密度 -->
+<!-- 28 不变密度 -->
 <section class="slide" data-part="3" data-min="1" data-title="不变密度">
   <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>不变密度同样不动</h2></header>
   <div class="split">
@@ -693,7 +853,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 24 吸引子 -->
+<!-- 29 吸引子 -->
 <section class="slide" data-part="3" data-min="0.5" data-title="吸引子">
   <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>教科书上的蝴蝶不是幻觉</h2></header>
   <div class="split">
@@ -709,7 +869,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 25 分隔：第 ④ 问 -->
+<!-- 30 分隔：第 ④ 问 -->
 <section class="slide" data-part="4" data-min="0.25" data-title="分隔：第 ④ 问">
   <header><p class="eyebrow">第 ④ 问</p><h2>换一类系统，答案还一样吗？</h2></header>
   <div class="map-host" data-focus="4"></div>
@@ -718,7 +878,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 26 判据表 -->
+<!-- 31 判据表 -->
 <section class="slide" data-part="4" data-min="1.5" data-title="判据表">
   <header><p class="eyebrow">④ 判据随系统类型变</p><h2>"可信吗"不能脱离系统类型回答</h2></header>
   <div class="center">
@@ -738,7 +898,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 27 守恒对照 -->
+<!-- 32 守恒对照 -->
 <section class="slide" data-part="4" data-min="2" data-title="守恒系统对照">
   <header><p class="eyebrow">④ 判据随系统类型变</p><h2>守恒系统里，精度换来成倍的时间</h2></header>
   <div class="full">
@@ -757,7 +917,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 28 声学 -->
+<!-- 33 声学 -->
 <section class="slide" data-part="4" data-min="1" data-title="回到声学">
   <header><p class="eyebrow">④ 判据随系统类型变</p><h2>回到声学</h2></header>
   <div class="split even">
@@ -777,7 +937,7 @@ pre.eig {
   </aside>
 </section>
 
-<!-- 29 结论 -->
+<!-- 34 结论 -->
 <section class="slide" data-part="4" data-min="1" data-title="结论与复现">
   <header><p class="eyebrow">结论</p><h2>守恒系统看不变量，混沌系统看统计量</h2></header>
   <div class="split even">
@@ -801,7 +961,7 @@ uv run lorenz63 figure all</pre>
   </aside>
 </section>
 
-<!-- 30 备用目录 -->
+<!-- 35 备用目录 -->
 <section class="slide" id="backupIndex" data-part="b" data-min="0" data-title="备用页">
   <header><p class="eyebrow">备用</p><h2>备用页</h2></header>
   <ol class="backup-list" id="backupList"></ol>
@@ -810,7 +970,7 @@ uv run lorenz63 figure all</pre>
   </aside>
 </section>
 
-<!-- 31 分岔 -->
+<!-- 36 分岔 -->
 <section class="slide" data-part="b" data-min="0" data-title="分岔图">
   <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>动力学在代数预言的位置改变</h2></header>
   <div class="full">
@@ -827,7 +987,7 @@ uv run lorenz63 figure all</pre>
   </aside>
 </section>
 
-<!-- 32 本征结构 -->
+<!-- 37 本征结构 -->
 <section class="slide" data-part="b" data-min="0" data-title="本征结构">
   <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>吸引子的形状来自线性代数</h2></header>
   <div class="full">
@@ -841,7 +1001,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 33 Poincaré -->
+<!-- 38 Poincaré -->
 <section class="slide" data-part="b" data-min="0" data-title="Poincaré 截面">
   <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>三维流 → 二维截面 → 一维映射</h2></header>
   <div class="full">
@@ -858,7 +1018,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 34 两件事 -->
+<!-- 39 两件事 -->
 <section class="slide" data-part="b" data-min="0" data-title="稳定性与 Lyapunov 指数">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>两件常被混为一谈的事</h2></header>
   <div class="center">
@@ -876,7 +1036,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 35 稳定域 -->
+<!-- 40 稳定域 -->
 <section class="slide" data-part="b" data-min="0" data-title="RK4 稳定域">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>瓶颈是精度，不是稳定性</h2></header>
   <div class="split">
@@ -896,7 +1056,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 36 正交化 -->
+<!-- 41 正交化 -->
 <section class="slide" data-part="b" data-min="0" data-title="QR 重正交化">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>Lyapunov 谱为什么必须重正交</h2></header>
   <div class="full">
@@ -914,7 +1074,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 37 谱 -->
+<!-- 42 谱 -->
 <section class="slide" data-part="b" data-min="0" data-title="Lyapunov 谱与自洽检验">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>λ₁ 是数值结果，凭什么信它</h2></header>
   <div class="split">
@@ -932,7 +1092,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 38 FTLE -->
+<!-- 43 FTLE -->
 <section class="slide" data-part="b" data-min="0" data-title="有限时间 Lyapunov 指数">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>局部拉伸率差别极大</h2></header>
   <div class="split">
@@ -955,7 +1115,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 39 收敛性 -->
+<!-- 44 收敛性 -->
 <section class="slide" data-part="b" data-min="0" data-title="收敛性研究的推论">
   <header><p class="eyebrow">备用 · ④ 判据随系统类型变</p><h2>推论：混沌问题的收敛阶要在短窗口里验</h2></header>
   <div class="split even">
@@ -974,7 +1134,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 40 数字汇总 -->
+<!-- 45 数字汇总 -->
 <section class="slide" data-part="b" data-min="0" data-title="数字汇总">
   <header><p class="eyebrow">备用</p><h2>数字汇总</h2></header>
   <div class="split even" style="font-size:21px">
@@ -1007,8 +1167,8 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
 </section>
 
       <footer class="foot" aria-hidden="true">
-        <span>Lorenz 63 · 数值结果的可信度</span>
-        <span class="chain" id="chain"><span data-p="bg">背景</span><span data-p="1">① 无不变量</span><span data-p="2">② 对数时间</span><span data-p="3">③ 统计量</span><span data-p="4">④ 判据</span></span>
+        <span>Lorenz 63 · 从方程到可信的数值解</span>
+        <span class="chain" id="chain"><span data-p="bg">绪论</span><span data-p="1">① 无不变量</span><span data-p="2">② 对数时间</span><span data-p="3">③ 统计量</span><span data-p="4">④ 判据</span></span>
         <span class="pg" id="pg"></span>
       </footer>
     </div>
@@ -1031,7 +1191,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
 
 <template id="mapTpl">
   <div class="mmap">
-    <div class="mm-root"><b>什么样的<br>数值结果<br>值得相信？</b><span>以 Lorenz 系统为例</span></div>
+    <div class="mm-root"><b>从对流方程<br>到可信的<br>数值解</b><span>以 Lorenz 系统为例</span></div>
     <svg class="mm-wires" viewBox="0 0 90 580" aria-hidden="true">
       <path data-p="bg" d="M0,290 C45,290 45,58 90,58"/>
       <path data-p="1" d="M0,290 C45,290 45,174 90,174"/>
@@ -1041,12 +1201,12 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
     </svg>
     <div class="mm-rows">
       <div class="mm-row" data-p="bg" title="跳到这一段">
-        <div class="mm-q"><i>背景</i>这组方程描述什么？</div>
-        <div class="mm-a"><span>加热的流体层：振幅 x、y、z 与参数 σ、ρ、β</span><small>对流示意 · fig18</small></div>
+        <div class="mm-q"><i>绪论</i>方程怎么来，怎么算？</div>
+        <div class="mm-a"><span>PDE → 留三个模态 → 三行 ODE → 逐步迭代</span><small>Boussinesq 方程 · fig18 · RK4 代码</small></div>
       </div>
       <div class="mm-row" data-p="1" title="跳到这一段">
         <div class="mm-q"><i>①</i>能像查能量守恒那样查它吗？</div>
-        <div class="mm-a"><span>不能：<strong>没有守恒量</strong>，相空间体积一直在缩</span><small>四个 ρ 的相图 fig13 · 体积 fig05</small></div>
+        <div class="mm-a"><span>不能：<strong>没有守恒量</strong>，相空间体积一直在缩</span><small>现场演示 · 四个 ρ 的相图 fig13 · 体积 fig05</small></div>
       </div>
       <div class="mm-row" data-p="2" title="跳到这一段">
         <div class="mm-q"><i>②</i>算得更准，能多算多久？</div>
@@ -1147,6 +1307,7 @@ window.MathJax = {
     try { history.replaceState(null, "", "#s" + (cur + 1)); } catch (e) {}
     hero.toggle(sl.classList.contains("cover"));
     split.toggle(sl.id === "splitSlide");
+    roll.toggle(sl.id === "rollSlide");
   }
 
   function toggleNotes(force) {
@@ -1464,6 +1625,193 @@ window.MathJax = {
         if (on && !cur) start(+slider.value);
         if (on) play();
         else if (raf !== null) { cancelAnimationFrame(raf); raf = null; }
+      }
+    };
+  })();
+
+  /* ---------- 演示①：拖 ρ，看对流卷从无到有，再到停不下来 ---------- */
+  const roll = (function () {
+    const cell = document.getElementById("rollCell");
+    const strip = document.getElementById("rollX");
+    const phase = document.getElementById("rollPhase");
+    const cc = cell.getContext("2d"), sc = strip.getContext("2d"), pc = phase.getContext("2d");
+    const css = getComputedStyle(document.documentElement);
+    const col = name => css.getPropertyValue(name).trim();
+    const NAVY = col("--navy"), ORBIT = col("--orbit"), INK = col("--ink"), INK2 = col("--ink-2"), RULE = col("--rule"), PAPER = col("--paper");
+    const MONO = col("--mono"), SANS = col("--sans");
+    const S = 10, B = 8 / 3, H = 0.005, STEPS = 4;
+    const RHO_H = S * (S + B + 3) / (S - B - 1);   // 470/19：C± 在这里失稳
+    // 由状态 (x, y, z) 重建流场与温度场，公式同 src/lorenz63/convection.py（H = κ = ΔT = 1）
+    const A2 = 4 / B - 1, A = Math.sqrt(A2);       // β = 4/(1+a²)，所以 a² = 1/2
+    const L = 2 / A;                               // 一个波长：一对反向旋转的卷
+    const AMP = Math.SQRT2 * (1 + A2) / A;         // ψ = AMP·x·sin(πaX)·sin(πZ)
+    const TAU = Math.PI * Math.PI * (1 + A2);      // Lorenz 的 1 个时间单位 = H²/κ 的 1/TAU
+    const VIS = 0.15;                              // 短线按真实流速的 0.15 倍走，只示意方向与快慢
+    const NOISE = 1e-3;                            // 流体里总有的微小扰动，让卷能在几秒内从静止长出来
+    const WINDOW = 30, TRAIL = 15;                 // x(t) 显示最近 30 个时间单位，相平面留 15 个
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    let rho = 0.5, u, t, hist, raf = null;
+    function f(v) { return [S * (v[1] - v[0]), v[0] * (rho - v[2]) - v[1], v[0] * v[1] - B * v[2]]; }
+    function rk4(v) {
+      const k1 = f(v);
+      const k2 = f(v.map((w, i) => w + 0.5 * H * k1[i]));
+      const k3 = f(v.map((w, i) => w + 0.5 * H * k2[i]));
+      const k4 = f(v.map((w, i) => w + H * k3[i]));
+      return v.map((w, i) => w + H / 6 * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]));
+    }
+    function reset() { u = [NOISE, 0, 0]; t = 0; hist = [[0, u.slice()]]; }
+
+    /* 温度场先画在一张小图上，再放大到对流层：底热（朱红）顶冷（藏青） */
+    const GW = 180, GH = 64;
+    const field = document.createElement("canvas");
+    field.width = GW; field.height = GH;
+    const fc = field.getContext("2d"), img = fc.createImageData(GW, GH);
+    const cosX = [], sinZ = [], sin2Z = [], Zs = [];
+    for (let i = 0; i < GW; i++) cosX.push(Math.cos(Math.PI * A * (i + 0.5) / GW * L));
+    for (let j = 0; j < GH; j++) {
+      const Z = 1 - (j + 0.5) / GH;
+      Zs.push(Z); sinZ.push(Math.sin(Math.PI * Z)); sin2Z.push(Math.sin(2 * Math.PI * Z));
+    }
+    const rgb = hex => [1, 3, 5].map(k => parseInt(hex.slice(k, k + 2), 16));
+    const COLD = rgb(NAVY), MID = [244, 241, 236], HOT = rgb(ORBIT);
+    function paint(T) {
+      const s = Math.max(0, Math.min(1, T));
+      const [p, q, w] = s < 0.5 ? [COLD, MID, s * 2] : [MID, HOT, s * 2 - 1];
+      return [0, 1, 2].map(k => p[k] + (q[k] - p[k]) * w);
+    }
+    function drawField() {
+      const d = img.data;
+      for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) {
+        const theta = (Math.SQRT2 * u[1] * cosX[i] * sinZ[j] - u[2] * sin2Z[j]) / (Math.PI * rho);
+        const c = paint(1 - Zs[j] + theta), o = 4 * (j * GW + i);
+        d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255;
+      }
+      fc.putImageData(img, 0, 0);
+    }
+
+    /* 示踪粒子：随当前速度场走，偶尔换一个随机位置，免得都挤到卷心 */
+    const NP = 240, px = new Float64Array(NP), pz = new Float64Array(NP);
+    const seed = k => { px[k] = Math.random() * L; pz[k] = 0.04 + 0.92 * Math.random(); };
+    for (let k = 0; k < NP; k++) seed(k);
+    function vel(X, Z) {
+      const s = Math.sin(Math.PI * A * X), c = Math.cos(Math.PI * A * X);
+      return [-AMP * u[0] * Math.PI * s * Math.cos(Math.PI * Z), AMP * u[0] * Math.PI * A * c * Math.sin(Math.PI * Z)];
+    }
+    function moveParticles(dtau) {
+      for (let k = 0; k < NP; k++) {
+        if (Math.random() < 0.006) { seed(k); continue; }
+        const v = vel(px[k], pz[k]), g = VIS * dtau / TAU;
+        px[k] = Math.max(0, Math.min(L, px[k] + v[0] * g));
+        pz[k] = Math.max(0.01, Math.min(0.99, pz[k] + v[1] * g));
+      }
+    }
+
+    const BAR = 52, CH = cell.height - 2 * BAR;
+    const cx = X => X / L * cell.width, cz = Z => BAR + (1 - Z) * CH;
+    function drawCell() {
+      drawField();
+      cc.imageSmoothingEnabled = true;
+      cc.drawImage(field, 0, BAR, cell.width, CH);
+      cc.fillStyle = NAVY; cc.fillRect(0, 0, cell.width, BAR);
+      cc.fillStyle = ORBIT; cc.fillRect(0, cell.height - BAR, cell.width, BAR);
+      cc.fillStyle = PAPER; cc.font = "500 32px " + SANS; cc.textAlign = "center"; cc.textBaseline = "middle";
+      cc.fillText("顶板 · 冷", cell.width / 2, BAR / 2);
+      cc.fillText("底板 · 热，温差是起对流所需的 " + rho.toFixed(1) + " 倍", cell.width / 2, cell.height - BAR / 2);
+      cc.strokeStyle = INK; cc.globalAlpha = 0.6; cc.lineWidth = 4; cc.lineCap = "round";
+      cc.beginPath();
+      for (let k = 0; k < NP; k++) {
+        const v = vel(px[k], pz[k]);
+        const len = Math.min(0.1, 0.0009 * Math.hypot(v[0], v[1])) / (Math.hypot(v[0], v[1]) || 1);
+        cc.moveTo(cx(px[k]), cz(pz[k]));
+        cc.lineTo(cx(px[k] - v[0] * len), cz(pz[k] - v[1] * len));
+      }
+      cc.stroke(); cc.globalAlpha = 1;
+    }
+
+    /* x(t)：最近 WINDOW 个时间单位 */
+    const XM = 24;
+    function drawStrip() {
+      const c = sc, W = strip.width, Hh = strip.height, l = 120, r = 20;
+      const sx = tt => l + (tt - (t - WINDOW)) / WINDOW * (W - l - r);
+      const sy = x => Hh / 2 - x / XM * (Hh / 2 - 16);
+      c.clearRect(0, 0, W, Hh);
+      c.fillStyle = col("--wash-navy"); c.fillRect(0, 0, W, Hh);
+      c.strokeStyle = RULE; c.lineWidth = 2; c.beginPath(); c.moveTo(l, sy(0)); c.lineTo(W - r, sy(0)); c.stroke();
+      c.fillStyle = INK2; c.font = "28px " + MONO; c.textAlign = "right"; c.textBaseline = "middle";
+      c.fillText("x(t)", l - 18, sy(0));
+      c.font = "28px " + SANS; c.textAlign = "left";
+      c.fillText("x > 0：两侧升、中间降", l + 12, 32); c.fillText("x < 0：反过来", l + 12, Hh - 32);
+      c.strokeStyle = NAVY; c.lineWidth = 4; c.lineJoin = "round"; c.beginPath();
+      let first = true;
+      hist.forEach(h => { if (h[0] < t - WINDOW) return; const X = sx(h[0]), Y = sy(Math.max(-XM, Math.min(XM, h[1][0]))); first ? c.moveTo(X, Y) : c.lineTo(X, Y); first = false; });
+      c.stroke();
+    }
+
+    /* x–z 相平面：轨道尾迹与三个不动点，实心稳定、空心不稳定 */
+    function drawPhase() {
+      const c = pc, W = phase.width, Hh = phase.height, m = 36;
+      const qx = x => W / 2 + x / 26 * (W / 2 - m);
+      const qz = z => Hh - m - z / 54 * (Hh - 2 * m);
+      c.clearRect(0, 0, W, Hh);
+      c.fillStyle = col("--wash-navy"); c.fillRect(0, 0, W, Hh);
+      c.fillStyle = INK2; c.font = "26px " + MONO; c.textBaseline = "middle";
+      c.textAlign = "right"; c.fillText("x", W - 14, qz(0));
+      c.textAlign = "left"; c.fillText("z", W / 2 + 12, m - 6);
+      c.strokeStyle = RULE; c.lineWidth = 2; c.beginPath();
+      c.moveTo(m, qz(0)); c.lineTo(W - m, qz(0)); c.moveTo(W / 2, Hh - m); c.lineTo(W / 2, m); c.stroke();
+      c.strokeStyle = NAVY; c.lineWidth = 3; c.globalAlpha = 0.75; c.lineJoin = "round"; c.beginPath();
+      let first = true;
+      hist.forEach(h => { if (h[0] < t - TRAIL) return; const v = h[1]; first ? c.moveTo(qx(v[0]), qz(v[2])) : c.lineTo(qx(v[0]), qz(v[2])); first = false; });
+      c.stroke(); c.globalAlpha = 1;
+      const pts = [[0, 0, rho < 1]];
+      if (rho > 1) { const e = Math.sqrt(B * (rho - 1)); pts.push([e, rho - 1, rho < RHO_H], [-e, rho - 1, rho < RHO_H]); }
+      pts.forEach(([x, z, stable]) => {
+        c.beginPath(); c.arc(qx(x), qz(z), 11, 0, 2 * Math.PI);
+        c.lineWidth = 4; c.strokeStyle = INK; c.fillStyle = stable ? INK : PAPER; c.fill(); c.stroke();
+      });
+      c.fillStyle = ORBIT; c.beginPath(); c.arc(qx(u[0]), qz(u[2]), 12, 0, 2 * Math.PI); c.fill();
+    }
+
+    const regime = document.getElementById("rollRegime");
+    const slider = document.getElementById("rollRho");
+    function label() {
+      document.getElementById("rollRhoV").textContent = rho.toFixed(1);
+      regime.innerHTML = rho < 1 ? "<strong>静止</strong>：浮力敌不过粘性和热扩散，热量只靠传导"
+        : rho < RHO_H ? "<strong>一对定常的对流卷</strong>：轨道落到不动点 C<sub>+</sub> 或 C<sub>−</sub>，转向取决于初值"
+        : "<strong class=\"orbit\">卷不停地翻转</strong>：C± 也失稳，轨道哪里都停不下来";
+    }
+    function readout() {
+      document.getElementById("rollNu").textContent = "Nu = 1 + 2z/ρ = " + (1 + 2 * u[2] / rho).toFixed(2);
+    }
+    function draw() { drawCell(); drawStrip(); drawPhase(); readout(); }
+
+    function advance(n) {
+      for (let k = 0; k < n; k++) { u = rk4(u); t += H; }
+      u[0] += (Math.random() - 0.5) * 2 * NOISE;
+      hist.push([t, u.slice()]);
+      while (hist.length && hist[0][0] < t - WINDOW) hist.shift();
+      moveParticles(n * H);
+    }
+    function frame() {
+      advance(STEPS); draw();
+      raf = requestAnimationFrame(frame);
+    }
+    function settle() { if (reduce) { for (let k = 0; k < 600; k++) advance(STEPS); draw(); } }
+    function setRho(r) { rho = r; slider.value = r; label(); settle(); }
+
+    slider.addEventListener("input", () => setRho(+slider.value));
+    document.querySelectorAll("#rollSlide [data-rho]").forEach(b => b.addEventListener("click", () => setRho(+b.dataset.rho)));
+    // 推一下：z 突然加 15。ρ = 24.5 时从定常卷或它的衰减螺旋出发，这样推都会落到混沌集上
+    document.getElementById("rollKick").addEventListener("click", () => { u[2] += 15; settle(); });
+    document.getElementById("rollReset").addEventListener("click", () => { reset(); settle(); });
+    reset(); label(); draw();
+
+    return {
+      toggle(on) {
+        if (on && reduce) settle();
+        if (on && !reduce && raf === null) raf = requestAnimationFrame(frame);
+        if (!on && raf !== null) { cancelAnimationFrame(raf); raf = null; }
       }
     };
   })();
