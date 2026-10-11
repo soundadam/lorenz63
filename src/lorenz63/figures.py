@@ -26,6 +26,7 @@ from lorenz63.bifurcation import (  # noqa: E402
     eigenvalue_locus,
     rho_sweep,
 )
+from lorenz63.convection import convection_field, nusselt  # noqa: E402
 from lorenz63.hamiltonian import (  # noqa: E402
     DEFAULT_ECCENTRICITY,
     KEPLER_PERIOD,
@@ -75,6 +76,7 @@ from lorenz63.system import (  # noqa: E402
     RHO_HOMOCLINIC,
     LorenzParams,
     divergence,
+    fixed_points,
     hopf_rho,
     jacobian,
     rhs,
@@ -1337,6 +1339,69 @@ def _conservative_data() -> dict[str, NDArray]:
 
 
 # ---------------------------------------------------------------------------
+# 18 — what x, y, z are: one convecting layer
+# ---------------------------------------------------------------------------
+
+
+def fig18_convection(output: Path) -> Path:
+    """Each Lorenz variable as the spatial pattern it multiplies, then all three at C+."""
+    p = CLASSICAL
+    c_plus = fixed_points(p)[1]
+    fig = plt.figure(figsize=(11.0, 7.6))
+    grid = fig.add_gridspec(2, 3, height_ratios=[1.0, 1.25])
+
+    def roll_axes(ax: plt.Axes, title: str) -> plt.Axes:
+        ax.set_aspect("equal")
+        ax.set_xticks([])
+        ax.set_yticks([0, 1])
+        ax.set_yticklabels(["底（热）", "顶（冷）"], fontsize=8)
+        ax.set_title(title, fontsize=10)
+        return ax
+
+    # x alone: the stream function, i.e. the rolls themselves.
+    f = convection_field(np.array([1.0, 0.0, 0.0]), p)
+    ax = roll_axes(fig.add_subplot(grid[0, 0]), "x：对流卷的翻滚速度")
+    ax.streamplot(f.x[0], f.z[:, 0], f.u, f.w, color=C_REF, density=0.9, linewidth=0.8)
+
+    # y alone: warm where fluid rises, cool where it sinks.
+    f = convection_field(np.array([0.0, 1.0, 0.0]), p)
+    ax = roll_axes(fig.add_subplot(grid[0, 1]), "y：上升流与下沉流的温差")
+    theta = f.temperature - (1.0 - f.z)
+    lim = np.abs(theta).max()
+    ax.pcolormesh(f.x, f.z, theta, cmap="RdBu_r", vmin=-lim, vmax=lim, shading="auto")
+
+    # z alone: horizontally uniform, so draw the mean profile it produces.
+    ax = _style(fig.add_subplot(grid[0, 2]))
+    f = convection_field(c_plus, p)
+    profile = f.temperature.mean(axis=1)
+    z = f.z[:, 0]
+    ax.plot(1.0 - z, z, color=C_MUTED, ls="--", lw=1.0, label="纯传导：线性")
+    ax.plot(profile, z, color=C_LOOSE, lw=1.6, label=f"C+ 处，z = {c_plus[2]:.0f}")
+    ax.set_xlabel("水平平均温度")
+    ax.set_ylabel("高度")
+    ax.set_title(f"z：剖面弯离线性 → Nu = 1 + 2z/ρ = {nusselt(c_plus, p):.2f}", fontsize=10)
+    ax.legend(fontsize=8, loc="upper right")
+
+    # All three together at C+: steady rolls carrying heat upward.
+    ax = roll_axes(fig.add_subplot(grid[1, :]), "")
+    mesh = ax.pcolormesh(
+        f.x, f.z, f.temperature, cmap="RdBu_r", vmin=0.0, vmax=1.0, shading="auto"
+    )
+    ax.streamplot(
+        f.x[0], f.z[:, 0], f.u, f.w, color="k", density=1.1, linewidth=0.7, arrowsize=0.9
+    )
+    fig.colorbar(mesh, ax=ax, fraction=0.02, pad=0.01, label="温度（底 = 1，顶 = 0）")
+    x, y, zz = c_plus
+    ax.set_title(
+        f"三者合起来：C+ = ({x:.2f}, {y:.2f}, {zz:.0f}) 是一对定常对流卷"
+        f"（σ=10, ρ=28, β=8/3，横向一个波长 = {f.x[0, -1]:.2f} H）",
+        fontsize=10,
+    )
+
+    return _finish(fig, output, "fig18_convection")
+
+
+# ---------------------------------------------------------------------------
 
 FIGURES: dict[str, Callable[[Path], Path]] = {
     "fig01": fig01_paradox,
@@ -1356,4 +1421,5 @@ FIGURES: dict[str, Callable[[Path], Path]] = {
     "fig15": fig15_eigen_structure,
     "fig16": fig16_orthogonalisation,
     "fig17": fig17_conservative,
+    "fig18": fig18_convection,
 }
