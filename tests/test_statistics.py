@@ -1,8 +1,8 @@
 """Invariant statistics, and the claim that they survive changing the solver.
 
-The test that matters here is ``test_lorenz_map_is_solver_independent``. Two
-solvers whose individual trajectories have nothing to do with each other after
-40 time units produce the *same* return map to within a fraction of a percent.
+The test that matters here is ``test_lorenz_map_is_tolerance_independent``.
+Two tolerances whose individual trajectories part after about 10 time units
+produce the *same* return map to within a fraction of a percent.
 That is the positive half of the report's argument.
 """
 

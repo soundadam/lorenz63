@@ -255,6 +255,7 @@ pre.eig {
 .notes-panel .meta { font-family: var(--mono); font-size: 13px; color: var(--ink-2); margin-bottom: 6px; display: flex; gap: 20px; flex-wrap: wrap; }
 .notes-panel p { margin: 0 0 8px; max-width: 70em; }
 .notes-panel .q { color: var(--orbit); }
+.notes-panel .key { color: var(--navy); font-weight: 700; }
 
 @media (max-width: 640px) {
   .bar .hint { display: none; }
