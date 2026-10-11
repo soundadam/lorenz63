@@ -289,7 +289,7 @@ pre.eig {
 
 <!-- 2 目录 -->
 <section class="slide" data-part="0" data-min="1" data-title="目录">
-  <header><p class="eyebrow">目录</p><h2>先推导、离散，再检验算出来的结果</h2></header>
+  <header><p class="eyebrow">目录</p><h2>一段推导，四个问题</h2></header>
   <div class="map-host"></div>
   <aside class="notes">
     <p>先把整张地图亮出来：左边是题目，右边五行从上往下就是讲的顺序。绪论把方程从流体力学推出来、放进计算机；后面四问检验算出来的东西。每一行左边是用大白话问的问题，右边是答案和拿来作证的图或演示。现在不用解释答案，只念问题。</p>
@@ -326,7 +326,7 @@ pre.eig {
 
 <!-- 5 物理图景 -->
 <section class="slide" data-part="bg" data-min="1.5" data-title="从哪里来">
-  <header><p class="eyebrow">绪论 · 物理图景</p><h2>一层从下面加热的流体</h2></header>
+  <header><p class="eyebrow">绪论 · 物理图景</p><h2>Rayleigh–Bénard 对流</h2></header>
   <div class="split even">
     <div class="col">
       <svg viewBox="0 0 600 360" role="img" aria-label="Rayleigh–Bénard 对流示意：底板热、顶板冷，中间一对反向旋转的对流卷" style="width:100%;height:auto">
@@ -356,7 +356,7 @@ pre.eig {
         <li>Ra 大于 Ra<sub>c</sub>：静止失稳，长出一排<strong>对流卷</strong></li>
         <li>另一个无量纲数 Pr = ν/κ：动量与热量各自扩散的快慢之比</li>
       </ul>
-      <p style="font-size:24px">Saltzman（1962）、Lorenz（1963）研究的就是这个 Rayleigh–Bénard 问题，只看一个方向上的二维卷。</p>
+      <p style="font-size:24px">Saltzman（1962）、Lorenz（1963）只看一个方向上的二维卷。</p>
     </div>
   </div>
   <aside class="notes">
@@ -367,7 +367,7 @@ pre.eig {
 
 <!-- 6 出发点 -->
 <section class="slide" data-part="bg" data-min="2" data-title="出发点：两条偏微分方程">
-  <header><p class="eyebrow">绪论 · 出发点</p><h2>从流体力学的基本方程出发</h2></header>
+  <header><p class="eyebrow">绪论 · 出发点</p><h2>Boussinesq 方程与流函数形式</h2></header>
   <div class="split even">
     <div class="col">
       <p style="font-size:24px">Boussinesq 近似：密度只在浮力项里随温度变，其余地方当常数。</p>
@@ -398,7 +398,7 @@ pre.eig {
 
 <!-- 7 数值路线 -->
 <section class="slide" data-part="bg" data-min="1.5" data-title="数值求解的路线">
-  <header><p class="eyebrow">绪论 · 怎么放进计算机</p><h2>先离散空间，再一步步推进时间</h2></header>
+  <header><p class="eyebrow">绪论 · 怎么放进计算机</p><h2>线方法：先空间离散，再时间积分</h2></header>
   <div class="center">
     <table class="data" style="font-size:24px">
       <thead><tr><th></th><th>偏微分方程</th><th>第 1 步：空间离散</th><th>常微分方程组</th><th>第 2 步：时间推进</th></tr></thead>
@@ -408,7 +408,7 @@ pre.eig {
         <tr class="hl-navy"><td><strong>Lorenz</strong></td><td>二维 Boussinesq 对流</td><td>3 个 Fourier 模态，N = 3</td><td>非线性，3 行</td><td>RK4 · RK45 · DOP853</td></tr>
       </tbody>
     </table>
-    <p class="lede" style="max-width:none">这条路线叫线方法（method of lines）。Lorenz 是它最小的例子：N&nbsp;=&nbsp;3，小到每一步都能看清。<br>后面四个问题都落在第 2 步上：每一步的误差会怎样累积。</p>
+    <p class="lede" style="max-width:none">Lorenz 是线方法（method of lines）最小的例子：N&nbsp;=&nbsp;3，小到每一步都能看清。<br>后面四个问题都落在第 2 步上：每一步的误差会怎样累积。</p>
   </div>
   <aside class="notes">
     <p>用大家熟悉的声学 FDTD 做对照：波动方程先在网格上差分，变成一个很大的线性 ODE 组，再用蛙跳格式推进。Lorenz 走的是同一条路，只是第 1 步用的是 Fourier 模态而不是网格，而且只留了 3 个。</p>
@@ -418,7 +418,7 @@ pre.eig {
 
 <!-- 8 三个变量 -->
 <section class="slide" data-part="bg" data-min="2" data-title="三个变量">
-  <header><p class="eyebrow">绪论 · 第 1 步 空间离散</p><h2>只留三个模态：x、y、z 是它们的振幅</h2></header>
+  <header><p class="eyebrow">绪论 · 第 1 步 空间离散</p><h2>三模 Fourier 截断：x、y、z 是模态振幅</h2></header>
   <div class="split">
     <figure class="fig"><img src="figures/fig18_convection.png" alt="三个模态各自的空间形状，以及三者在 C+ 处合成的定常对流卷"><figcaption>lorenz63 figure fig18</figcaption></figure>
     <div class="col">
@@ -440,7 +440,7 @@ pre.eig {
 
 <!-- 9 Galerkin -->
 <section class="slide" data-part="bg" data-min="2" data-title="截断丢掉了什么">
-  <header><p class="eyebrow">绪论 · 第 1 步 空间离散</p><h2>代回去、投影：截断丢掉了什么</h2></header>
+  <header><p class="eyebrow">绪论 · 第 1 步 空间离散</p><h2>Galerkin 投影：截断丢掉了什么</h2></header>
   <div class="full" style="justify-content:center;gap:30px">
     <p style="font-size:26px">Galerkin 做法：把三项展开代入两条 PDE，乘以每个模态、在一个卷上积分，每个模态得到一条 ODE。线性项各回各的模态，要算的只有平流 J。取 H = 1，k = πa：</p>
     <table class="data tight" style="font-size:24px">
@@ -455,13 +455,13 @@ pre.eig {
   </div>
   <aside class="notes">
     <p>这页是给"三个模态为什么能自己闭合"的回答。两个乘积可以直接用积化和差验证：x 的卷与 y 的温差相乘，含 cos 2kX 的项正好抵消，只剩水平均匀的 sin 2πZ，所以 xy 只喂 z。x 与 z 相乘生出 sin πZ 和 sin 3πZ 两部分，前者落回 y，后者被丢掉。</p>
-    <p>对计算方法的读法：这就是谱 Galerkin 方法，模态取得越多越接近原 PDE。Lorenz 取到最少，换来一个能整个看清的三维系统，代价是 ρ 大了以后和流体对不上（后面"推导到这里就断了"那页）。</p>
+    <p>对计算方法的读法：这就是谱 Galerkin 方法，模态取得越多越接近原 PDE。Lorenz 取到最少，换来一个能整个看清的三维系统，代价是 ρ 大了以后和流体对不上（后面"三模截断的适用范围"那页）。</p>
   </aside>
 </section>
 
 <!-- 10 每一项 -->
 <section class="slide" data-part="bg" data-min="2" data-title="每一项的物理">
-  <header><p class="eyebrow">绪论 · 得到的 ODE</p><h2>三行 ODE，每一项都是一个物理过程</h2></header>
+  <header><p class="eyebrow">绪论 · 得到的 ODE</p><h2>Lorenz 方程逐项的物理意义</h2></header>
   <div class="center">
     <table class="data tight" style="font-size:23px">
       <thead><tr><th>方程</th><th>项</th><th>物理过程</th></tr></thead>
@@ -486,7 +486,7 @@ pre.eig {
 
 <!-- 11 经典参数 -->
 <section class="slide" data-part="bg" data-min="2" data-title="经典的那一组数">
-  <header><p class="eyebrow">绪论 · 参数</p><h2>经典的那一组数，每个都有来由</h2></header>
+  <header><p class="eyebrow">绪论 · 参数</p><h2>经典参数 σ、β、ρ 的来由</h2></header>
   <div class="full" style="justify-content:center;gap:40px">
     <div class="strip" style="gap:72px">
       <div class="kv"><span class="v navy">σ = 10</span><span class="k">Prandtl 数 ν/κ</span></div>
@@ -509,7 +509,7 @@ pre.eig {
 
 <!-- 12 边界 -->
 <section class="slide" data-part="bg" data-min="1" data-title="方程与它的边界">
-  <header><p class="eyebrow">绪论 · 模型的边界</p><h2>推导到这里就断了</h2></header>
+  <header><p class="eyebrow">绪论 · 模型的边界</p><h2>三模截断的适用范围</h2></header>
   <div class="split even">
     <div class="col">
       <div class="callout orbit-bg"><span class="tag orbit">局限</span>三模截断只在 ρ 略大于 1 时有渐近依据。ρ = 28 时被丢掉的高阶模态早已被激发，它是一个自洽的<strong>数学对象</strong>，不再是流体模型。</div>
@@ -532,7 +532,7 @@ pre.eig {
 
 <!-- 13 时间推进 -->
 <section class="slide" data-part="bg" data-min="2" data-title="把 ODE 变成迭代">
-  <header><p class="eyebrow">绪论 · 第 2 步 时间推进</p><h2>把三行 ODE 写成一步一步的迭代</h2></header>
+  <header><p class="eyebrow">绪论 · 第 2 步 时间推进</p><h2>时间积分：Euler、RK4 与自适应步长</h2></header>
   <div class="split even">
     <div class="col">
 <pre class="eig" style="font-size:19px;line-height:1.6">def f(u):                <span class="muted"># 就是那三行方程</span>
@@ -581,7 +581,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
 
 <!-- 15 演示：加热强度 ρ -->
 <section class="slide" id="rollSlide" data-part="1" data-min="3" data-title="现场演示：加热强度 ρ">
-  <header><p class="eyebrow">① 没有不变量可查 · 现场演示</p><h2>把底板加热到起对流时的 ρ 倍</h2></header>
+  <header><p class="eyebrow">① 没有不变量可查 · 现场演示</p><h2>约化 Rayleigh 数 ρ = Ra / Ra<sub>c</sub></h2></header>
   <div class="demo roll">
     <div class="pane">
       <canvas id="rollCell" width="1840" height="740" aria-label="由当前 x、y、z 重建的对流层：颜色是温度，短线是流动"></canvas>
@@ -653,7 +653,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
 
 <!-- 18 有界 -->
 <section class="slide" data-part="1" data-min="1" data-title="有界性">
-  <header><p class="eyebrow">① 没有不变量可查</p><h2>耗散，但有界</h2></header>
+  <header><p class="eyebrow">① 没有不变量可查</p><h2>Lyapunov 函数：耗散但有界</h2></header>
   <div class="split even">
     <div class="col">
       <div style="font-size:28px">$$V = \rho x^2 + \sigma y^2 + \sigma (z-2\rho)^2$$
@@ -672,7 +672,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
 
 <!-- 19 体积 -->
 <section class="slide" data-part="1" data-min="1.5" data-title="相空间体积">
-  <header><p class="eyebrow">① 没有不变量可查</p><h2>相空间体积以固定速率坍缩</h2></header>
+  <header><p class="eyebrow">① 没有不变量可查</p><h2>Liouville 公式：相空间体积匀速坍缩</h2></header>
   <div class="split">
     <figure class="fig"><img src="figures/fig05_volume.png" alt="Lorenz 与谐振子的 ln det M(t) 对比"><figcaption>lorenz63 figure fig05</figcaption></figure>
     <div class="col">
@@ -800,7 +800,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
 
 <!-- 26 影随 -->
 <section class="slide" data-part="3" data-min="1.5" data-title="影随">
-  <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>那还剩下什么可信？</h2></header>
+  <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>影随：数值轨道跟着另一条真解</h2></header>
   <div class="split even">
     <div class="col">
       <p>直觉：局部误差很小的数值轨道，虽然不是你要的那条真解，可能紧跟着<strong>另一条</strong>初值稍有不同的真解。</p>
@@ -972,7 +972,7 @@ uv run lorenz63 figure all</pre>
 
 <!-- 36 分岔 -->
 <section class="slide" data-part="b" data-min="0" data-title="分岔图">
-  <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>动力学在代数预言的位置改变</h2></header>
+  <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>分岔图：叉式、同宿爆炸、Hopf</h2></header>
   <div class="full">
     <figure class="fig"><img src="figures/fig03_bifurcation.png" alt="z 的局部极大值随 ρ 的分岔图"><figcaption>lorenz63 figure fig03</figcaption></figure>
     <div class="strip">
@@ -989,7 +989,7 @@ uv run lorenz63 figure all</pre>
 
 <!-- 37 本征结构 -->
 <section class="slide" data-part="b" data-min="0" data-title="本征结构">
-  <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>吸引子的形状来自线性代数</h2></header>
+  <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>不动点的本征结构决定吸引子形状</h2></header>
   <div class="full">
     <figure class="fig"><img src="figures/fig15_eigen_structure.png" alt="特征值在复平面上随 ρ 的路径，以及相空间中的本征方向和不变平面"><figcaption>lorenz63 figure fig15</figcaption></figure>
     <pre class="eig">原点  +11.827723   −2.666667   −22.827723           <span class="muted">一正二负 → 鞍点</span>
@@ -1020,7 +1020,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
 
 <!-- 39 两件事 -->
 <section class="slide" data-part="b" data-min="0" data-title="稳定性与 Lyapunov 指数">
-  <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>两件常被混为一谈的事</h2></header>
+  <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>数值稳定性 ≠ Lyapunov 不稳定性</h2></header>
   <div class="center">
     <table class="data">
       <thead><tr><th></th><th>是什么的性质</th><th>由什么决定</th><th>步长能改变吗</th></tr></thead>
@@ -1094,7 +1094,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
 
 <!-- 43 FTLE -->
 <section class="slide" data-part="b" data-min="0" data-title="有限时间 Lyapunov 指数">
-  <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>局部拉伸率差别极大</h2></header>
+  <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>有限时间 Lyapunov 指数：局部拉伸率差别极大</h2></header>
   <div class="split">
     <figure class="fig"><img src="figures/fig12_ftle.png" alt="吸引子上按有限时间 λ₁ 着色，以及其分布"><figcaption>lorenz63 figure fig12</figcaption></figure>
     <div class="col">
@@ -1111,7 +1111,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
     </div>
   </div>
   <aside class="notes">
-    <p>全局 λ₁ = 0.904 是长时间平均。红色区域主要在两叶交界与外缘。自适应控制器在那里自动缩小步长，这符合「两件常被混为一谈的事」那张表：它减少的是注入的误差量。</p>
+    <p>全局 λ₁ = 0.904 是长时间平均。红色区域主要在两叶交界与外缘。自适应控制器在那里自动缩小步长，这符合「数值稳定性 ≠ Lyapunov 不稳定性」那张表：它减少的是注入的误差量。</p>
   </aside>
 </section>
 
@@ -1202,7 +1202,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
     <div class="mm-rows">
       <div class="mm-row" data-p="bg" title="跳到这一段">
         <div class="mm-q"><i>绪论</i>方程怎么来，怎么算？</div>
-        <div class="mm-a"><span>PDE → 留三个模态 → 三行 ODE → 逐步迭代</span><small>Boussinesq 方程 · fig18 · RK4 代码</small></div>
+        <div class="mm-a"><span>Boussinesq → 三模 Galerkin 截断 → RK4 积分</span><small>Rayleigh–Bénard 对流 · fig18 · RK4 代码</small></div>
       </div>
       <div class="mm-row" data-p="1" title="跳到这一段">
         <div class="mm-q"><i>①</i>能像查能量守恒那样查它吗？</div>
