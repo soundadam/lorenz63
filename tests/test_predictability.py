@@ -77,8 +77,11 @@ def test_precision_buys_only_logarithmic_time() -> None:
 @pytest.mark.slow
 def test_ensemble_growth_recovers_lambda_1_independently() -> None:
     """No variational equation here -- just perturbed initial conditions."""
-    growth = ensemble_growth(CLASSICAL, n_members=24, delta0=1e-9, t_end=30.0)
-    assert growth.separations.shape[0] == 24
+    n_bases, n_members = 16, 2
+    growth = ensemble_growth(
+        CLASSICAL, n_bases=n_bases, n_members=n_members, delta0=1e-9, t_end=30.0
+    )
+    assert growth.separations.shape[0] == n_bases * n_members
     # Fit inside the exponential window: above the initial transient, below
     # saturation at the attractor's diameter.
     slope, _ = growth.fit_exponent(5.0, 15.0)
@@ -89,7 +92,7 @@ def test_ensemble_growth_recovers_lambda_1_independently() -> None:
 
 @pytest.mark.slow
 def test_quantile_band_is_ordered() -> None:
-    growth = ensemble_growth(CLASSICAL, n_members=16, delta0=1e-9, t_end=10.0)
+    growth = ensemble_growth(CLASSICAL, n_bases=4, n_members=4, delta0=1e-9, t_end=10.0)
     lo, hi = growth.quantiles()
     assert np.all(lo <= growth.median + 1e-15)
     assert np.all(growth.median <= hi + 1e-15)

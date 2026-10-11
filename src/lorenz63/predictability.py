@@ -145,10 +145,10 @@ def tolerance_sweep(
 
 @dataclass(frozen=True, slots=True)
 class EnsembleGrowth:
-    """Separation of an ensemble of slightly perturbed initial conditions."""
+    """Separation of slightly perturbed copies of several attractor states."""
 
     t: NDArray[np.floating]
-    separations: NDArray[np.floating]  # (n_members, n_times)
+    separations: NDArray[np.floating]  # (n_bases * n_members, n_times)
     delta0: float
 
     @property
@@ -175,35 +175,48 @@ class EnsembleGrowth:
 def ensemble_growth(
     p: LorenzParams,
     *,
-    n_members: int = 64,
+    n_bases: int = 16,
+    n_members: int = 4,
+    base_spacing: float = 5.0,
     delta0: float = 1e-9,
     t_end: float = 40.0,
     dt_out: float = 0.02,
     seed: int = 20260922,
 ) -> EnsembleGrowth:
-    """Perturb one attractor state in many random directions and watch them part.
+    """Perturb several attractor states in random directions and watch them part.
 
     An independent route to lambda_1: the exponential envelope of the median
     separation. It should agree with the Benettin value without sharing any code
     with it.
+
+    The base states are ``n_bases`` points ``base_spacing`` apart along one
+    trajectory, each perturbed in ``n_members`` directions. A single base state
+    measures the finite-time exponent of the stretch of attractor its 10-20
+    time units of growth happen to cover, which ranges from about 0.4 to 1.3;
+    pooling bases spread over the attractor is what makes the median slope an
+    estimate of lambda_1. Random directions add little on their own, since
+    members of one base all align with its unstable direction within a few
+    time units.
     """
     rng = np.random.default_rng(seed)
-    base_u0 = on_attractor(p)
-    base = reference_trajectory(p, base_u0, t_end, dt_out=dt_out)
+    path = reference_trajectory(
+        p, on_attractor(p), base_spacing * (n_bases - 1), dt_out=base_spacing
+    )
 
-    directions = rng.normal(size=(n_members, 3))
-    directions /= np.linalg.norm(directions, axis=1, keepdims=True)
+    seps = []
+    for base_u0 in path.u:
+        base = reference_trajectory(p, base_u0, t_end, dt_out=dt_out)
+        directions = rng.normal(size=(n_members, 3))
+        directions /= np.linalg.norm(directions, axis=1, keepdims=True)
+        for direction in directions:
+            member = solve_adaptive(
+                p,
+                base_u0 + delta0 * direction,
+                t_end,
+                rtol=REFERENCE_RTOL,
+                atol=REFERENCE_ATOL,
+                dt_out=dt_out,
+            )
+            seps.append(separation(base, member))
 
-    seps = np.empty((n_members, base.t.size))
-    for k, direction in enumerate(directions):
-        member = solve_adaptive(
-            p,
-            base_u0 + delta0 * direction,
-            t_end,
-            rtol=REFERENCE_RTOL,
-            atol=REFERENCE_ATOL,
-            dt_out=dt_out,
-        )
-        seps[k] = separation(base, member)
-
-    return EnsembleGrowth(t=base.t, separations=seps, delta0=delta0)
+    return EnsembleGrowth(t=base.t, separations=np.array(seps), delta0=delta0)

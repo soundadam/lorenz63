@@ -751,16 +751,17 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
 <section class="slide" data-part="2" data-min="1.5" data-title="误差增长">
   <header><p class="eyebrow">② 精度只换来对数时间</p><h2>误差按 λ₁ 增长，到吸引子尺度饱和</h2></header>
   <div class="split">
-    <figure class="fig"><img src="figures/fig07_ensemble.png" alt="64 个扰动初值的分离度随时间增长"><figcaption>lorenz63 figure fig07</figcaption></figure>
+    <figure class="fig"><img src="figures/fig07_ensemble.png" alt="16 个吸引子点各 4 个扰动的分离度随时间增长"><figcaption>lorenz63 figure fig07</figcaption></figure>
     <div class="col">
-      <p style="font-size:24px">64 个随机方向，扰动 δ₀ = 1e−9，全部用参考精度积分。</p>
-      <div class="kv small"><span class="v">0.9090</span><span class="k">t ∈ [5, 22] 的拟合斜率，与变分方程算出的 0.9038（备用页）相差 0.6%，两条路径没有共用代码</span></div>
+      <p style="font-size:24px">16 个吸引子点 × 4 个随机方向，扰动 δ₀ = 1e−9，全部用参考精度积分。</p>
+      <div class="kv small"><span class="v">0.8750</span><span class="k">t ∈ [5, 22] 的拟合斜率，与变分方程算出的 0.9038（备用页）相差 3.2%，两条路径没有共用代码</span></div>
       <div class="kv small"><span class="v">0.767</span><span class="k">倍增时间 ln 2 / λ₁</span></div>
       <div class="kv small"><span class="v orbit">40.76</span><span class="k">双精度预报极限 ln(10¹⁶) / λ₁</span></div>
     </div>
   </div>
   <aside class="notes">
     <p>一个解变分方程，一个只是扰动初值，两种独立办法给出同一个 λ₁。</p>
+    <p>为什么要 16 个点？只扰动一个点，量到的是那一段轨道的有限时间指数，换个起点斜率能在 0.4 到 1.3 之间跳；点散布在吸引子上再取中位，才是 λ₁。</p>
     <p>40.76 的意思：即便算法完美无误差，初值在双精度下只能表示到 10⁻¹⁶，超过约 41 个时间单位之后，你算的就不再是你想要的那条轨道。</p>
   </aside>
 </section>
@@ -1168,7 +1169,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
     <table class="data" style="font-size:21px">
       <tbody>
         <tr><td>双精度预报极限</td><td class="num">40.76</td><td class="muted">ln(10¹⁶)/λ₁</td></tr>
-        <tr><td>λ₁（系综）</td><td class="num">0.9090</td><td class="muted">64 个扰动</td></tr>
+        <tr><td>λ₁（系综）</td><td class="num">0.8750</td><td class="muted">16 点 × 4 方向</td></tr>
         <tr><td>λ₁（容差斜率）</td><td class="num">0.9595</td><td class="muted">T_div 拟合</td></tr>
         <tr><td>RK4 稳定步长上限</td><td class="num">0.1253</td><td class="muted">仅衰减模</td></tr>
         <tr><td>Lorenz 映射厚度</td><td class="num">8.6e−5</td><td class="muted">z 值域比例</td></tr>

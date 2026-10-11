@@ -451,13 +451,15 @@ def fig07_ensemble(output: Path) -> Path:
     )
     ax.set_xlabel("t")
     ax.set_ylabel("‖δ(t)‖")
-    ax.set_title("64 个扰动初值（δ₀ = 1e-9）的分离：指数增长，然后在吸引子尺度饱和")
+    ax.set_title("16 个吸引子点 × 4 个方向（δ₀ = 1e-9）的分离：指数增长，然后在吸引子尺度饱和")
     ax.legend(loc="lower right", fontsize=9)
     return _finish(fig, output, "fig07_ensemble")
 
 
 def _ensemble_data() -> dict[str, NDArray]:
-    growth = ensemble_growth(CLASSICAL, n_members=64, delta0=1e-9, t_end=40.0, dt_out=0.02)
+    growth = ensemble_growth(
+        CLASSICAL, n_bases=16, n_members=4, delta0=1e-9, t_end=40.0, dt_out=0.02
+    )
     lo, hi = growth.quantiles()
     slope, intercept = growth.fit_exponent(5.0, 22.0)
     return {
