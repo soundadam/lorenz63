@@ -1,0 +1,15 @@
+# 与 CLAUDE.md「本地检查」相同的两条命令
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --all-groups --locked
+      - run: uv run ruff check src tests
+      - run: uv run pytest
