@@ -67,11 +67,11 @@ def test_lorenz_map_lies_above_the_unstable_fixed_point(long_trajectory) -> None
     assert lmap.z_n.min() > CLASSICAL.rho - 1.0
 
 
-def test_lorenz_map_is_solver_independent(long_trajectory) -> None:
+def test_lorenz_map_is_tolerance_independent(long_trajectory) -> None:
     """The thesis: single trajectories diverge, the return map does not."""
     u0 = on_attractor(CLASSICAL)
     loose = solve_adaptive(
-        CLASSICAL, u0, 1500.0, method="RK45", rtol=1e-6, atol=1e-9, dt_out=0.002
+        CLASSICAL, u0, 1500.0, method="DOP853", rtol=1e-6, atol=1e-9, dt_out=0.002
     )
     a = lorenz_map(long_trajectory)
     b = lorenz_map(loose)
@@ -125,10 +125,10 @@ def test_invariant_density_normalises(long_trajectory) -> None:
     assert np.all(density >= 0.0)
 
 
-def test_invariant_density_is_solver_independent(long_trajectory) -> None:
+def test_invariant_density_is_tolerance_independent(long_trajectory) -> None:
     u0 = on_attractor(CLASSICAL)
     loose = solve_adaptive(
-        CLASSICAL, u0, 1500.0, method="RK45", rtol=1e-6, atol=1e-9, dt_out=0.002
+        CLASSICAL, u0, 1500.0, method="DOP853", rtol=1e-6, atol=1e-9, dt_out=0.002
     )
     span = (0.0, 50.0)
     _, da = invariant_density(long_trajectory.z, bins=50, value_range=span)

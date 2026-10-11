@@ -56,6 +56,7 @@ from lorenz63.portrait import (  # noqa: E402
     regime_trajectory,
 )
 from lorenz63.predictability import (  # noqa: E402
+    DEFAULT_THRESHOLD,
     divergence_time,
     ensemble_growth,
     separation,
@@ -176,17 +177,17 @@ def fig01_paradox(output: Path) -> Path:
     t_end = 60.0
     truth = reference_trajectory(CLASSICAL, u0, t_end, dt_out=0.005)
     loose = solve_adaptive(
-        CLASSICAL, u0, t_end, method="RK45", rtol=1e-6, atol=1e-9, dt_out=0.005
+        CLASSICAL, u0, t_end, method="DOP853", rtol=1e-6, atol=1e-9, dt_out=0.005
     )
     tight = solve_adaptive(
-        CLASSICAL, u0, t_end, method="RK45", rtol=1e-12, atol=1e-15, dt_out=0.005
+        CLASSICAL, u0, t_end, method="DOP853", rtol=1e-12, atol=1e-15, dt_out=0.005
     )
 
     fig, axes = plt.subplots(2, 1, figsize=(9.5, 6.0), sharex=True)
 
     ax = _style(axes[0])
-    ax.plot(loose.t, loose.x, color=C_LOOSE, lw=1.0, label="RK45  rtol=1e-6")
-    ax.plot(tight.t, tight.x, color=C_REF, lw=1.0, label="RK45  rtol=1e-12")
+    ax.plot(loose.t, loose.x, color=C_LOOSE, lw=1.0, label="DOP853  rtol=1e-6")
+    ax.plot(tight.t, tight.x, color=C_REF, lw=1.0, label="DOP853  rtol=1e-12")
     ax.set_ylabel("x(t)")
     ax.set_title("同一方程、同一初值、两个容差：谁是对的？")
     ax.legend(loc="upper left", fontsize=9)
@@ -636,7 +637,7 @@ def fig10_trajectory_vs_statistics(output: Path) -> Path:
     data = _cached("thesis", _thesis_data)
 
     fig, axes = plt.subplots(1, 2, figsize=(12.0, 5.0))
-    labels = ["RK45 rtol=1e-6", "RK45 rtol=1e-9", "DOP853 rtol=1e-13"]
+    labels = ["DOP853 rtol=1e-6", "DOP853 rtol=1e-9", "DOP853 rtol=1e-13"]
     colours = [C_LOOSE, C_MID, C_REF]
 
     ax = _style(axes[0])
@@ -682,7 +683,7 @@ def fig10_trajectory_vs_statistics(output: Path) -> Path:
 
 def _thesis_data() -> dict[str, NDArray]:
     u0 = on_attractor(CLASSICAL)
-    settings = [("RK45", 1e-6), ("RK45", 1e-9), ("DOP853", 1e-13)]
+    settings = [("DOP853", 1e-6), ("DOP853", 1e-9), ("DOP853", 1e-13)]
     truth = reference_trajectory(CLASSICAL, u0, 60.0, dt_out=0.005)
     out: dict[str, NDArray] = {"t_short": truth.t}
     t_div = []
@@ -709,7 +710,7 @@ def _thesis_data() -> dict[str, NDArray]:
 
 def fig11_invariant_density(output: Path) -> Path:
     data = _cached("density", _density_data)
-    labels = ["RK45 rtol=1e-6", "RK45 rtol=1e-9", "DOP853 rtol=1e-13"]
+    labels = ["DOP853 rtol=1e-6", "DOP853 rtol=1e-9", "DOP853 rtol=1e-13"]
     colours = [C_LOOSE, C_MID, C_REF]
 
     fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.7))
@@ -730,14 +731,14 @@ def fig11_invariant_density(output: Path) -> Path:
 
     tv = float(data["max_total_variation"])
     fig.suptitle(
-        f"统计量对求解器不敏感：三条密度的最大总变差距离 {tv:.4f}", fontsize=11
+        f"统计量对容差不敏感：三条密度的最大总变差距离 {tv:.4f}", fontsize=11
     )
     return _finish(fig, output, "fig11_invariant_density")
 
 
 def _density_data() -> dict[str, NDArray]:
     u0 = on_attractor(CLASSICAL)
-    settings = [("RK45", 1e-6), ("RK45", 1e-9), ("DOP853", 1e-13)]
+    settings = [("DOP853", 1e-6), ("DOP853", 1e-9), ("DOP853", 1e-13)]
     span = (0.0, 52.0)
     bins = 130
     out: dict[str, NDArray] = {}
@@ -1403,44 +1404,42 @@ def fig18_convection(output: Path) -> Path:
     return _finish(fig, output, "fig18_convection")
 
 
-# ---------------------------------------------------------------------------
-# hero — the cover animation's data
+# slides — data the HTML slides replay
 # ---------------------------------------------------------------------------
 
 #: Initial-condition offset on the cover, in x.
 HERO_DELTA = 1e-5
-#: Separation at which the cover animation stops. The report's threshold of 1
-#: is only about ten pixels on the cover canvas; 5 is reached about 0.2 time
-#: units later and is visibly apart.
-HERO_STOP = 5.0
 
 
-def hero_data(output: Path) -> Path:
-    """Two reference-accuracy trajectories ``HERO_DELTA`` apart, until ``HERO_STOP``.
+def slides_data(output: Path) -> Path:
+    """The start point shared by every slide demo, and the cover's two orbits.
 
-    Written as a script that sets ``window.LORENZ_HERO`` so that ``slides.html``
-    can load it from ``file://``, where ``fetch`` is blocked. The slides only
-    replay these samples; nothing on the cover is integrated in the browser.
+    The cover shows two reference-accuracy trajectories ``HERO_DELTA`` apart,
+    up to the first time their separation exceeds the report's threshold.
+    Written as a script that sets ``window.LORENZ_DATA`` so that ``slides.html``
+    can load it from ``file://``, where ``fetch`` is blocked.
     """
     u0 = on_attractor(CLASSICAL)
     dt = 0.005
     a = reference_trajectory(CLASSICAL, u0, 30.0, dt_out=dt)
     b = reference_trajectory(CLASSICAL, u0 + np.array([HERO_DELTA, 0.0, 0.0]), 30.0, dt_out=dt)
     delta = separation(a, b)
-    n = int(np.flatnonzero(delta > HERO_STOP)[0]) + 1
+    n = int(np.flatnonzero(delta > DEFAULT_THRESHOLD)[0]) + 1
 
     def series(v: NDArray) -> str:
         return "[" + ",".join(f"{x:.4f}" for x in v[:n]) + "]"
 
     output.mkdir(parents=True, exist_ok=True)
-    path = output / "hero_data.js"
+    path = output / "slides_data.js"
     path.write_text(
-        "// 由 `lorenz63 figure hero` 生成：DOP853 rtol=1e-13，两条轨道初值在 x 上差 "
-        f"{HERO_DELTA:g}，到 |Δ| 首次超过 {HERO_STOP:g} 为止。\n"
-        "window.LORENZ_HERO = {"
-        f'"dt":{dt},"delta":{HERO_DELTA},'
+        "// 由 `lorenz63 figure slides` 生成。u0 = on_attractor(CLASSICAL)；hero 是封面的两条轨道："
+        f"DOP853 rtol=1e-13，初值在 x 上差 {HERO_DELTA:g}，"
+        f"到 |Δ| 首次超过 {DEFAULT_THRESHOLD:g} 为止。\n"
+        "window.LORENZ_DATA = {"
+        '"u0":[' + ",".join(repr(float(x)) for x in u0) + "],"
+        f'"hero":{{"dt":{dt},"delta":{HERO_DELTA},'
         f'"ax":{series(a.x)},"az":{series(a.z)},"bx":{series(b.x)},"bz":{series(b.z)},'
-        '"logd":[' + ",".join(f"{x:.3f}" for x in np.log10(delta[:n])) + "]};\n",
+        '"logd":[' + ",".join(f"{x:.3f}" for x in np.log10(delta[:n])) + "]}};\n",
         encoding="utf-8",
     )
     return path
@@ -1467,5 +1466,5 @@ FIGURES: dict[str, Callable[[Path], Path]] = {
     "fig16": fig16_orthogonalisation,
     "fig17": fig17_conservative,
     "fig18": fig18_convection,
-    "hero": hero_data,
+    "slides": slides_data,
 }

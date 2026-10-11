@@ -73,6 +73,7 @@
       cur < N - 1 ? "下一页：" + slides[cur + 1].dataset.title : "最后一页";
     try { history.replaceState(null, "", "#s" + (cur + 1)); } catch (e) {}
     hero.toggle(sl.classList.contains("cover"));
+    paradox.toggle(sl.id === "paradoxSlide");
     split.toggle(sl.id === "splitSlide");
     roll.toggle(sl.id === "rollSlide");
   }

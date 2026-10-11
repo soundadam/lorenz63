@@ -7,14 +7,16 @@ const split = (function () {
   const col = name => css.getPropertyValue(name).trim();
   const NAVY = col("--navy"), ORBIT = col("--orbit"), INK = col("--ink"), INK2 = col("--ink-2"), RULE = col("--rule");
   const MONO = col("--mono"), SANS = col("--sans");
-  const H = 0.005;
+  const DT = 0.005;                  // 取样间隔（画线与读数），不是步长：步长由 DOP853 自己选
+  const RTOL = 1e-13, ATOL = 1e-15;  // 与 Python 端参考解同一精度
   const LAMBDA1 = 0.903764;          // lorenz63 info 的 Benettin 值，只用来画参考斜率
   const T_MAX = 45, AFTER = 4;       // 分开之后再跑 AFTER 个时间单位就停
-  const KEEP = 3600;                 // 每个 RK4 步都画，折线才不出棱角
+  const KEEP = 3600;
   const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const f = Lorenz.field(Lorenz.RHO);
-  const rk4 = u => Lorenz.rk4(f, u, H);
+  // 两条轨道拼成一个 6 维系统一起积：共用同一串步长，|Δ| 里不混进两边各自选步的差别
+  const pair = v => f(v.slice(0, 3)).concat(f(v.slice(3)));
   const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
   const SUP = { "-": "⁻", 0: "⁰", 1: "¹", 2: "²", 3: "³", 4: "⁴", 5: "⁵", 6: "⁶", 7: "⁷", 8: "⁸", 9: "⁹" };
   const pow10 = n => "10" + String(n).split("").map(c => SUP[c]).join("");
@@ -34,13 +36,11 @@ const split = (function () {
   (function () {
     const g = backdrop.getContext("2d");
     g.strokeStyle = INK2; g.globalAlpha = 0.16; g.lineWidth = 1.4;
-    let u = a0.slice();
+    const sm = Lorenz.sampler(f, a0, { dt: DT, tEnd: 80, rtol: 1e-8, atol: 1e-10 });
     g.beginPath();
-    for (let k = 0; k < 16000; k++) {
-      u = rk4(u);
-      const p = proj(u);
-      k ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]);
-    }
+    let p = proj(a0), smp;
+    g.moveTo(p[0], p[1]);
+    while ((smp = sm.next())) { p = proj(smp[1]); g.lineTo(p[0], p[1]); }
     g.stroke();
   })();
 
@@ -51,7 +51,7 @@ const split = (function () {
   const X = t => M.l + t / T_MAX * W;
   const Y = l => M.t + (LMAX - l) / (LMAX - LMIN) * Hh;
 
-  let runs = [], cur = null, queue = [], a, b, t, ta, tb, raf = null, stepsPerFrame = 16, active = false;
+  let runs = [], cur = null, queue = [], a, b, t, ta, tb, sm, raf = null, stepsPerFrame = 16, active = false;
   const slider = document.getElementById("splitEps");
   const label = () => { document.getElementById("splitEpsV").textContent = pow10(-slider.value); };
 
@@ -62,12 +62,15 @@ const split = (function () {
     slider.value = k; label();
     a = a0.slice(); b = [a0[0] + cur.eps, a0[1], a0[2]];
     t = 0; ta = [a]; tb = [b];
+    sm = Lorenz.sampler(pair, a.concat(b), { dt: DT, tEnd: T_MAX, rtol: RTOL, atol: ATOL });
     cur.pts.push([0, Math.log10(dist(a, b))]);
   }
   function finished() { return !cur || t >= T_MAX || (cur.T !== null && t >= cur.T + AFTER); }
   function advance(n) {
     for (let k = 0; k < n && !finished(); k++) {
-      a = rk4(a); b = rk4(b); t += H;
+      const smp = sm.next();
+      if (!smp) { t = T_MAX; break; }
+      t = smp[0]; a = smp[1].slice(0, 3); b = smp[1].slice(3);
       if (cur.T === null && dist(a, b) > 1) cur.T = t;
       ta.push(a); tb.push(b);
     }

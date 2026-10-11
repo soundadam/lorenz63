@@ -101,7 +101,7 @@ def tolerance_sweep(
     *,
     t_end: float = 80.0,
     n_samples: int = 8,
-    method: str = "RK45",
+    method: str = "DOP853",
     threshold: float = DEFAULT_THRESHOLD,
     dt_out: float = 0.01,
     seed: int = 20260922,

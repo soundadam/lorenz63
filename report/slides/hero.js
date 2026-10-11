@@ -1,7 +1,7 @@
-/* ---------- 封面：两条初值相差 1e-5 的轨道，回放 figures/hero_data.js ---------- */
-/* 数据由 `lorenz63 figure hero` 用 DOP853（rtol=1e-13）算好，浏览器只回放，到 |Δ| 首次超过 5 停住。 */
+/* ---------- 封面：两条初值相差 1e-5 的轨道，回放 figures/slides_data.js ---------- */
+/* 数据由 `lorenz63 figure slides` 用 DOP853（rtol=1e-13）算好，浏览器只回放，到 |Δ| 首次超过 1 停住。 */
 const hero = (function () {
-  const D = window.LORENZ_HERO;
+  const D = window.LORENZ_DATA.hero;
   const cv = document.getElementById("hero");
   const ctx = cv.getContext("2d");
   const css = getComputedStyle(document.documentElement);

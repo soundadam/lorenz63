@@ -169,6 +169,9 @@ pre.eig {
 
 /* 演示①：左边对流层与 x(t)，右边 ρ 滑块与 x–z 相平面 */
 .demo.roll { grid-template-columns: 1fr 440px; }
+.demo.paradox { grid-template-columns: 1fr 440px; }
+.demo.paradox .ctrl { gap: 10px; flex-wrap: wrap; }
+.demo.paradox .ctrl button { padding: 4px 12px; }
 .demo.roll .pane { gap: 12px; }
 .rho-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 21px; }
 .rho-head .eps { font-family: var(--mono); font-weight: 500; font-size: 30px; color: var(--orbit); font-variant-numeric: tabular-nums; }

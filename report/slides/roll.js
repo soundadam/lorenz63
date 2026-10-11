@@ -8,7 +8,7 @@ const roll = (function () {
   const col = name => css.getPropertyValue(name).trim();
   const NAVY = col("--navy"), ORBIT = col("--orbit"), INK = col("--ink"), INK2 = col("--ink-2"), RULE = col("--rule"), PAPER = col("--paper");
   const MONO = col("--mono"), SANS = col("--sans");
-  const S = Lorenz.SIGMA, B = Lorenz.BETA, H = 0.005, STEPS = 4;
+  const S = Lorenz.SIGMA, B = Lorenz.BETA, DT = 0.005, STEPS = 4;   // 每帧取 STEPS 个样本，间隔 DT
   const RHO_H = S * (S + B + 3) / (S - B - 1);   // 470/19：C± 在这里失稳
   // 由状态 (x, y, z) 重建流场与温度场，公式同 src/lorenz63/convection.py（H = κ = ΔT = 1）
   const A2 = 4 / B - 1, A = Math.sqrt(A2);       // β = 4/(1+a²)，所以 a² = 1/2
@@ -20,8 +20,7 @@ const roll = (function () {
   const WINDOW = 30, TRAIL = 15;                 // x(t) 显示最近 30 个时间单位，相平面留 15 个
   const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  let rho = 0.5, u, t, hist, raf = null;
-  const rk4 = v => Lorenz.rk4(Lorenz.field(rho), v, H);   // rho 随滑块变，每步现取
+  let rho = 0.5, u, t, hist, hNext, raf = null;
   function reset() { u = [NOISE, 0, 0]; t = 0; hist = [[0, u.slice()]]; }
 
   /* 温度场先画在一张小图上，再放大到对流层：底热（朱红）顶冷（藏青） */
@@ -149,10 +148,14 @@ const roll = (function () {
   function draw() { drawCell(); drawStrip(); drawPhase(); readout(); }
 
   function advance(n) {
-    for (let k = 0; k < n; k++) { u = rk4(u); t += H; hist.push([t, u.slice()]); }
+    // 每帧从当前状态起一段 DOP853：ρ 随滑块变，每帧现取；扰动在两段之间加
+    const sm = Lorenz.sampler(Lorenz.field(rho), u, { t0: t, dt: DT, tEnd: t + n * DT, rtol: 1e-8, atol: 1e-10, h0: hNext });
+    let smp;
+    while ((smp = sm.next())) { t = smp[0]; u = smp[1]; hist.push([t, u.slice()]); }
+    hNext = sm.solver.hNext;
     u[0] += (Math.random() - 0.5) * 2 * NOISE;
     while (hist.length && hist[0][0] < t - WINDOW) hist.shift();
-    moveParticles(n * H);
+    moveParticles(n * DT);
   }
   function frame() {
     advance(STEPS); draw();
