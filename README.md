@@ -55,7 +55,14 @@ src/lorenz63/
   cli.py
 report/
   report.md         报告正文
-  slides.html       汇报幻灯片（引用 figures/ 里的图）
+  slides.html       汇报幻灯片：每页正文与讲稿（引用 figures/ 里的图）
+  slides/           幻灯片的样式与脚本
+    slides.css
+    lorenz.js       向量场与定步长 RK4，三个演示共用
+    hero.js         封面：两条相差 1e-5 的轨道，步长滑块
+    roll.js         现场演示：拖 ρ 看对流卷
+    split.js        现场演示：缩小初值差
+    deck.js         翻页、讲稿、计时，进出页时开关演示
   figures/          png 图
 tests/
 ```
