@@ -153,6 +153,7 @@ pre.eig {
 .cover canvas { width: 640px; height: 640px; display: block; }
 .cover .readout { font-family: var(--mono); font-size: 19px; color: var(--ink-2); display: flex; gap: 28px; font-variant-numeric: tabular-nums; }
 .cover .legend { font-size: 19px; color: var(--ink-2); display: flex; gap: 24px; }
+.cover .ctrl { width: 640px; font-size: 20px; }
 .swatch { display: inline-block; width: 22px; height: 3px; vertical-align: middle; margin-right: 8px; }
 
 /* 现场演示：左边相空间里的两条轨道，右边 log|Δ| 随 t，下面是 ε 滑块 */
@@ -278,12 +279,23 @@ pre.eig {
     <p class="params"><span>σ = 10</span><span>ρ = 28</span><span>β = 8/3</span></p>
   </div>
   <div class="right">
-    <canvas id="hero" width="1280" height="1280" aria-label="两条初值相差 1e-5 的 Lorenz 轨道在 x–z 平面上逐渐分离"></canvas>
+    <canvas id="hero" width="1280" height="1280" aria-label="两条初值相差 1e-5 的 Lorenz 轨道在 x–z 平面上逐渐分离，步长 h 可调"></canvas>
     <p class="legend"><span><i class="swatch" style="background:var(--navy)"></i>x₀</span><span><i class="swatch" style="background:var(--orbit)"></i>x₀ + 10⁻⁵</span></p>
-    <p class="readout"><span id="heroT">t = 0.0</span><span id="heroD">|Δ| = 1.0e−5</span></p>
+    <p class="readout"><span id="heroT">t = 0.0</span><span id="heroD">|Δ| = 1.0e−5</span><span id="heroS">|Δ| > 1 于 t = —</span></p>
+    <div class="ctrl">
+      <label for="heroH">RK4 步长 h</label>
+      <input type="range" id="heroH" min="0" max="5" step="1" value="2">
+      <span class="eps" id="heroHV">0.005</span>
+    </div>
   </div>
   <aside class="notes">
-    <p>自我介绍，报题目。右边是两条 Lorenz 轨道，初值只差 10⁻⁵，画的是 x–z 平面。先别解释，让大家看着它们分开。</p>
+    <p>自我介绍，报题目：《从对流方程到可信的数值解》，以 Lorenz 系统为例，σ = 10、ρ = 28、β = 8/3。</p>
+    <p>右边是两条轨道，投影在 x–z 平面。同一个方程、同一个 RK4、同一个步长 h，唯一的区别是初值的 x 差了 10⁻⁵。请大家盯右下角的 |Δ|：从 1e−5 起步，十几个时间单位就涨到 10 的量级，也就是吸引子本身的大小。</p>
+    <p>先不解释为什么，只请大家记住这个现象：差 10⁻⁵，最后差得和吸引子一样大。整场汇报回答的是：在这种系统里，计算机算出来的东西哪些还能信。</p>
+    <p class="q">开口先问："是不是步长太粗了？" 拖一下滑块给大家看。</p>
+    <p>操作：拖 h 滑块，从同一个起点重跑。h 从 0.001 到 0.02，两条轨道在吸引子上走的路线各不相同，但 "|Δ| &gt; 1 于 t =" 那一栏几乎不变，都在 11.8 附近；到 h = 0.04 才明显提前（约 9.7）。所以分开是 10⁻⁵ 的初值差造成的，不是步长造成的。</p>
+    <p>画线和积分是分开的：每一步内部用三次 Hermite 插值补点（和 RK45 的 dense output 同一个思路），所以 h 再大，线也是光滑的。插值只让线光滑，不让轨道更准。</p>
+    <p>可能被追问："h = 0.005 的 RK4 到 t = 5 已经离真解 3.7e−5，比 10⁻⁵ 还大，凭什么说分开是初值造成的？" 答：两条轨道走的是同一个确定的离散映射，起点又很近，所以积分误差在两条上几乎一样；它们之间的距离量的是这个离散映射对初值的敏感性，而离散映射和真实的流有同样的 Lyapunov 指数。第 ③ 部分讲影随时回到这里。</p>
   </aside>
 </section>
 
@@ -549,7 +561,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
     k3 = f(u + h/2 * k2)
     k4 = f(u + h * k3)
     return u + h/6 * (k1 + 2*k2 + 2*k3 + k4)</pre>
-      <p class="muted" style="font-size:20px">仓库里的 <code>integrate.rk4_step</code> 就是这几行（多一个时间参数）。幻灯片里的演示也用同一个 RK4，h = 0.005，在浏览器里现算。</p>
+      <p class="muted" style="font-size:20px">仓库里的 <code>integrate.rk4_step</code> 就是这几行（多一个时间参数）。幻灯片里的演示也用同一个 RK4，在浏览器里现算，默认 h = 0.005。</p>
     </div>
     <div class="col">
       <table class="data tight" style="font-size:22px">
@@ -1366,30 +1378,54 @@ window.MathJax = {
     const css = getComputedStyle(document.documentElement);
     const colA = css.getPropertyValue("--navy").trim();
     const colB = css.getPropertyValue("--orbit").trim();
-    const S = 10, R = 28, B = 8 / 3, H = 0.005, STEPS = 8, KEEP = 3360, DELTA = 1e-5;   // 每个 RK4 步都画，折线才不出棱角
+    const S = 10, R = 28, B = 8 / 3, DELTA = 1e-5;
+    const HS = [0.001, 0.002, 0.005, 0.01, 0.02, 0.04];   // 滑块档位；0.005 是其余演示用的步长
+    const T_FRAME = 0.04;                                  // 每帧推进的物理时间，与 h 无关，换 h 不改变播放速度
+    const DT_DRAW = 0.0025;                                // 画线的时间分辨率：步与步之间用三次 Hermite 补点
+    const TRAIL = 16.8;                                    // 尾迹保留的时间长度
+    const KEEP = Math.round(TRAIL / DT_DRAW);
+    const slider = document.getElementById("heroH");
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     function f(u) { return [S * (u[1] - u[0]), u[0] * (R - u[2]) - u[1], u[0] * u[1] - B * u[2]]; }
-    function rk4(u) {
-      const k1 = f(u);
-      const k2 = f(u.map((v, i) => v + 0.5 * H * k1[i]));
-      const k3 = f(u.map((v, i) => v + 0.5 * H * k2[i]));
-      const k4 = f(u.map((v, i) => v + H * k3[i]));
-      return u.map((v, i) => v + H / 6 * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]));
+    function rk4(u, k1, h) {
+      const k2 = f(u.map((v, i) => v + 0.5 * h * k1[i]));
+      const k3 = f(u.map((v, i) => v + 0.5 * h * k2[i]));
+      const k4 = f(u.map((v, i) => v + h * k3[i]));
+      return u.map((v, i) => v + h / 6 * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]));
+    }
+    /* 推进一步，并把这一步内部按 DT_DRAW 用三次 Hermite 插值补进尾迹。
+       插值只决定线画得多细，不改变 u：轨道的精度只由 h 决定。 */
+    function step(o, h) {
+      const u1 = rk4(o.u, o.f, h), f1 = f(u1);
+      const m = Math.max(1, Math.ceil(h / DT_DRAW));
+      for (let j = 1; j <= m; j++) {
+        const s = j / m, s2 = s * s, s3 = s2 * s;
+        const c0 = 2 * s3 - 3 * s2 + 1, c1 = s3 - 2 * s2 + s, c2 = -2 * s3 + 3 * s2, c3 = s3 - s2;
+        o.pts.push(o.u.map((v, i) => c0 * v + c1 * h * o.f[i] + c2 * u1[i] + c3 * h * f1[i]));
+      }
+      if (o.pts.length > KEEP) o.pts.splice(0, o.pts.length - KEEP);
+      o.u = u1; o.f = f1;
     }
 
-    let a, b, t, ta, tb, raf = null;
+    let h, a, b, t, tSep, raf = null;
+    const u0 = (function () {                      // 起点固定：h = 0.005 丢掉 20 个时间单位的瞬态
+      let u = [1, 1, 1];
+      for (let k = 0; k < 4000; k++) u = rk4(u, f(u), 0.005);
+      return u;
+    })();
+    function orbit(u) { return { u: u.slice(), f: f(u), pts: [u.slice()] }; }
     function reset() {
-      a = [1, 1, 1];
-      for (let k = 0; k < 4000; k++) a = rk4(a);   // 丢掉 20 个时间单位的瞬态
-      b = [a[0] + DELTA, a[1], a[2]];
-      t = 0; ta = [a]; tb = [b];
+      h = HS[+slider.value];
+      a = orbit(u0); b = orbit([u0[0] + DELTA, u0[1], u0[2]]);
+      t = 0; tSep = null;
+      document.getElementById("heroHV").textContent = String(h);
     }
     const px = x => (x + 24) / 48 * cv.width;
     const pz = z => cv.height - (z - 2) / 52 * cv.height;
 
     function trail(pts, col) {
-      ctx.strokeStyle = col; ctx.lineWidth = 2.4; ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = col; ctx.lineWidth = 2.4; ctx.globalAlpha = 0.9; ctx.lineJoin = "round";
       ctx.beginPath();
       pts.forEach((p, k) => (k ? ctx.lineTo(px(p[0]), pz(p[2])) : ctx.moveTo(px(p[0]), pz(p[2]))));
       ctx.stroke();
@@ -1397,24 +1433,30 @@ window.MathJax = {
       ctx.globalAlpha = 1; ctx.fillStyle = col;
       ctx.beginPath(); ctx.arc(px(e[0]), pz(e[2]), 7, 0, 2 * Math.PI); ctx.fill();
     }
+    const dist = () => Math.hypot(a.u[0] - b.u[0], a.u[1] - b.u[1], a.u[2] - b.u[2]);
     function draw() {
       ctx.clearRect(0, 0, cv.width, cv.height);
-      trail(ta, colA); trail(tb, colB);
-      const d = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+      trail(a.pts, colA); trail(b.pts, colB);
       document.getElementById("heroT").textContent = "t = " + t.toFixed(1);
-      document.getElementById("heroD").textContent = "|Δ| = " + d.toExponential(1).replace("-", "−");
+      document.getElementById("heroD").textContent = "|Δ| = " + dist().toExponential(1).replace("-", "−");
+      document.getElementById("heroS").textContent = "|Δ| > 1 于 t = " + (tSep === null ? "—" : tSep.toFixed(1));
     }
     function advance() {
-      for (let k = 0; k < STEPS; k++) { a = rk4(a); b = rk4(b); t += H; ta.push(a); tb.push(b); }
-      if (ta.length > KEEP) { ta.splice(0, ta.length - KEEP); tb.splice(0, tb.length - KEEP); }
+      const n = Math.max(1, Math.round(T_FRAME / h));
+      for (let k = 0; k < n; k++) {
+        step(a, h); step(b, h); t += h;
+        if (tSep === null && dist() > 1) tSep = t;
+      }
     }
     function frame() {
       advance(); draw();
       if (t > 60) reset();
       raf = requestAnimationFrame(frame);
     }
+    function settle() { for (let k = 0; k < 900; k++) advance(); draw(); }
+    slider.addEventListener("input", () => { reset(); if (reduce) settle(); else draw(); });
     reset();
-    if (reduce) { for (let k = 0; k < 900; k++) advance(); draw(); }
+    if (reduce) settle();
     else draw();
 
     return {
