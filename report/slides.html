@@ -18,23 +18,16 @@
     <p class="params"><span>σ = 10</span><span>ρ = 28</span><span>β = 8/3</span></p>
   </div>
   <div class="right">
-    <canvas id="hero" width="1280" height="1280" aria-label="两条初值相差 1e-5 的 Lorenz 轨道在 x–z 平面上逐渐分离，步长 h 可调"></canvas>
+    <canvas id="hero" width="1280" height="1280" aria-label="两条初值相差 1e-5 的 Lorenz 轨道在 x–z 平面上逐渐分离，到距离超过 5 时停住"></canvas>
     <p class="legend"><span><i class="swatch" style="background:var(--navy)"></i>x₀</span><span><i class="swatch" style="background:var(--orbit)"></i>x₀ + 10⁻⁵</span></p>
-    <p class="readout"><span id="heroT">t = 0.0</span><span id="heroD">|Δ| = 1.0e−5</span><span id="heroS">|Δ| > 1 于 t = —</span></p>
-    <div class="ctrl">
-      <label for="heroH">RK4 步长 h</label>
-      <input type="range" id="heroH" min="0" max="5" step="1" value="2">
-      <span class="eps" id="heroHV">0.005</span>
-    </div>
+    <p class="readout"><span id="heroT">t = 0.0</span><span id="heroD">|Δ| = 1.0e−5</span></p>
+    <div class="ctrl"><button type="button" id="heroReplay">重放</button></div>
   </div>
   <aside class="notes">
     <p>自我介绍，报题目：《从对流方程到可信的数值解》，以 Lorenz 系统为例，σ = 10、ρ = 28、β = 8/3。</p>
-    <p>右边是两条轨道，投影在 x–z 平面。同一个方程、同一个 RK4、同一个步长 h，唯一的区别是初值的 x 差了 10⁻⁵。请大家盯右下角的 |Δ|：从 1e−5 起步，十几个时间单位就涨到 10 的量级，也就是吸引子本身的大小。</p>
-    <p>先不解释为什么，只请大家记住这个现象：差 10⁻⁵，最后差得和吸引子一样大。整场汇报回答的是：在这种系统里，计算机算出来的东西哪些还能信。</p>
-    <p class="q">开口先问："是不是步长太粗了？" 拖一下滑块给大家看。</p>
-    <p>操作：拖 h 滑块，从同一个起点重跑。h 从 0.001 到 0.02，两条轨道在吸引子上走的路线各不相同，但 "|Δ| &gt; 1 于 t =" 那一栏几乎不变，都在 11.8 附近；到 h = 0.04 才明显提前（约 9.7）。所以分开是 10⁻⁵ 的初值差造成的，不是步长造成的。</p>
-    <p>画线和积分是分开的：每一步内部用三次 Hermite 插值补点（和 RK45 的 dense output 同一个思路），所以 h 再大，线也是光滑的。插值只让线光滑，不让轨道更准。</p>
-    <p>可能被追问："h = 0.005 的 RK4 到 t = 5 已经离真解 3.7e−5，比 10⁻⁵ 还大，凭什么说分开是初值造成的？" 答：两条轨道走的是同一个确定的离散映射，起点又很近，所以积分误差在两条上几乎一样；它们之间的距离量的是这个离散映射对初值的敏感性，而离散映射和真实的流有同样的 Lyapunov 指数。第 ③ 部分讲影随时回到这里。</p>
+    <p>右边是两条轨道，投影在 x–z 平面。同一个方程，唯一的区别是初值的 x 差了 10⁻⁵。请大家盯右下角的 |Δ|：从 1e−5 起步，到 t ≈ 13.6 超过 1（报告里的可分辨阈值），再过 0.2 个时间单位涨到 5，动画在这里停住，两个端点已经分开。</p>
+    <p>先不解释为什么，只请大家记住这个现象：差 10⁻⁵，十几个时间单位就差到看得出来。整场汇报回答的是：在这种系统里，计算机算出来的东西哪些还能信。点"重放"可以再看一遍。</p>
+    <p>可能被追问："是不是数值误差造成的？" 答：这两条轨道是用 DOP853、rtol = 1e−13 在 Python 里算好的（<code>lorenz63 figure hero</code>），也就是报告全篇当作参考解的那个精度；积分误差比 10⁻⁵ 小好几个量级，分开来自初值差。</p>
   </aside>
 </section>
 
@@ -300,7 +293,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
     k3 = f(u + h/2 * k2)
     k4 = f(u + h * k3)
     return u + h/6 * (k1 + 2*k2 + 2*k3 + k4)</pre>
-      <p class="muted" style="font-size:20px">仓库里的 <code>integrate.rk4_step</code> 就是这几行（多一个时间参数）。幻灯片里的演示也用同一个 RK4，在浏览器里现算，默认 h = 0.005。</p>
+      <p class="muted" style="font-size:20px">仓库里的 <code>integrate.rk4_step</code> 就是这几行（多一个时间参数）。ρ 和 ε 两个现场演示也用同一个 RK4，h = 0.005，在浏览器里现算。</p>
     </div>
     <div class="col">
       <table class="data tight" style="font-size:22px">
@@ -988,6 +981,7 @@ window.MathJax = {
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js" async></script>
 <script src="slides/lorenz.js"></script>
+<script src="figures/hero_data.js"></script>
 <script src="slides/hero.js"></script>
 <script src="slides/split.js"></script>
 <script src="slides/roll.js"></script>

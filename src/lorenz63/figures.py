@@ -1404,6 +1404,49 @@ def fig18_convection(output: Path) -> Path:
 
 
 # ---------------------------------------------------------------------------
+# hero — the cover animation's data
+# ---------------------------------------------------------------------------
+
+#: Initial-condition offset on the cover, in x.
+HERO_DELTA = 1e-5
+#: Separation at which the cover animation stops. The report's threshold of 1
+#: is only about ten pixels on the cover canvas; 5 is reached about 0.2 time
+#: units later and is visibly apart.
+HERO_STOP = 5.0
+
+
+def hero_data(output: Path) -> Path:
+    """Two reference-accuracy trajectories ``HERO_DELTA`` apart, until ``HERO_STOP``.
+
+    Written as a script that sets ``window.LORENZ_HERO`` so that ``slides.html``
+    can load it from ``file://``, where ``fetch`` is blocked. The slides only
+    replay these samples; nothing on the cover is integrated in the browser.
+    """
+    u0 = on_attractor(CLASSICAL)
+    dt = 0.005
+    a = reference_trajectory(CLASSICAL, u0, 30.0, dt_out=dt)
+    b = reference_trajectory(CLASSICAL, u0 + np.array([HERO_DELTA, 0.0, 0.0]), 30.0, dt_out=dt)
+    delta = separation(a, b)
+    n = int(np.flatnonzero(delta > HERO_STOP)[0]) + 1
+
+    def series(v: NDArray) -> str:
+        return "[" + ",".join(f"{x:.4f}" for x in v[:n]) + "]"
+
+    output.mkdir(parents=True, exist_ok=True)
+    path = output / "hero_data.js"
+    path.write_text(
+        "// 由 `lorenz63 figure hero` 生成：DOP853 rtol=1e-13，两条轨道初值在 x 上差 "
+        f"{HERO_DELTA:g}，到 |Δ| 首次超过 {HERO_STOP:g} 为止。\n"
+        "window.LORENZ_HERO = {"
+        f'"dt":{dt},"delta":{HERO_DELTA},'
+        f'"ax":{series(a.x)},"az":{series(a.z)},"bx":{series(b.x)},"bz":{series(b.z)},'
+        '"logd":[' + ",".join(f"{x:.3f}" for x in np.log10(delta[:n])) + "]};\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+# ---------------------------------------------------------------------------
 
 FIGURES: dict[str, Callable[[Path], Path]] = {
     "fig01": fig01_paradox,
@@ -1424,4 +1467,5 @@ FIGURES: dict[str, Callable[[Path], Path]] = {
     "fig16": fig16_orthogonalisation,
     "fig17": fig17_conservative,
     "fig18": fig18_convection,
+    "hero": hero_data,
 }

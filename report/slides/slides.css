@@ -148,7 +148,7 @@ pre.eig {
 .cover canvas { width: 640px; height: 640px; display: block; }
 .cover .readout { font-family: var(--mono); font-size: 19px; color: var(--ink-2); display: flex; gap: 28px; font-variant-numeric: tabular-nums; }
 .cover .legend { font-size: 19px; color: var(--ink-2); display: flex; gap: 24px; }
-.cover .ctrl { width: 640px; font-size: 20px; }
+.cover .ctrl { font-size: 20px; }
 .swatch { display: inline-block; width: 22px; height: 3px; vertical-align: middle; margin-right: 8px; }
 
 /* 现场演示：左边相空间里的两条轨道，右边 log|Δ| 随 t，下面是 ε 滑块 */
