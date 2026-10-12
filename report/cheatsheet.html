@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>板书小抄</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;900&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* A4 纵向打印。左栏是板书与心算，右栏是讲稿。
+   板块颜色与 mindmap.html 的分支一致：1 灰蓝 2 藏青 3 紫 4 蓝 5 朱红 6 青绿。 */
+:root {
+  color-scheme: light;
+  --ink: #16213a;
+  --ink-2: #4b5770;
+  --ink-3: #6b7489;
+  --rule: #d6dbe4;
+  --paper: #ffffff;
+  --surround: #e3e7ee;
+  --c0: #33405a;
+  --c1: #5b6478;
+  --c2: #1f3a73;
+  --c3: #7b3fa0;
+  --c4: #2f6db5;
+  --c5: #c2410c;
+  --c6: #0f7a6e;
+  --sans: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --serif: "Noto Serif SC", "Songti SC", "STSong", serif;
+  --math: "STIX Two Text", "STIXGeneral", "Times New Roman", "Noto Serif SC", "Songti SC", serif;
+}
+@page { size: A4; margin: 9mm 9mm 10mm; }
+* { box-sizing: border-box; }
+html { font-size: 9pt; }
+body {
+  margin: 0;
+  background: var(--surround);
+  color: var(--ink);
+  font-family: var(--sans);
+  line-height: 1.45;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.sheet {
+  width: 210mm;
+  margin: 8mm auto;
+  padding: 9mm;
+  background: var(--paper);
+  box-shadow: 0 1px 3px rgba(22, 33, 58, .12), 0 10px 30px rgba(22, 33, 58, .10);
+}
+.hint { width: 210mm; margin: 6mm auto 0; color: var(--ink-2); font-size: 8.5pt; }
+@media print {
+  body { background: none; }
+  .sheet { width: auto; margin: 0; padding: 0; box-shadow: none; }
+  .hint { display: none; }
+}
+
+/* ---------- 页头 ---------- */
+.top { display: flex; align-items: baseline; gap: 4mm; border-bottom: 1.6px solid var(--ink); padding-bottom: 1.6mm; }
+.top h1 { font-family: var(--serif); font-weight: 900; font-size: 17pt; margin: 0; letter-spacing: .04em; }
+.top p { margin: 0; color: var(--ink-2); font-size: 8.4pt; }
+.spine { display: flex; flex-wrap: wrap; gap: 1.2mm 5mm; margin: 2.2mm 0 0; font-family: var(--math); font-size: 10pt; }
+.spine span { white-space: nowrap; }
+.spine b { font-family: var(--sans); font-size: 7.6pt; color: var(--ink-2); font-weight: 500; margin-right: 1.2mm; }
+
+.board {
+  display: grid; grid-template-columns: 1fr 1.35fr 1.15fr;
+  margin-top: 3mm; border: 1.4px solid var(--ink); border-radius: 1.5mm;
+  font-size: 8pt;
+}
+.board > div { padding: 1.6mm 2.4mm 2mm; }
+.board > div + div { border-left: 1px dashed var(--ink-3); }
+.board h3 { margin: 0 0 .8mm; font-size: 7.8pt; font-weight: 700; color: var(--ink-2); letter-spacing: .06em; }
+.board ol, .board ul { margin: 0; padding-left: 4mm; }
+.board li { margin: .2mm 0; }
+
+.timeline { display: flex; margin-top: 2.6mm; height: 9.4mm; font-size: 7.2pt; line-height: 1.25; }
+.timeline > div { color: #fff; padding: 1mm 1.4mm; overflow: hidden; border-right: 1px solid #fff; }
+.timeline b { display: block; font-weight: 700; }
+.legend { margin: 1.2mm 0 0; font-size: 7.4pt; color: var(--ink-2); }
+
+/* ---------- 板块 ---------- */
+.block { margin-top: 3.4mm; }
+.block > header {
+  display: flex; align-items: baseline; gap: 2.4mm;
+  border-bottom: 1.6px solid var(--c); padding-bottom: .8mm;
+  break-after: avoid; page-break-after: avoid;
+}
+.block > header .n {
+  display: inline-grid; place-items: center; width: 5.6mm; height: 5.6mm; border-radius: 50%;
+  background: var(--c); color: #fff; font-weight: 700; font-size: 9pt; align-self: center;
+}
+.block > header h2 { margin: 0; font-family: var(--serif); font-weight: 900; font-size: 12pt; color: var(--c); }
+.block > header .meta { color: var(--ink-2); font-size: 8pt; }
+.block > header .meta2 { margin-left: auto; color: var(--ink-3); font-size: 7.6pt; }
+
+.row {
+  display: grid; grid-template-columns: 1.12fr 1fr; gap: 3.6mm;
+  padding: 1.3mm 0 1.4mm; border-bottom: .6px dashed var(--rule);
+  break-inside: avoid; page-break-inside: avoid;
+}
+.row:last-child { border-bottom: none; }
+.bd { font-size: 8.7pt; }
+.bd p { margin: 0 0 .6mm; }
+.bd .pg { display: block; font-size: 7.4pt; color: var(--ink-3); margin-bottom: .5mm; }
+.say { font-size: 7.4pt; color: var(--ink-2); line-height: 1.46; border-left: 1.4px solid color-mix(in srgb, var(--c) 35%, white); padding-left: 2.6mm; }
+.say p { margin: 0 0 .7mm; }
+.say .q { color: var(--c); font-weight: 500; }
+.say .q::before { content: "开口问　"; font-weight: 700; font-size: 6.9pt; letter-spacing: .05em; }
+.say .key { color: var(--ink); font-weight: 700; }
+.say .key::before { content: "留下一句　"; color: var(--c); font-size: 6.9pt; letter-spacing: .05em; }
+.say .bb { color: var(--ink); font-weight: 700; }
+.say .bb::before { content: "黑板　"; color: var(--c); font-size: 6.9pt; letter-spacing: .05em; }
+
+.tg {
+  display: inline-block; font-size: 6.7pt; line-height: 1.35; padding: 0 1.1mm; margin-right: 1.4mm;
+  border-radius: .8mm; border: .7px solid currentColor; vertical-align: 1px; font-weight: 500; white-space: nowrap;
+}
+.tg.w { color: var(--c); }
+.tg.ppt { color: var(--ink-3); }
+.tg.demo { color: var(--c5); }
+.tg.calc { color: #fff; background: var(--c); border-color: var(--c); }
+
+.m { font-family: var(--math); font-size: 10.2pt; }
+.chalk { font-family: var(--math); font-size: 10.2pt; line-height: 1.45; margin: .3mm 0 .8mm; }
+.eqs { display: inline-grid; grid-template-columns: auto auto; column-gap: 1.6mm; font-family: var(--math); font-size: 11.4pt; line-height: 1.32; vertical-align: middle; }
+.eqs span:nth-child(odd) { text-align: right; }
+.mat {
+  display: inline-grid; grid-template-columns: repeat(3, auto); gap: .1em 1.2em;
+  padding: .12em .7em; margin: 0 .3em; vertical-align: middle; text-align: center;
+  border-left: 1.2px solid var(--ink); border-right: 1.2px solid var(--ink); border-radius: 3px;
+  font-family: var(--math); font-size: 10.6pt; line-height: 1.3;
+}
+.ok { color: var(--c6); font-weight: 700; }
+.no { color: var(--c5); font-weight: 700; }
+.hl { color: var(--c); font-weight: 700; }
+.small { font-size: 7.8pt; color: var(--ink-2); }
+ul.ck { list-style: none; margin: .4mm 0 0; padding: 0; }
+ul.ck li { margin: .25mm 0; }
+
+table.t { border-collapse: collapse; font-size: 8.2pt; margin: .8mm 0 .6mm; width: 100%; }
+table.t th, table.t td { border-bottom: .6px solid var(--rule); padding: .55mm 1.4mm; text-align: left; vertical-align: top; }
+table.t th { font-weight: 700; color: var(--ink-2); font-size: 7.6pt; border-bottom: 1px solid var(--ink-3); }
+table.t td.n, table.t th.n { text-align: right; font-family: var(--math); font-size: 9pt; white-space: nowrap; }
+table.t tr.em td { background: color-mix(in srgb, var(--c) 8%, white); }
+
+.qa { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2mm 5mm; font-size: 8pt; margin-top: 1.6mm; }
+.qa div { break-inside: avoid; }
+.qa b { display: block; color: var(--ink); }
+.qa span { color: var(--ink-2); }
+.qa-page { break-before: page; page-break-before: always; }
+.nums { display: grid; grid-template-columns: 1fr 1fr; gap: 0 6mm; margin-top: 1.4mm; align-items: start; }
+.nums table.t { font-size: 8pt; margin: 0; }
+.nums table.t td:first-child { color: var(--ink-2); }
+.nums tr.sec td { font-weight: 700; color: var(--ink); padding-top: 1.6mm; border-bottom: 1px solid var(--ink-3); }
+.foot { margin-top: 4mm; padding-top: 1.4mm; border-top: 1px solid var(--rule); font-size: 7.4pt; color: var(--ink-3); }
+</style>
+</head>
+<body>
+<p class="hint">打印：A4 纵向，边距默认，勾选“背景图形”。左栏是板书和心算，右栏是讲稿。</p>
+<main class="sheet">
+
+<div class="top">
+  <h1>板书小抄</h1>
+  <p>从对流方程到可信的数值解 · 正文 40 页，页上预估合计约 51 分钟 · ← → 翻页 · N 讲稿 · B 备用目录 · R 返回</p>
+</div>
+<div class="spine">
+  <span><b>主线</b>T = ln(1/δ) / λ₁</span>
+  <span><b>每一位</b>δ ÷ 10 → T + ln10/λ₁ = 2.30/0.90 ≈ 2.55</span>
+  <span><b>双精度</b>16 × 2.55 ≈ 41</span>
+  <span><b>迹</b>Σλ = tr J = −(σ+1+β) = −13.67</span>
+  <span><b>谱</b>λ = (+0.904, 0, −14.57)</span>
+</div>
+
+<div class="board">
+  <div>
+    <h3>左栏 · 全程保留</h3>
+    <ul>
+      <li>Lorenz 方程与 σ、β、ρ（板块 1）</li>
+      <li>J 矩阵，写在方程下面（板块 4）</li>
+    </ul>
+  </div>
+  <div>
+    <h3>中间 · 推导区，随写随擦</h3>
+    <ol>
+      <li>Galerkin 代入三项，截断的代价</li>
+      <li>不动点、分类讨论、三次式验算</li>
+      <li>截面映射与蛛网草图</li>
+      <li>局部指数、diag(2, ½)、迹</li>
+      <li>精度估算：对数时间、幂律、方法、稳定域</li>
+    </ol>
+  </div>
+  <div>
+    <h3>右栏 · 全程保留，逐条攒</h3>
+    <ol>
+      <li>停不下（板块 2）</li>
+      <li>一个方向在拉伸，λ₁ ≈ 0.9（板块 4）</li>
+      <li>体积缩到零，Σλ = tr J（板块 4）</li>
+    </ol>
+    <ul style="margin-top:.6mm">
+      <li>T = ln(1/δ)/λ₁ → +2.55 / 位，41（板块 5）</li>
+      <li>守恒乘法，混沌加法（板块 6）</li>
+    </ul>
+  </div>
+</div>
+
+<div class="timeline">
+  <div style="flex:3.5;background:var(--c0)"><b>开场</b>1–3 · 3.5′</div>
+  <div style="flex:11.25;background:var(--c1)"><b>1 方程从哪来</b>4–13 · 11′</div>
+  <div style="flex:6.25;background:var(--c2)"><b>2 不动点</b>14–17 · 6′</div>
+  <div style="flex:1.5;background:var(--c3)"><b>3</b>18</div>
+  <div style="flex:6.75;background:var(--c4)"><b>4 J 与 λ</b>19–23 · 7′</div>
+  <div style="flex:7.5;background:var(--c5)"><b>5 精度</b>24–28 · 7.5′</div>
+  <div style="flex:14.5;background:var(--c6)"><b>6 什么可信</b>29–40 · 14.5′</div>
+</div>
+<p class="legend">数字是页码与每页 data-min 之和。标签：<span class="tg w" style="--c:var(--c2)">板书</span>写上黑板　<span class="tg calc" style="--c:var(--c2)">心算</span>边写边算　<span class="tg ppt">对图</span>指着 PPT 讲　<span class="tg demo">演示</span>现场拖滑块</p>
+
+<!-- ============ 开场 ============ -->
+<section class="block" style="--c:var(--c0)">
+  <header><span class="n">0</span><h2>开场</h2><span class="meta">第 1–3 页 · 3.5 分钟</span><span class="meta2">不写板书</span></header>
+  <div class="row">
+    <div class="bd">
+      <p><span class="tg demo">演示</span>封面：x 初值差 10⁻⁵，|Δ| 到 1 停在 <span class="m">t ≈ 13.6</span>（心算 5 × 2.55 ≈ 12.7）</p>
+      <p><span class="tg demo">演示</span>第 3 页：同方程、同初值、同 DOP853，只拧 rtol</p>
+      <p class="chalk">rtol 1e−3 / 1e−6 / 1e−9 / 1e−12 → 脱钩 5.4 / 10.6 / 18.4 / 26.8；步数 300 多 → 3700 多</p>
+    </div>
+    <div class="say">
+      <p class="q">“rtol = 1e−6 的这条和参考解，哪一条是对的？”</p>
+      <p>停一下等回答。脱钩之前参考解对；脱钩之后两条都只是吸引子上的某一条轨道，“哪条对”这个问题本身没了意义。后两个间隔都是 8 左右：每收紧 1000 倍只多 8，这个 8 第 ② 部分算。目录页只请大家记住 2.55。</p>
+      <p class="key">容差收紧十亿倍，可信时间只从 5 走到 27。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 1 方程从哪来 ============ -->
+<section class="block" style="--c:var(--c1)">
+  <header><span class="n">1</span><h2>方程从哪来</h2><span class="meta">绪论 · 第 4–13 页 · 11 分钟</span><span class="meta2">PDE 对图带过，板书只写方程、代入、截断</span></header>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 5–6 页</span>
+      <p><span class="tg ppt">对图</span><span class="m">Ra = gαΔT H³ / (νκ)</span> = 想翻的 ÷ 拦着的</p>
+      <p><span class="tg ppt">对图</span>Boussinesq → 流函数 ψ 与温度偏离 θ 两条 PDE。只读花括号：平流 · 粘性 · 浮力 · 热扩散 · 搬运背景温度</p>
+      <p>未知量是函数 → 无穷维</p>
+    </div>
+    <div class="say">
+      <p class="q">“这组方程从哪来，怎么放进计算机？”</p>
+      <p>锅里的水底下烧：热的变轻想上去，冷的想下来；粘性 ν 拖住流动，热扩散 κ 抹平温差。Ra 小拦得住，水不动；过了临界值长出一排对流卷。能拧的只有 ΔT，Ra ∝ ΔT，这个旋钮后面叫 ρ。</p>
+      <p>θ 是实际温度减掉传导直线：水不动 θ = 0，所以 θ 量的是对流本身。</p>
+      <p class="key">两条 PDE，未知量是函数，要先变成有限个数。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 7–8 页 · 左栏，全程保留</span>
+      <p><span class="tg w">板书</span>
+        <span class="eqs"><span>ẋ =</span><span>σ(y − x)</span><span>ẏ =</span><span>ρx − y − xz</span><span>ż =</span><span>xy − βz</span></span>
+      </p>
+      <p class="chalk">σ = ν/κ = 10　β = 4/(1+a²) = 8/3　ρ = Ra/Ra<sub>c</sub> = 28</p>
+      <p class="chalk">ψ ∝ x · sin kX sin πZ　　θ ∝ y · cos kX sin πZ − z · sin 2πZ</p>
+      <p>x 卷转速（正负是转向）· y 升降流温差 · z 剖面弯曲，<span class="m">Nu = 1 + 2z/ρ</span></p>
+    </div>
+    <div class="say">
+      <p>线方法：先空间离散、再时间推进，和声学 FDTD 一样；只是第 1 步用 Fourier 模态，只留 3 个，N = 3，小到每一步都看得清。</p>
+      <p>大写 X、Z 是坐标，小写 x、y、z 是只随时间变的振幅（H = 1，k = πa）。z 的模态只随竖直 Z 变：中段被搅匀拉平、近板变陡，所以 z 就是对流多运走的热。</p>
+      <p class="key">x 是转速，y 是温差，z 是多运的热。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 9 页 · 代入几项</span>
+      <p><span class="tg w">板书</span>Galerkin：代进 PDE → 乘每个模态 → 在一个卷上积分。线性项各回各的模态，只看平流 J(a, b) = u·∇b：</p>
+      <ul class="ck">
+        <li>① 卷 × 卷　<span class="m">J(ψ, ∇²ψ) = 0</span>（∇²ψ = −K²ψ）→ ẋ 线性</li>
+        <li>② x × y　<span class="m">(kπ/2) sin 2πZ</span>（cos²kX + sin²kX = 1，X 消掉）→ 恰好是 z 的花样 → ż 里 <span class="hl">+xy</span></li>
+        <li>③ x × z　<span class="m">kπ cos kX (sin 3πZ − sin πZ)</span>：sin πZ 回 y → ẏ 里 <span class="hl">−xz</span>；<span class="no">sin 3πZ 不在三个模态里 → 扔掉 = 截断</span></li>
+      </ul>
+    </div>
+    <div class="say">
+      <p class="q">“只留三项，为什么能自己闭合？扔掉了什么？”</p>
+      <p>② 是 z 非留不可的理由：x、y 一乘直接生出 z。不留 z，方程只剩线性部分，ρ &gt; 1 时振幅指数增长，没有东西让它停；z 是非线性的刹车。</p>
+      <p>③ 是截断发生的唯一地方。被问到可现场验 ②：积化和差后含 cos 2kX 的项正好抵消，只剩 sin 2πZ。</p>
+      <p class="key">截断就是扔掉 sin 3πZ；z 是非线性的刹车。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 10、12 页 · 截断的代价</span>
+      <p><span class="tg calc">心算</span>扔掉的 sin 3πZ 与留下的 −xz <strong>同系数</strong>（③ 括号里两项）</p>
+      <p>留下的 −xz 比驱动 ρx = z/ρ；定常卷 C± 上 z = ρ − 1：</p>
+      <p class="chalk">ρ = 1.1：0.1/1.1 ≈ 9%　　ρ = 28：27/28 ≈ <span class="no">96%</span></p>
+      <p>传热：定常卷上 <span class="m">Nu = 1 + 2z/ρ = 3 − 2/ρ ≤ 3</span>（ρ = 28 是 2.93）；真实对流 Nu 约 ∝ Ra<sup>1/3</sup>，无界</p>
+      <p>⇒ ρ = 28 时高阶模早被强烈激发：三行方程是自洽的<strong>数学对象</strong>，不是流体模型</p>
+    </div>
+    <div class="say">
+      <p>刚过 ρ = 1，xz 是小量乘小量，扔掉的那块也小，截断有渐近依据；到 28，扔掉的强迫和驱动 ρx 同一量级，真实流体里 sin 3πZ 一定长起来。传热是第二个迹象：截断把 Nu 封顶在 3。</p>
+      <p>第 10 页一句带过：线性项只有驱动和扩散，非线性两项 −xz、xy 都是 u·∇θ，混沌全来自搬运。</p>
+      <p>恰好就是这组方程的装置：Malkus 水车、热虹吸环、单模激光（Haken 1975）。</p>
+      <p class="key">后面的结论关于方程本身，不关于天气。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 11 页 · 参数代入（时间紧就跳过）</span>
+      <p class="chalk">Ra<sub>c</sub>(a) = π⁴(1+a²)³/a²，a² = ½ 最小 → 27π⁴/4 ≈ 657.5</p>
+      <p class="chalk">β = 4/(1 + ½) = 8/3，卷宽 √2 H　　σ = 10 &gt; β + 1 = 11/3　　ρ = 28 &gt; ρ<sub>H</sub> ≈ 24.74</p>
+    </div>
+    <div class="say">
+      <p class="q">“为什么是 8/3 这么怪的数？”</p>
+      <p>8/3 是最先失稳的那种卷的几何；σ 和水同量级（室温约 7），还得大于 β + 1，否则 C± 永不失稳；28 刚过 24.74。量级（被问再说）：1 cm 水层上下差 1 K，Ra 约 1.5×10⁴；一个时间单位约一分钟；刚性板临界值是 1708。</p>
+      <p class="key">8/3 是几何，10 是水，28 刚过失稳。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 13 页 · 时间推进</span>
+      <p class="chalk">Euler　u ← u + h f(u)　一阶</p>
+      <p class="chalk">RK4　四个斜率加权：h 减半，误差 ÷ 2⁴ = 16</p>
+      <p class="chalk">DOP853　8 阶，每步估局部误差，按 rtol 调 h；rtol = 1e−13 当参考解</p>
+    </div>
+    <div class="say">
+      <p class="q">“怎么让计算机往前走一步？”</p>
+      <p>左边代码就是全部计算：一个 f、一个循环。全篇实算只用 DOP853，只拧 rtol，开场演示就在拧它。过渡：方程有了，积分器也有了；谈误差之前，先看方程自己会做什么。</p>
+      <p class="key">每一步都很准；问题是误差怎么累积。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2 不动点 ============ -->
+<section class="block" style="--c:var(--c2)">
+  <header><span class="n">2</span><h2>不动点、分类讨论、三次式验算</h2><span class="meta">① · 第 14–17 页 · 6 分钟</span><span class="meta2">右栏写下第一条</span></header>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 15 页</span>
+      <p><span class="tg demo">演示</span>ρ：0.5 → 慢拖过 1 → 10 → 24.5（点“推一下”）→ 28</p>
+    </div>
+    <div class="say">
+      <p class="q">每拖之前先猜：“ρ 小于 1 会怎样？刚过 1？一直加热下去？”</p>
+      <p>0.5 不动；过 1 卷自己长出来，转向随机；10 定常卷更强；过 24.74，x 在正负间跳，停不下来。24.5 推一下（z 加 15）就不再回来：两种结局并存，看初值。</p>
+      <p class="key">拧 ρ，从静止到定常卷，再到停不下来的翻转。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 16 页 · 不动点</span>
+      <p><span class="tg w">板书</span><span class="m">ẋ = ẏ = ż = 0：y = x，z = x²/β，x(ρ − 1 − z) = 0</span></p>
+      <p class="chalk">→ 原点 O；C± = (±√(β(ρ−1)), ±√(β(ρ−1)), ρ − 1)</p>
+      <p><span class="tg calc">心算</span>ρ = 28：8/3 × 27 = 72，√72 ≈ 8.49 → C± = (±8.49, ±8.49, 27)</p>
+      <p><span class="tg w">板书</span>原点扔掉 xz、xy：<span class="m">λ = −β；λ² + (σ+1)λ + σ(1−ρ) = 0</span></p>
+      <p>两根之和 −(σ+1) &lt; 0；两根之积 σ(1−ρ)：ρ &gt; 1 变负 → 一正一负，鞍点</p>
+    </div>
+    <div class="say">
+      <p class="q">“刚才停下来的点，能不能不积分，直接从方程里找出来？”</p>
+      <p>O 是静止导热，C± 是定常卷，正负是转向；(x, y) → (−x, −y) 对称，所以成对。原点附近 xz、xy 是小量乘小量，扔掉就是线性化，z 自己分出去。ρ = Ra/Ra<sub>c</sub> 这样归一化，就是为了让阈值落在 1。</p>
+      <p class="key">ρ = 1，原点从稳定变成鞍点，C± 诞生。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">分类讨论</span>
+      <table class="t">
+        <thead><tr><th>ρ</th><th>原点</th><th>C±</th><th>看到的</th></tr></thead>
+        <tbody>
+          <tr><td class="n">&lt; 1</td><td>稳定：积 &gt; 0，两根皆负</td><td>不存在</td><td>静止导热</td></tr>
+          <tr><td class="n">= 1</td><td>一根过零：叉式分岔</td><td>诞生</td><td>对流起来</td></tr>
+          <tr><td class="n">1 ~ 24.74</td><td>鞍点</td><td>稳定；ρ &gt; 1.35 起是复根，螺旋收拢</td><td>定常卷</td></tr>
+          <tr class="em"><td class="n">&gt; 24.74</td><td>鞍点</td><td>一对复根穿虚轴，失稳</td><td>停不下</td></tr>
+        </tbody>
+      </table>
+      <p class="small">13.926 同宿爆炸，生出的混沌集不吸引；24.06 起混沌吸引子与稳定 C± 共存，去哪看初值（亚临界）</p>
+    </div>
+    <div class="say">
+      <p>对着第 16 页四格读：0.5 一个点；10 原点空心、两条轨道螺旋落进 C±；24.5 一条在两叶间游荡、一条困在 C+ 旁；28 三个点全空心。</p>
+      <p>第 17 页分岔图的纵轴：固定 ρ，把 z 每个波峰竖着点上去。ρ<sub>H</sub> 以下那一列收到 ρ − 1，正是 C± 的高度：虚部让轨道绕着转出峰，负实部让峰逐圈收拢。带在 ρ ≈ 23.8 就出现（23.8 到 24.06 是长暂态），比 ρ<sub>H</sub> 早。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 17 页 · C± 的三次式与 Hopf</span>
+      <p><span class="tg w">板书</span><span class="m">λ³ + a₂λ² + a₁λ + a₀ = 0</span></p>
+      <p class="chalk">a₂ = σ+β+1，a₁ = β(σ+ρ)，a₀ = 2σβ(ρ−1)，ρ &gt; 1 全正</p>
+      <p>全正 ⇒ 没有 λ ≥ 0 的实根 ⇒ 失稳只能一对复根从 ±iω 穿过：Hopf</p>
+      <p>代 λ = iω：虚部 <span class="m">ω² = a₁</span>，实部 <span class="m">a₂ω² = a₀</span> ⇒ <span class="m">a₂a₁ = a₀</span></p>
+      <p class="chalk">ρ<sub>H</sub> = σ(σ+β+3)/(σ−β−1) = (10 × 47/3)/(19/3) = 470/19 ≈ 24.74</p>
+      <p>此时分解为 (λ + a₂)(λ² + a₁)：ω = √(8/3 × 34.74) ≈ 9.62，第三根 −a₂ = −41/3</p>
+    </div>
+    <div class="say">
+      <p class="q">“一直加热，定常卷什么时候站不住？”</p>
+      <p>系数全正挡住的只是实根：反例 λ³ + λ² + λ + 2，实根约 −1.35，三根之和 −1，复根实部 +0.18。根随 ρ 连续地动，到右半平面必须过虚轴；a₀ &gt; 0，λ = 0 不是根，只能在 ±iω 成对穿。分母 σ − β − 1 说明为什么要 σ &gt; β + 1。</p>
+      <p>亚临界：穿越时没有小极限环接住，轨道一离开 C± 就跳到远处的吸引子。</p>
+      <p class="bb">第一条：停不下，ρ = 28 时三个不动点全不稳。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">三次式快速验算（ρ = 28）</span>
+      <p><span class="tg calc">心算</span><span class="m">a₂ = 41/3 ≈ 13.67　a₁ = 8/3 × 38 ≈ 101.3　a₀ = 160/3 × 27 = 1440</span></p>
+      <p>根：<span class="m">−13.85，0.094 ± 10.19i</span></p>
+      <ul class="ck">
+        <li><span class="ok">✓</span> 和 = −a₂：−13.85 + 2 × 0.094 = −13.67 = tr J</li>
+        <li><span class="ok">✓</span> 积 = −a₀：13.85 × (10.19² + 0.094²) ≈ 13.85 × 104 ≈ 1440</li>
+        <li><span class="ok">✓</span> Routh–Hurwitz：a₂a₁ ≈ 1385 &lt; a₀ = 1440，差 55 → 复根实部 &gt; 0</li>
+        <li><span class="ok">✓</span> 反推实部：a₂a₁ − a₀ = −2α[(r − α)² + ω²] → α ≈ 55 / (2 × 293) ≈ 0.094</li>
+        <li><span class="ok">✓</span> 原点：λ² + 11λ − 270 = 0 → (−11 ± √1201)/2 = +11.83，−22.83；连 −β，和 −13.67 = tr J</li>
+      </ul>
+    </div>
+    <div class="say">
+      <p>三个系数就够验算，不用解三次方程。Vieta：a₂ = −(根之和) = −tr J，a₀ = −(根之积) = −det J。</p>
+      <p>ρ 每加 1，a₀ 涨 160/3 ≈ 53，a₂a₁ 只涨 41/3 × 8/3 ≈ 36，所以一过 ρ<sub>H</sub> 就一直是 a₀ 大。</p>
+      <p>两个不动点的特征值加起来都是 −13.67。先记下这个数：第 23 页它是 tr J。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3 截面 ============ -->
+<section class="block" style="--c:var(--c3)">
+  <header><span class="n">3</span><h2>截面与一维映射</h2><span class="meta">① · 第 18 页 · 1.5 分钟</span><span class="meta2">第 31、36 页再用；拉伸倍数在板块 4 末尾回扣</span></header>
+
+  <div class="row">
+    <div class="bd">
+      <p><span class="tg w">板书</span>平面流线不交叉 → 有界轨道只能落到不动点或闭轨（Poincaré–Bendixson）→ 混沌至少三维</p>
+      <p class="chalk">截面 z = ρ − 1 = 27，只记上行：P<sub>n+1</sub> = F(P<sub>n</sub>)</p>
+      <p><span class="tg calc">心算</span>T = 3000 内 3992 次 → 一圈 ≈ 3000/3992 ≈ <strong>0.75</strong> 个时间单位</p>
+      <p><span class="tg w">草图</span>x<sub>n</sub> → x<sub>n+1</sub> 四段；门槛 <span class="m">|x| ≈ 13.25</span>：内侧留叶、下一圈更往外；外侧换叶，越过得越少落得越远</p>
+      <p class="chalk">蛛网　−12.2 → −12.8 → −14.0 → 13.3 → −15.3 → 11.4</p>
+      <p>留叶 56.7%；换后再换 47%；最长连换 9 次。<span class="hl">|F′| &gt; 1 处处</span> ⇒ 映射的任何不动点都不稳定</p>
+    </div>
+    <div class="say">
+      <p class="q">“三个不动点都站不住，轨道在两叶之间怎么换？”</p>
+      <p>竖一块平面，轨道每从同一侧穿过一次记一个点，其余全扔：三维的流变成平面上的映射，时间换成“第几圈”。每一叶是一张薄片，切过平面是一条细线，细到看不出宽度，就是 D<sub>KY</sub> = 2.06。</p>
+      <p>一个点是一步，不是一个位置。0→1→2 沿绿色往外爬到门槛；3 是 13.3，只越过 0.06，被甩到对面最外圈 −15.3；4 越过 2，反而落到右叶中心附近的 11.4。截面降到一维就不受“流线不交叉”的限制，点一下一下跳，映射上可以有混沌。</p>
+      <p>近邻每圈乘 |F′| &gt; 1；“乘多少”变成一个数就是 Lyapunov 指数，要算它先在任意一点线性化（下一页）。</p>
+      <p class="key">三维的流压成一条一维映射，映射处处拉伸。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4 J 与 λ ============ -->
+<section class="block" style="--c:var(--c4)">
+  <header><span class="n">4</span><h2>Jacobian 与 Lyapunov 指数</h2><span class="meta">① · 第 19–23 页 · 7 分钟</span><span class="meta2">右栏写下第二、三条</span></header>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 19 页 · 左栏，方程下面</span>
+      <p><span class="tg w">板书</span><span class="m">δu̇ = J(u) δu，J<sub>ij</sub> = ∂f<sub>i</sub>/∂u<sub>j</sub></span>
+        　<span class="m">J =</span><span class="mat"><span>−σ</span><span>σ</span><span>0</span><span>ρ − z</span><span>−1</span><span>−x</span><span>y</span><span>x</span><span>−β</span></span></p>
+      <p class="small">逐行：σ(y−x) → −σ, σ, 0；xρ − xz − y → ρ−z, −1, −x；xy − βz → y, x, −β</p>
+      <p>读三次：<strong>不动点上</strong>常数 → 特征值（板块 2，代 0 即原点矩阵）· <strong>对角线</strong> tr J 与点无关 · <strong>沿轨道</strong>每点不同 → 局部指数、QR</p>
+    </div>
+    <div class="say">
+      <p class="q">“轨道上任意一点旁边差一点点，这一点点下一刻怎么变？”</p>
+      <p>J 的第 i 行回答：第 i 个变量的变化率对 x、y、z 各多敏感。线性项求导得常数，xz、xy 求导留下 x、y、z，所以轨道走到哪 J 就是哪个矩阵。</p>
+      <p class="key">J 里有 x、y、z，所以它随轨道上的点变。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 20 页 · 局部指数</span>
+      <p><span class="tg w">板书</span><span class="m">d/dt ln|δu| = e·J e，e = δu/|δu|</span></p>
+      <p>例：<span class="m">J = [0 1; 0 0]</span>（剪切），特征值 0, 0；<span class="m">e = (1, 1)/√2 → e·J e = ½ &gt; 0</span></p>
+      <p>Lorenz 沿吸引子：平均 <strong>0.907 = λ₁</strong>，标准差 4.25，<span class="no">51%</span> 的时刻 &lt; 0；J 最大实部特征值平均 1.65 ≠ λ₁</p>
+    </div>
+    <div class="say">
+      <p class="q">“轨道走到这一点，扰动在这里长得多快？”</p>
+      <p>|δu|² 求导得 2δu·Jδu，除以 2|δu|² 就是 e·Je。只给一个点不够，还要说扰动指向哪。特征值说“一直乘同一个矩阵，最后谁赢”；e·Je 说“此刻这个方向怎样”。下一刻矩阵换了，本征方向也换了。</p>
+      <p>窗口 τ 上平均 = 有限时间指数：τ = 0.5 标准差 2.60，43% 的窗口在缩；τ → ∞ 收拢到 λ₁。图上红色在两叶交界与外缘。</p>
+      <p class="key">局部指数随点、随方向跳，只有长期平均才是 λ₁。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 21–22 页 · 定义与 QR</span>
+      <p><span class="tg w">板书</span><span class="m">λ = lim (1/t) ln(|M(t)δu₀| / |δu₀|)，M′ = JM，M(0) = I</span></p>
+      <p>线段 e<sup>λ₁t</sup>　面积 e<sup>(λ₁+λ₂)t</sup>　体积 e<sup>(λ₁+λ₂+λ₃)t</sup></p>
+      <p><span class="tg w">板书</span>例：每步乘 <span class="m">diag(2, ½)</span>，λ = ±ln 2</p>
+      <p class="chalk">v₁ = (1, 0) → (2ⁿ, 0)；v₂ = (1, 1) → (2ⁿ, 2⁻ⁿ)，长度 ≈ 2ⁿ，又量到 +ln 2</p>
+      <p>夹角 ≈ 4⁻ⁿ（n = 10 → 10⁻⁶）；减掉 v₁ 方向 → (0, 2⁻ⁿ)，−ln 2 出来：这一步就是 Gram–Schmidt，即 QR</p>
+      <p class="chalk">λ<sub>k</sub> = (1/(nΔt)) Σ ln|R<sub>kk</sub>| = ⟨q<sub>k</sub>·J q<sub>k</sub>⟩，Δt = 1</p>
+    </div>
+    <div class="say">
+      <p class="q">“J 在不动点上看特征值就行，沿着轨道为什么不行？”</p>
+      <p>每走 Δt 乘一次 I + J(u)Δt，沿轨道是一长串各不相同的矩阵，没有共用的本征方向。随手跟三个向量，全倒向 λ₁：第 22 页不做 QR，t = 30 时夹角 3×10⁻¹⁴（心算 e<sup>−(λ₁−λ₂)t</sup> = e<sup>−30</sup> ≈ 10⁻¹³），三条斜率 0.98 / 1.01 / 1.05 全是 λ₁；做 QR 后分开成 0.92 / −0.003 / −14.58。</p>
+      <p>为什么每 Δt = 1 就做：夹角到 10⁻¹⁶ 就丢，ln(10¹⁶)/0.9 ≈ 41，和双精度预报极限是同一个数；长度到 e<sup>709</sup> 溢出。</p>
+      <p class="bb">第二条：一个方向在拉伸，λ₁ ≈ 0.9。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 23 页 · 迹</span>
+      <p><span class="tg w">板书</span><span class="m">Σ q<sub>k</sub>·J q<sub>k</sub> = tr(QᵀJQ) = tr J = −(σ+1+β) = −41/3 ≈ −13.67</span>，每一瞬间</p>
+      <p class="chalk">λ = (+0.904, 0, −14.57)：λ₂ = 0 沿流方向；λ₃ = −13.67 − 0.90 = −14.57</p>
+      <p><span class="tg calc">心算</span>D<sub>KY</sub> = 2 + 0.904/14.57 ≈ 2.06；体积每个时间单位乘 e<sup>−13.67</sup> ≈ 10⁻⁶；实测 Σλ − tr J = 2×10⁻⁹，不拟合</p>
+      <p><span class="tg calc">回扣截面</span>一圈 0.75：0.9 × 0.75 ≈ 0.68，e<sup>0.68</sup> ≈ <strong>2</strong> → 映射每圈把近邻拉开约 2 倍</p>
+    </div>
+    <div class="say">
+      <p class="q">“三个指数加起来是多少？能不能不算？”</p>
+      <p>换一组正交坐标轴不改迹。Lorenz 特殊在对角线 −σ、−1、−β 是粘性和两项热扩散，没有变量：搬运只挪体积，耗散才缩体积。和式守的是变分方程、积分精度、QR 记账；三个数怎么分它管不到，λ₁ 单独的依据是第 26 页系综斜率 0.875。</p>
+      <p>回扣那一行是 Abramov 公式：截面映射的指数 = λ₁ × 平均回归时间；拿 fig14 的截面数据拟合局部斜率核过，平均 ln|F′| = 0.68。停不下、跑不掉（备用 2）、体积为零 → 奇怪吸引子。</p>
+      <p class="bb">第三条：体积缩到零，Σλ = tr J = −13.67。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 精度估算 ============ -->
+<section class="block" style="--c:var(--c5)">
+  <header><span class="n">5</span><h2>精度估算</h2><span class="meta">② · 第 24–28 页 · 7.5 分钟</span><span class="meta2">后四格接备用 1、4–10，按 B 跳，R 返回</span></header>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 25–27 页 · 右栏，全程保留</span>
+      <p><span class="tg w">板书</span><span class="m">|Δ(t)| ≈ δ e<sup>λ₁t</sup> ⇒ T = ln(1/δ)/λ₁；δ ÷ 10 ⇒ T + ln10/λ₁ ≈ 2.55</span></p>
+      <table class="t">
+        <thead><tr><th>例子</th><th class="n">位数</th><th class="n">心算</th><th>实测</th><th class="n">页</th></tr></thead>
+        <tbody>
+          <tr><td>封面 δ = 1e−5</td><td class="n">5</td><td class="n">12.7</td><td>13.6</td><td class="n">1</td></tr>
+          <tr><td>开场 rtol 每紧 1000 倍</td><td class="n">3</td><td class="n">7.6</td><td>7.8、8.4</td><td class="n">3</td></tr>
+          <tr><td>系综 δ = 1e−9</td><td class="n">9</td><td class="n">23</td><td>中位 23.4 越过 1</td><td class="n">26</td></tr>
+          <tr class="em"><td>rtol 1e−4 → 1e−12</td><td class="n">8</td><td class="n">20.4</td><td>5.69 → 26.88，+21.2</td><td class="n">27</td></tr>
+          <tr><td>rtol 1e−6 对 1e−9</td><td class="n">3</td><td class="n">7.6</td><td>10.5 → 18.3，+7.8</td><td class="n">31</td></tr>
+          <tr class="em"><td>双精度 1e−16</td><td class="n">16</td><td class="n">41</td><td>40.76</td><td class="n">28</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="say">
+      <p class="q">“算得更准，能多算多久？”</p>
+      <p>第 25 页先跑 ε = 1e−6；再问“缩小一百万倍到 1e−12，能多看多久？”猜完再扫：每条线平移，6 × 2.55 ≈ 15，不是一百万倍的时间，是加 15。</p>
+      <p>第 26 页：16 个吸引子上的状态各推 4 个方向 1e−9，共 64 对；读三段：对齐、直线、在 20 左右走平。斜率 0.875 对 QR 的 0.904，差 3%，没有共用代码。第 27 页：rtol 也是 δ；拟合斜率 1.131 对 1/λ₁ = 1.107，差 2%（有效初始误差与 rtol 同阶，不严格成正比）。</p>
+      <p>老实交代：单个起点相邻间隔在 0.2 到 7 之间跳，所以要多起点取中位。</p>
+      <p class="key">精度乘 10，时间只加 2.55。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 28 页 · 双精度的地板</span>
+      <p><span class="tg w">板书</span><span class="m">ε = 2⁻⁵² ≈ 2.2×10⁻¹⁶</span>：一个数能存多细　｜　rtol：每步截断误差的要求，建在 ε 之上</p>
+      <p><span class="tg calc">心算</span>1e−12 离地板 4 位 → 4 × 2.55 ≈ 10 → 上限 ≈ 41</p>
+      <p>每步几百次乘加 × 几千步 → 实际地板约 1e−14；scipy 遇 rtol &lt; 100ε 抬回 → 参考解停在 1e−13。1e−13 对参考解（只差 atol 1e−15 / 1e−16）也在 t = 33.3 脱钩</p>
+    </div>
+    <div class="say">
+      <p>rtol 和双精度是两回事。就算算法完美，初值只能存到 1e−16，t &gt; 41 算的就不是那个初值的轨道：“哪条对”在双精度下没有答案。到这里全是坏消息。</p>
+      <p class="key">t &gt; 41，单条轨道在双精度下没有答案。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 28、38 页 · 备用 1、9 · 代价是幂律</span>
+      <p><span class="tg w">板书</span><span class="m">p 阶：每步误差 ∝ h<sup>p+1</sup> ⇒ h ∝ tol<sup>1/p</sup> ⇒ nfev ∝ s · tol<sup>−1/p</sup></span></p>
+      <ul class="ck">
+        <li>RK4：h ÷ 2 → 误差 ÷ 16</li>
+        <li>收紧 10⁶：RK45 10<sup>6/5</sup> ≈ 16（实测 15.7）；DOP853 10<sup>6/8</sup> ≈ 5.6（实测 5.8）</li>
+        <li>DOP853 1e−4 → 1e−12：步数 × 10<sup>8/8</sup> = 10，时间 5.7 → 26.9</li>
+        <li>5 阶对 8 阶：每个数量级 10<sup>1/5 − 1/8</sup> = 10<sup>0.075</sup> ≈ 1.19（实测 1.18）；交汇在 1e−4 到 1e−6；误差 1e−10 时 6100 对 1440 次</li>
+      </ul>
+      <p><span class="tg calc">心算</span>算力 × 10：Lorenz（DOP853）时间 <span class="no">+20</span>；Kepler（Verlet 误差 ∝ h²t）时间 <span class="ok">× 100</span></p>
+    </div>
+    <div class="say">
+      <p>第 28 页算账：8 阶方法步数随 rtol 的 −1/8 次方涨，8 个数量级正好 10 倍。10 倍的计算换来 5.7 到 26.9；再要 20 个时间单位得再收紧 8 个数量级，双精度已经到头。</p>
+      <p>第 38 页 Kepler（e = 0.6，RK4 步长取 Verlet 的 4 倍，同等代价）：Verlet 能量误差 7.4×10⁻⁴ 跑 1000 周期不涨，RK4 线性漂移，第 33 周期超过；可信时间对代价是幂律，斜率 2.0 / 2.5。</p>
+      <p class="key">精度换时间：守恒是乘法，混沌是加法。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">备用 1、7 · 方法差异</span>
+      <table class="t">
+        <thead><tr><th></th><th class="n">RK4</th><th class="n">RK45</th><th class="n">DOP853</th></tr></thead>
+        <tbody>
+          <tr><td>阶 p</td><td class="n">4</td><td class="n">5</td><td class="n">8</td></tr>
+          <tr><td>每步求 f 次数 s</td><td class="n">4</td><td class="n">6</td><td class="n">12</td></tr>
+          <tr><td>步长 · 误差估计</td><td class="n">固定 · 无</td><td class="n">自适应 · 5−4</td><td class="n">自适应 · 5 与 3</td></tr>
+          <tr class="em"><td>稳定域负实轴交点</td><td class="n">−2.785</td><td class="n">−3.31</td><td class="n">−6.39</td></tr>
+          <tr><td>稳定上限 h = 交点 / 21.85</td><td class="n">0.127</td><td class="n">0.151</td><td class="n">0.293</td></tr>
+          <tr><td>刚性代价 s / 交点</td><td class="n">1.44</td><td class="n">1.81</td><td class="n">1.88</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="say">
+      <p>嵌入式：同一组 k<sub>i</sub> 两套权重，两个解之差就是本步误差估计，几乎不花额外 f；err ≤ 1 接受，下一步 h ← 0.9 h err<sup>−1/p</sup>。</p>
+      <p>被问“为什么用 DOP853”：rtol = 1e−4 时两者 f 次数持平，容差越紧 DOP853 越划算。刚性时步长被稳定域卡住，s / 交点三者差不多，阶数换不来步数。</p>
+      <p class="key">积分器决定代价，λ₁ 决定 2.55。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">备用 5–8 · 稳定域与精度域</span>
+      <p><span class="tg w">板书</span><span class="m">ẏ = λy</span>：真解一步 × e<sup>hλ</sup>，格式一步 × R(hλ)；z = hλ 读作“一步跨过几个时间尺度”</p>
+      <p class="chalk">R<sub>RK4</sub>(z) = 1 + z + z²/2 + z³/6 + z⁴/24；稳定域 |R| ≤ 1，负实轴交 −2.785</p>
+      <p>吸引子上 J 的谱：Re λ ∈ [−21.85, +10.55]，|λ| ≤ 23.0，36% 实部 &gt; 0。最快衰减模 λ = −21.85（时间尺度 0.046）：</p>
+      <table class="t">
+        <thead><tr><th class="n">h</th><th class="n">hλ</th><th class="n">e<sup>hλ</sup></th><th class="n">R(hλ)</th><th>读法</th></tr></thead>
+        <tbody>
+          <tr><td class="n">0.01</td><td class="n">−0.22</td><td class="n">0.8037</td><td class="n">0.8037</td><td>准</td></tr>
+          <tr><td class="n">0.12</td><td class="n">−2.62</td><td class="n">0.073</td><td class="n">0.78</td><td>稳定但不准</td></tr>
+          <tr class="em"><td class="n">0.15</td><td class="n">−3.28</td><td class="n">0.038</td><td class="n">2.03</td><td>出界，10 步放大约 1000 倍</td></tr>
+        </tbody>
+      </table>
+      <p><span class="tg calc">心算</span>RK4 上限 2.785/21.85 ≈ 0.127（数值 0.1253）；实际 h ≈ 0.01，差一个数量级</p>
+      <table class="t">
+        <thead><tr><th>rtol = 1e−4，负实轴</th><th class="n">精度域</th><th class="n">衰减模 hλ</th><th class="n">稳定域</th></tr></thead>
+        <tbody>
+          <tr><td>RK45</td><td class="n">−0.63</td><td class="n">−1.81</td><td class="n">−3.31</td></tr>
+          <tr><td>DOP853</td><td class="n">−1.81</td><td class="n">−4.57</td><td class="n">−6.39</td></tr>
+        </tbody>
+      </table>
+      <p class="small">DOP853 最大步占稳定上限：1e−4 时 0.84 → 1e−13 时 0.07</p>
+    </div>
+    <div class="say">
+      <p>增长模（备用 6 的红点）永远在稳定域外，那是格式在正确复现真实的增长；要求全谱 |R| ≤ 1 只会得到 h = 0。稳定域只约束衰减模。</p>
+      <p>衰减模的振幅早衰减没了，误差估计看不见它，控制器不管它的精度，把它带出精度域，但还在稳定域里：步长由慢模的精度定。</p>
+      <p>刚性反例（备用 9）：y′ = −1000(y − cos t)，T = 10，步数 ≈ 10 × 1000 / 交点：RK45 3020（实测 3025），DOP853 1560（实测 1567），与 rtol、阶数都无关；隐式 Radau 只要 112 次。</p>
+      <p class="key">步长由慢模的精度定，衰减模只要还在稳定域里就没事。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">关注点</span>
+      <p><span class="tg w">板书</span><strong>稳定性</strong>　Lorenz 上不是瓶颈：h 离上限一个数量级</p>
+      <p>→ <strong>精度</strong>　决定代价；阶数在这里值钱</p>
+      <p>→ <strong class="no">λ₁</strong>　决定可信时间：每位 +2.55，与积分器无关</p>
+      <p>→ <strong>双精度 1e−16</strong>　天花板 41</p>
+      <p class="small">推论：收敛阶要在 t ≪ 1/λ₁ 的窗口里验，过了可预报时间误差饱和成水平线（备用 10）</p>
+    </div>
+    <div class="say">
+      <p>被问“步长再小一点不就行了？”（备用 4）：数值稳定性是方法加步长的性质，步长能改；Lyapunov 指数是流的性质，步长改不了。步长变小只减少注入的误差量，这些误差随后照样按 e<sup>λt</sup> 放大。</p>
+      <p>被问“红色区域减步长有没有用？”：有用，理由是少往那里注入误差，不是压住 λ。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6 什么可信 ============ -->
+<section class="block" style="--c:var(--c6)">
+  <header><span class="n">6</span><h2>什么可信</h2><span class="meta">③④ · 第 29–40 页 · 14.5 分钟</span><span class="meta2">对图讲；右栏补最后一句</span></header>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 29–33 页 · ③</span>
+      <p><span class="tg ppt">对图</span>30 影随：数值轨道紧跟另一条真解；一致双曲才是定理，Lorenz 含原点不是（Tucker 2002）</p>
+      <p><span class="tg ppt">对图</span>31 中心实验：rtol 1e−6 / 1e−9 / 1e−13 → 10.5 / 18.3 / 33.3 脱钩；Lorenz 映射三色重合，厚度 8.6×10⁻⁵</p>
+      <p><span class="tg ppt">对图</span>32 不变密度：三个 rtol 间总变差 0.0099　·　33 吸引子：可信的是形状和统计</p>
+    </div>
+    <div class="say">
+      <p class="q">“单条轨道不可信，那还有什么可信？”</p>
+      <p>第 31 页多停：左边问“t 时刻你在哪”，取决于初值，被 e<sup>λ₁t</sup> 放大；右边问“从这么高的峰出发，下一个峰多高”，是方程本身的性质。映射斜率绝对值处处大于 1：左支 +1.1 到 +2.6，右支 −1.15 到 −4.4。</p>
+      <p class="key">同一组数据，按时间看是废品，按映射看完好。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 34–37 页 · ④</span>
+      <p><span class="tg ppt">对图</span>35 判据三行：保守（不变量，长时间可信）· 耗散非混沌（收敛到对的吸引子，可信）· 耗散混沌（无结构可保，看统计量）</p>
+      <p><span class="tg ppt">对图</span>36 截面：k 个点（收拢）· 闭曲线（刚性转动，误差线性涨）· 细线（指数散开）</p>
+      <p><span class="tg w">板书</span>37 哈密顿守三样：<span class="m">dH/dt = H<sub>q</sub>H<sub>p</sub> − H<sub>p</sub>H<sub>q</sub> = 0</span>；<span class="m">tr J = H<sub>pq</sub> − H<sub>qp</sub> = 0</span>；<span class="m">MᵀΩM = Ω</span> → 指数 ±λ 成对。Lorenz：没有 H；tr J = −13.67；3 维配不成对</p>
+    </div>
+    <div class="say">
+      <p class="q">“换一类系统，答案还一样吗？”</p>
+      <p>第 36 页心算：ρ = 350 周期 0.39，λ₂ = −0.73，每周期乘 e<sup>−0.28</sup> ≈ 0.75；ω = 2/5 每次转 144°，5 步闭合；ω = 0.618 每次转 222.5°（反着 137.5°，黄金角），永不闭合，就是李萨如图。</p>
+      <p>第 37 页：守恒量沿轨道是常数且连续；吸引盆里每条轨道都贴到吸引子上，混沌轨道走遍吸引子，于是它在整个吸引盆上是常数，什么也区分不了。</p>
+      <p class="key">守恒量记得初值，吸引子让轨道忘掉初值。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="bd">
+      <span class="pg">第 38–40 页</span>
+      <p><span class="tg ppt">对图</span>38 Kepler：算力 × 10 → 可信时间 × 100（幂律）；Lorenz：+20（对数）</p>
+      <p><span class="tg ppt">对图</span>39 声学：Yee FDTD 里 E、H 错开半格 = 蛙跳 = 辛（第一行）；声湍流报谱、相关函数、统计矩（第三行）</p>
+      <p><span class="tg w">板书</span>40 右栏最后一句：<strong>守恒看不变量，混沌看统计量</strong></p>
+    </div>
+    <div class="say">
+      <p>第 38 页 (c) 老实讲：同等代价下 RK4 的线在 Verlet 上面；辛格式买到的不是更准，而是不漂，跑得越久越占优。</p>
+      <p>第 40 页把黑板擦一遍：一，没有守恒量，体积以 −13.67 缩；二，精度乘 10 只多 2.55，天花板 41；三，Lorenz 映射、不变密度不随 rtol 变。</p>
+      <p class="key">守恒系统看不变量，混沌系统看统计量；精度换时间，前者乘法，后者加法。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7 被追问 ============ -->
+<section class="block qa-page" style="--c:var(--c0)">
+  <header><span class="n">?</span><h2>被追问</h2><span class="meta">B 进备用目录，R 回到原页</span></header>
+  <div class="qa">
+    <div><b>封面分开是不是数值误差？</b><span>两条都是 DOP853、rtol 1e−13，积分误差比 1e−5 小好几个量级（第 1 页）</span></div>
+    <div><b>所以天气不可预报？</b><span>低维确定性系统也能敏感依赖初值；定性教训可迁移，方程本身不能（第 12 页）</span></div>
+    <div><b>λ₁ &gt; 0，会不会跑到无穷？</b><span>V = ρx² + σy² + σ(z − 2ρ)² 在大椭球外单调降：局部分离、全局折回（备用 2）</span></div>
+    <div><b>不动点的本征结构？</b><span>原点 +11.83 / −2.67 / −22.83；C± −13.85 / 0.094 ± 10.19i，可拖动看平面（备用 3）</span></div>
+    <div><b>为什么 16 个点、4 个方向、取中位？</b><span>拉伸率沿吸引子不同，单点斜率在 0.4–1.3 跳；方向只改截距；距离跨几个数量级（第 26 页）</span></div>
+    <div><b>1% 是不是采样噪声？错的算法统计量也不动？</b><span>诚实：两次独立长跑的噪声底、大步长 Euler 反例都还没做（README 待补）</span></div>
+    <div><b>能不能把数值轨道修正成真轨道？</b><span>多重打靶加 Newton 的有限时间影随，列在待补清单里</span></div>
+    <div><b>哈密顿系统也能混沌（三体）？</b><span>能；辛格式仍保能量有界，单条轨道照样按 λ₁ 散开。表第一行“可信”说的是可积和近可积</span></div>
+    <div><b>为什么用 DOP853？</b><span>容差越紧越划算；2.55 与积分器无关（备用 1、9）</span></div>
+    <div><b>全部数字？</b><span>备用 11；完整表在 report.md 附录 B</span></div>
+  </div>
+</section>
+
+
+<section class="block" style="--c:var(--c0)">
+  <header><span class="n">#</span><h2>数字汇总</h2><span class="meta">问答时查；同备用 11，完整表在 report.md 附录 B</span></header>
+  <div class="nums">
+    <table class="t"><tbody>
+      <tr class="sec"><td colspan="2">闭式与不动点</td></tr>
+      <tr><td>tr J</td><td class="n">−13.6667</td></tr>
+      <tr><td>C±</td><td class="n">(±8.485, ±8.485, 27)</td></tr>
+      <tr><td>ρ<sub>H</sub> · Hopf 穿越频率 ω</td><td class="n">470/19 = 24.737 · 9.62</td></tr>
+      <tr><td>原点特征值</td><td class="n">+11.83, −2.67, −22.83</td></tr>
+      <tr><td>C± 特征值</td><td class="n">−13.85, 0.094 ± 10.19i</td></tr>
+      <tr><td>同宿爆炸 · 混沌集变吸引子</td><td class="n">13.926 · 24.06</td></tr>
+      <tr><td>Ra<sub>c</sub> 自由滑移 · 刚性板</td><td class="n">657.5 · 1708</td></tr>
+      <tr class="sec"><td colspan="2">数值</td></tr>
+      <tr><td>J 的谱 Re λ · 实部为正</td><td class="n">[−21.85, 10.55] · 36.3%</td></tr>
+      <tr><td>RK4 稳定步长上限</td><td class="n">0.1253</td></tr>
+      <tr><td>交点 RK4 / RK45 / DOP853</td><td class="n">−2.785 / −3.31 / −6.39</td></tr>
+      <tr><td>DOP853 最大步占稳定上限</td><td class="n">0.84（1e−4）→ 0.07（1e−13）</td></tr>
+    </tbody></table>
+    <table class="t"><tbody>
+      <tr class="sec"><td colspan="2">Lyapunov 与可预报性</td></tr>
+      <tr><td>λ₁ / λ₂ / λ₃（T = 2000）</td><td class="n">0.9038 / −0.0004 / −14.570</td></tr>
+      <tr><td>Σλ − tr J</td><td class="n">2.17×10⁻⁹</td></tr>
+      <tr><td>D<sub>KY</sub> · 倍增时间</td><td class="n">2.062 · 0.767</td></tr>
+      <tr><td>λ₁ 系综 · 容差斜率</td><td class="n">0.8750 · 0.8839</td></tr>
+      <tr><td>局部指数 均值 · 标准差 · 为负</td><td class="n">0.907 · 4.25 · 51%</td></tr>
+      <tr><td>双精度预报极限 · 不做 QR 的夹角（t = 30）</td><td class="n">40.76 · 3×10⁻¹⁴</td></tr>
+      <tr class="sec"><td colspan="2">统计与对照</td></tr>
+      <tr><td>映射厚度 · 密度总变差</td><td class="n">8.6×10⁻⁵ · 0.0099</td></tr>
+      <tr><td>截面 次数 · 留叶 · 门槛</td><td class="n">3992 · 56.7% · 13.25</td></tr>
+      <tr><td>Kepler 能量误差 Verlet · RK4</td><td class="n">7.4×10⁻⁴ · 2.2×10⁻²</td></tr>
+      <tr><td>ρ = 350 周期 · 每周期收缩</td><td class="n">0.3885 · 0.75</td></tr>
+    </tbody></table>
+  </div>
+</section>
+
+<p class="foot">数字出自 <code>uv run lorenz63 info</code>、report/figures 与 report.md；截断代价 (ρ−1)/ρ 与每圈约 2 倍是板书心算。页码是 slides.html 页脚显示的编号，备用页显示为“备用 n”。</p>
+</main>
+</body>
+</html>

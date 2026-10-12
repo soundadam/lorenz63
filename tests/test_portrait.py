@@ -35,6 +35,7 @@ from lorenz63.portrait import (
 from lorenz63.statistics import poincare_section, section_return_map
 from lorenz63.system import (
     LorenzParams,
+    divergence,
     fixed_point_eigenvalues,
     fixed_points,
     hopf_rho,
@@ -257,6 +258,16 @@ def test_tangent_frames_stay_orthonormal_and_reproduce_the_spectrum() -> None:
     # Same algorithm, same trajectory: the two must agree to round-off.
     assert history.spectrum == pytest.approx(reference.spectrum, abs=1e-9)
 
+
+
+def test_instantaneous_rates_sum_to_the_trace_and_average_to_the_spectrum() -> None:
+    """q_k . J q_k are the diagonal of Q^T J Q: their sum is tr J at every
+    sample, and each one's time average is that frame vector's mean log stretch."""
+    history = tangent_frames(CLASSICAL, total_time=20.0, renorm_interval=0.01)
+    rates = history.instantaneous_rates
+    assert np.allclose(rates.sum(axis=1), divergence(CLASSICAL), atol=1e-10)
+    stretch = history.log_stretch.sum(axis=0) / history.times[-1]
+    assert rates.mean(axis=0) == pytest.approx(stretch, abs=0.01)
 
 @pytest.mark.slow
 def test_without_reorthonormalisation_only_lambda_1_survives() -> None:
