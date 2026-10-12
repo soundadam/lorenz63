@@ -944,7 +944,44 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 41 稳定域 -->
+<!-- 41 hλ -->
+<section class="slide" data-part="b" data-min="0" data-title="hλ 与稳定性函数">
+  <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>hλ：一步跨过模的几个时间尺度</h2></header>
+  <div class="split even">
+    <div class="col">
+      <p style="font-size:24px">线性化 \(\dot{\delta u} = J\,\delta u\)，对角化后每个方向都是 \(\dot y = \lambda y\)。</p>
+      <div class="strip" style="gap:40px">
+        <div class="kv small"><span class="v">\(e^{h\lambda}\)</span><span class="k">真解一步的乘数</span></div>
+        <div class="kv small"><span class="v">\(R(h\lambda)\)</span><span class="k">格式一步的乘数</span></div>
+      </div>
+      <p style="font-size:23px">\(R_\text{RK4}(z) = 1 + z + \tfrac{z^2}{2} + \tfrac{z^3}{6} + \tfrac{z^4}{24}\)，是 \(e^z\) 的截断。</p>
+      <p style="font-size:23px"><strong>h·Re λ</strong>：一步里幅度的对数变化。<strong>h·Im λ</strong>：一步转过的弧度（C±：0.10，62 步一圈）。</p>
+    </div>
+    <div class="col">
+      <p style="font-size:22px">最快的衰减模 λ = −21.85，时间尺度 0.046：</p>
+      <table class="data" style="font-size:22px">
+        <thead><tr><th>h</th><th>hλ</th><th>真解 \(e^{h\lambda}\)</th><th>RK4 \(R(h\lambda)\)</th></tr></thead>
+        <tbody>
+          <tr><td class="num">0.01</td><td class="num">−0.22</td><td class="num">0.8037</td><td class="num stat">0.8037</td></tr>
+          <tr><td class="num">0.05</td><td class="num">−1.09</td><td class="num">0.335</td><td class="num">0.346</td></tr>
+          <tr><td class="num">0.12</td><td class="num">−2.62</td><td class="num">0.073</td><td class="num">0.78</td></tr>
+          <tr><td class="num">0.15</td><td class="num">−3.28</td><td class="num">0.038</td><td class="num orbit">2.03</td></tr>
+        </tbody>
+      </table>
+      <div class="callout navy-bg" style="font-size:22px"><strong>稳定域</strong> = { z : |R(z)| ≤ 1 }，与负实轴交在 −2.785。衰减模出了这片区域，就被格式每步放大。</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p class="q">被问“稳定域到底在说什么”“hλ 是什么”时，在下一页之前用这一页。</p>
+    <p>三维的问题先变成一个数。一步之内 J 几乎不变，对角化以后每个方向都是 y′ = λy。真解走 h 乘 e 的 hλ 次方；RK4 走一步乘 R(hλ)，R 是 e^z 泰勒展开到 z⁴。整件事只剩一个无量纲数 z = hλ。1/|λ| 是这个模的时间尺度，所以 |hλ| 是“一步跨过几个时间尺度”。</p>
+    <p>逐行读表。h = 0.01：一步跨过五分之一个时间尺度，0.8037 对 0.8037，准。h = 0.12：R 是 0.78，真解是 0.073，不炸，但该缩十几倍只缩了两成，稳定却不准。h = 0.15：hλ = −3.28，越过 −2.785，每步乘 2，十步 2 的 10 次方，一千倍，这才是“炸”。这个模本来该衰减掉，放大它的是格式，不是方程。</p>
+    <p>增长模不一样：Re λ &gt; 0 时真解自己就 |e^z| &gt; 1，R 大于 1 是对的。Re λ = +10.55、h = 0.01 时，R 和 e^z 到第七位才分开。下一页把整片谱乘上 h 放进稳定域，红点就是这些增长模。</p>
+    <p>细节见报告 4.0 节。</p>
+    <p class="key">留下一句：hλ 是一步跨过几个时间尺度；稳定域管的是衰减模别被放大。</p>
+  </aside>
+</section>
+
+<!-- 42 稳定域 -->
 <section class="slide" data-part="b" data-min="0" data-title="RK4 稳定域">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>瓶颈是精度，不是稳定性</h2></header>
   <div class="split">
@@ -964,7 +1001,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 42 正交化 -->
+<!-- 43 正交化 -->
 <section class="slide" data-part="b" data-min="0" data-title="QR 重正交化">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>Lyapunov 谱需要 QR 重正交</h2></header>
   <div class="full">
@@ -982,7 +1019,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 43 谱 -->
+<!-- 44 谱 -->
 <section class="slide" data-part="b" data-min="0" data-title="Lyapunov 谱与自洽检验">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>自洽检验：Σλᵢ = tr J</h2></header>
   <div class="split">
@@ -1000,7 +1037,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 44 FTLE -->
+<!-- 45 FTLE -->
 <section class="slide" data-part="b" data-min="0" data-title="有限时间 Lyapunov 指数">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>有限时间 Lyapunov 指数：局部拉伸率差别极大</h2></header>
   <div class="split">
@@ -1023,7 +1060,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 45 收敛性 -->
+<!-- 46 收敛性 -->
 <section class="slide" data-part="b" data-min="0" data-title="收敛性研究的推论">
   <header><p class="eyebrow">备用 · ④ 判据随系统类型变</p><h2>推论：混沌问题的收敛阶要在短窗口里验</h2></header>
   <div class="split even">
@@ -1042,7 +1079,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 46 数字汇总 -->
+<!-- 47 数字汇总 -->
 <section class="slide" data-part="b" data-min="0" data-title="数字汇总">
   <header><p class="eyebrow">备用</p><h2>数字汇总</h2></header>
   <div class="split even" style="font-size:21px">
