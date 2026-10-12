@@ -38,7 +38,9 @@ body {
   padding-inline: 16px;
   box-sizing: border-box;
 }
-.stage-area { flex: 1; position: relative; min-height: 0; margin-block: 12px 6px; }
+/* 讲稿打开时停在幻灯片右侧，画布按剩下的宽度缩放；窄屏退回到下方 */
+.main { flex: 1; min-height: 0; display: flex; gap: 12px; }
+.stage-area { flex: 1; position: relative; min-width: 0; min-height: 0; margin-block: 12px 6px; }
 .stage {
   --s: 0.5;
   position: absolute;
@@ -266,15 +268,19 @@ pre.eig {
 .bar .hint { color: var(--ink-2); font-size: 13px; }
 
 .notes-panel {
-  flex: 0 0 auto; max-height: 34%; overflow-y: auto;
+  flex: 0 0 clamp(320px, 32%, 560px); overflow-y: auto; box-sizing: border-box;
   background: var(--chrome-bg); color: var(--ink); border: 1px solid var(--rule); border-radius: 4px;
-  padding: 14px 20px; margin-bottom: 8px; font-size: 16px; line-height: 1.75;
+  padding: 14px 20px; margin-block: 12px 6px; font-size: 16px; line-height: 1.75;
 }
 .notes-panel .meta { font-family: var(--mono); font-size: 13px; color: var(--ink-2); margin-bottom: 6px; display: flex; gap: 20px; flex-wrap: wrap; }
-.notes-panel p { margin: 0 0 8px; max-width: 70em; }
+.notes-panel p { margin: 0 0 8px; }
 .notes-panel .q { color: var(--orbit); }
 .notes-panel .key { color: var(--navy); font-weight: 700; }
 
+@media (max-width: 900px) {
+  .main { flex-direction: column; gap: 0; }
+  .notes-panel { flex: 0 0 auto; max-height: 34%; margin-block: 0 8px; }
+}
 @media (max-width: 640px) {
   .bar .hint { display: none; }
 }
