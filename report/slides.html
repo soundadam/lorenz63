@@ -106,8 +106,8 @@
         <defs><marker id="rb-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"/></marker></defs>
         <rect x="20" y="20" width="560" height="22" fill="var(--navy)"/>
         <rect x="20" y="298" width="560" height="22" fill="var(--orbit)"/>
-        <text x="300" y="37" fill="#fff" font-size="16" text-anchor="middle">冷板 · 温度 T</text>
-        <text x="300" y="315" fill="#fff" font-size="16" text-anchor="middle">热板 · 温度 T + ΔT</text>
+        <text x="300" y="37" fill="#fff" font-size="16" text-anchor="middle">冷板 · 温度 T₀</text>
+        <text x="300" y="315" fill="#fff" font-size="16" text-anchor="middle">热板 · 温度 T₀ + ΔT</text>
         <ellipse cx="160" cy="170" rx="118" ry="92" fill="none" stroke="var(--ink)" stroke-width="2.5"/>
         <ellipse cx="440" cy="170" rx="118" ry="92" fill="none" stroke="var(--ink)" stroke-width="2.5"/>
         <path d="M42,180 L42,150" stroke="var(--ink)" stroke-width="2.5" marker-end="url(#rb-arrow)"/>
@@ -155,11 +155,11 @@
       <ul class="plain" style="font-size:23px">
         <li>只看 X–Z 平面里的二维卷：令 \(u = -\partial_Z\psi,\ w = \partial_X\psi\)，质量守恒自动满足</li>
         <li>对动量方程取旋度，压力 p 消掉</li>
-        <li>温度写成线性传导剖面加偏离：\(T = T_0 + \Delta T\,(1 - Z/H) + \theta\)</li>
+        <li>温度拆成两份：\(T = \underbrace{T_0 + \Delta T\,(1 - Z/H)}_{\text{静止时的传导直线}} + \theta\)</li>
       </ul>
     </div>
     <div class="col">
-      <p style="font-size:24px">剩下两个未知场 ψ(X, Z, t) 和 θ(X, Z, t)：</p>
+      <p style="font-size:24px">剩下两个未知场：流函数 ψ(X, Z, t) 管流动，θ(X, Z, t) 是温度<strong>偏离传导直线</strong>的那部分。流体静止时 θ&nbsp;≡&nbsp;0。</p>
       <div style="font-size:23px">$$\partial_t\nabla^2\psi = \underbrace{-J(\psi,\nabla^2\psi)}_{\text{平流}} + \underbrace{\nu\nabla^4\psi}_{\text{粘性}} + \underbrace{g\alpha\,\partial_X\theta}_{\text{浮力}}$$
       $$\partial_t\theta = \underbrace{-J(\psi,\theta)}_{\text{平流}} + \underbrace{\tfrac{\Delta T}{H}\,\partial_X\psi}_{\text{搬运背景温度}} + \underbrace{\kappa\nabla^2\theta}_{\text{热扩散}}$$</div>
       <p class="muted" style="font-size:22px">\(J(a,b) = \partial_X a\,\partial_Z b - \partial_Z a\,\partial_X b\)，就是 \(\mathbf u\cdot\nabla b\)。这是 Lorenz 1963 的式 (17)–(18)。未知量是两个函数，所以是<strong>无穷维</strong>的。</p>
@@ -167,7 +167,9 @@
   </div>
   <aside class="notes">
     <p>这页不逐项念。左边是大家见过的不可压 Navier–Stokes 加热传导，Boussinesq 近似只在浮力里让密度随温度变。</p>
-    <p>两步化简：二维流动用流函数，质量守恒自动满足；对动量方程取旋度，压力消掉。剩下右边两条，未知量是 ψ 和 θ。T 减掉线性传导剖面才剩 θ，所以多出“搬运背景温度”那一项。</p>
+    <p>两步化简：二维流动用流函数，质量守恒自动满足；对动量方程取旋度，压力消掉。剩下右边两条，未知量是 ψ 和 θ。</p>
+    <p>θ 是什么？水不动的时候，温度从底板 T₀ + ΔT 到顶板 T₀ 沿一条直线往下降，这是纯传导。θ 就是实际温度减掉这条直线。水不动，θ = 0；θ 不为零，就是流动把温度搅偏了。所以 θ 量的是对流本身，不是温度本身。</p>
+    <p>减掉直线有个代价：流体上下走的时候，也把背景那条直线搬着走。w = ∂<sub>X</sub>ψ 往上走，把底下热的带上来，这就是“搬运背景温度”那一项 (ΔT/H)∂<sub>X</sub>ψ。</p>
     <p>右边请只看花括号下的词：平流、粘性、热扩散、浮力。等会儿 Lorenz 方程的每一项，都能对回其中一个。</p>
     <p>最要紧的是右下角那句：未知量是函数，无穷维。计算机放不下函数，第一件事就是把它变成有限个数。</p>
     <p class="key">留下一句：两条 PDE，未知量是函数，要先变成有限个数。</p>
