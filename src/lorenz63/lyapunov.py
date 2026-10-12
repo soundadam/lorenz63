@@ -184,12 +184,27 @@ class FrameHistory:
     frames: NDArray[np.floating]  # (n, 3, 3) columns are the orthonormal vectors
     log_stretch: NDArray[np.floating]  # (n, 3) log|R_ii| over that window
     renorm_interval: float
+    params: LorenzParams
 
     @property
     def spectrum(self) -> NDArray[np.floating]:
         """Exponents implied by this history; matches ``benettin_spectrum``."""
         total = self.log_stretch.sum(axis=0) / self.times[-1]
         return np.sort(total)[::-1]
+
+    @property
+    def instantaneous_rates(self) -> NDArray[np.floating]:
+        """``q_k . J(u) q_k`` at each window end, shape (n, 3).
+
+        For ``delta u' = J delta u`` and ``e = delta u / |delta u|``,
+        ``d/dt ln|delta u| = e . J e``. With ``e = q_k`` this is how fast the
+        k-th frame vector grows at that instant, after Gram-Schmidt has removed
+        its part along the first k-1. Its time average is ``lambda_k``. The three rates are the
+        diagonal of ``Q^T J Q``, so they sum to ``tr J`` at every instant, not
+        just on average -- an orthogonal change of basis leaves the trace alone.
+        """
+        jac = np.stack([jacobian(u, self.params) for u in self.states])
+        return np.einsum("nik,nij,njk->nk", self.frames, jac, self.frames)
 
 
 def tangent_frames(
@@ -248,6 +263,7 @@ def tangent_frames(
         frames=frames,
         log_stretch=log_stretch,
         renorm_interval=renorm_interval,
+        params=p,
     )
 
 
