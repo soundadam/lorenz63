@@ -121,6 +121,28 @@ def section_return_map(
     return values[:-1], values[1:]
 
 
+def wing_switch_threshold(
+    s_n: NDArray[np.floating], s_next: NDArray[np.floating]
+) -> float:
+    """The |s| that separates crossings which stay on their wing from those that switch.
+
+    On the classical attractor the choice is not statistical: every crossing
+    inside a cutoff |x| stays on its wing (s_{n+1} has the same sign) and every
+    crossing outside it switches. Returns the midpoint of the gap between the
+    outermost staying crossing and the innermost switching one; raises if the
+    two sets overlap, because then no single cutoff exists.
+    """
+    reach = np.abs(s_n)
+    stays = np.sign(s_n) == np.sign(s_next)
+    if stays.all() or not stays.any():
+        raise ValueError("need both staying and switching crossings")
+    outer_stay = float(reach[stays].max())
+    inner_switch = float(reach[~stays].min())
+    if outer_stay >= inner_switch:
+        raise ValueError("staying and switching crossings overlap; no single cutoff")
+    return 0.5 * (outer_stay + inner_switch)
+
+
 def invariant_density(
     values: NDArray[np.floating],
     *,

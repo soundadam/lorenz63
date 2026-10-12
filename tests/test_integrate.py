@@ -55,7 +55,7 @@ def test_adaptive_meets_its_tolerance_against_a_tighter_run() -> None:
     """Over a short span, before chaos has had time to amplify anything."""
     u0 = on_attractor(CLASSICAL)
     truth = reference_trajectory(CLASSICAL, u0, 1.0, dt_out=0.01)
-    loose = solve_adaptive(CLASSICAL, u0, 1.0, method="RK45", rtol=1e-8, atol=1e-11, dt_out=0.01)
+    loose = solve_adaptive(CLASSICAL, u0, 1.0, method="DOP853", rtol=1e-8, atol=1e-11, dt_out=0.01)
     scale = np.abs(truth.u).max()
     assert np.linalg.norm(truth.u - loose.u, axis=1).max() < 1e-5 * scale
 
@@ -70,11 +70,13 @@ def test_tighter_tolerance_is_more_accurate_before_saturation() -> None:
     report, and it makes naive error comparisons over long windows meaningless.
     """
     u0 = on_attractor(CLASSICAL)
-    truth = reference_trajectory(CLASSICAL, u0, 8.0, dt_out=0.01)
+    # t=5, not longer: the rtol=1e-6 error grows ~30x per time unit here, and
+    # by t=8 it sits within a factor of a few of 1 and crosses it on some platforms.
+    truth = reference_trajectory(CLASSICAL, u0, 5.0, dt_out=0.01)
     errors = []
     for rtol in (1e-6, 1e-9, 1e-12):
         test = solve_adaptive(
-            CLASSICAL, u0, 8.0, method="RK45", rtol=rtol, atol=rtol * 1e-3, dt_out=0.01
+            CLASSICAL, u0, 5.0, method="DOP853", rtol=rtol, atol=rtol * 1e-3, dt_out=0.01
         )
         errors.append(np.linalg.norm(truth.u - test.u, axis=1).max())
     assert errors[0] > errors[1] > errors[2]
@@ -82,7 +84,7 @@ def test_tighter_tolerance_is_more_accurate_before_saturation() -> None:
 
 
 def test_adaptive_exposes_its_internal_steps() -> None:
-    traj = solve_adaptive(CLASSICAL, on_attractor(CLASSICAL), 10.0, method="RK45", rtol=1e-9)
+    traj = solve_adaptive(CLASSICAL, on_attractor(CLASSICAL), 10.0, method="DOP853", rtol=1e-9)
     steps = traj.solver_steps
     assert steps is not None
     assert steps.size > 10

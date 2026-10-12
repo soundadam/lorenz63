@@ -18,23 +18,18 @@
     <p class="params"><span>σ = 10</span><span>ρ = 28</span><span>β = 8/3</span></p>
   </div>
   <div class="right">
-    <canvas id="hero" width="1280" height="1280" aria-label="两条初值相差 1e-5 的 Lorenz 轨道在 x–z 平面上逐渐分离，步长 h 可调"></canvas>
+    <canvas id="hero" width="1280" height="1280" aria-label="两条初值相差 1e-5 的 Lorenz 轨道在 x–z 平面上逐渐分离，到距离超过 1 时停住"></canvas>
     <p class="legend"><span><i class="swatch" style="background:var(--navy)"></i>x₀</span><span><i class="swatch" style="background:var(--orbit)"></i>x₀ + 10⁻⁵</span></p>
-    <p class="readout"><span id="heroT">t = 0.0</span><span id="heroD">|Δ| = 1.0e−5</span><span id="heroS">|Δ| > 1 于 t = —</span></p>
-    <div class="ctrl">
-      <label for="heroH">RK4 步长 h</label>
-      <input type="range" id="heroH" min="0" max="5" step="1" value="2">
-      <span class="eps" id="heroHV">0.005</span>
-    </div>
+    <p class="readout"><span id="heroT">t = 0.0</span><span id="heroD">|Δ| = 1.0e−5</span></p>
+    <div class="ctrl"><button type="button" id="heroReplay">重放</button></div>
   </div>
   <aside class="notes">
-    <p>自我介绍，报题目：《从对流方程到可信的数值解》，以 Lorenz 系统为例，σ = 10、ρ = 28、β = 8/3。</p>
-    <p>右边是两条轨道，投影在 x–z 平面。同一个方程、同一个 RK4、同一个步长 h，唯一的区别是初值的 x 差了 10⁻⁵。请大家盯右下角的 |Δ|：从 1e−5 起步，十几个时间单位就涨到 10 的量级，也就是吸引子本身的大小。</p>
-    <p>先不解释为什么，只请大家记住这个现象：差 10⁻⁵，最后差得和吸引子一样大。整场汇报回答的是：在这种系统里，计算机算出来的东西哪些还能信。</p>
-    <p class="q">开口先问："是不是步长太粗了？" 拖一下滑块给大家看。</p>
-    <p>操作：拖 h 滑块，从同一个起点重跑。h 从 0.001 到 0.02，两条轨道在吸引子上走的路线各不相同，但 "|Δ| &gt; 1 于 t =" 那一栏几乎不变，都在 11.8 附近；到 h = 0.04 才明显提前（约 9.7）。所以分开是 10⁻⁵ 的初值差造成的，不是步长造成的。</p>
-    <p>画线和积分是分开的：每一步内部用三次 Hermite 插值补点（和 RK45 的 dense output 同一个思路），所以 h 再大，线也是光滑的。插值只让线光滑，不让轨道更准。</p>
-    <p>可能被追问："h = 0.005 的 RK4 到 t = 5 已经离真解 3.7e−5，比 10⁻⁵ 还大，凭什么说分开是初值造成的？" 答：两条轨道走的是同一个确定的离散映射，起点又很近，所以积分误差在两条上几乎一样；它们之间的距离量的是这个离散映射对初值的敏感性，而离散映射和真实的流有同样的 Lyapunov 指数。第 ③ 部分讲影随时回到这里。</p>
+    <p>自我介绍，报题目：《从对流方程到可信的数值解》，以 Lorenz 系统为例。</p>
+    <p>先看右边，不急着讲。两条轨道，同一个方程，x 的初值只差 10⁻⁵，十万分之一。请盯右下角的 |Δ|。（让它放完，大约四秒。）</p>
+    <p>它停在 t ≈ 13.6，|Δ| 涨到 1，这张图上已经看得出两条线分开了。十万分之一，十几个时间单位，就成了看得见的差别。</p>
+    <p>今天只回答一个问题：在这种系统里，计算机算出来的东西，哪些还能信。点“重放”可以再看一遍。</p>
+    <p class="key">留下一句：差十万分之一，十几个时间单位就分开。</p>
+    <p>可能被追问：“是不是数值误差造成的？” 答：这两条轨道是用 DOP853、rtol = 1e−13 在 Python 里算好的（<code>lorenz63 figure slides</code>），也就是全篇参考解的精度；积分误差比 10⁻⁵ 小好几个量级，分开来自初值差。</p>
   </aside>
 </section>
 
@@ -43,35 +38,62 @@
   <header><p class="eyebrow">目录</p><h2>一段推导，四项检验</h2></header>
   <div class="map-host"></div>
   <aside class="notes">
-    <p>先把整张地图亮出来：左边是题目，右边五行从上往下就是讲的顺序。绪论把方程从流体力学推出来、放进计算机；后面四段检验算出来的东西。每一行左边是这一段的主题，右边是结论和拿来作证的图或演示。念的时候把左边说成问题：方程怎么来、怎么算？能像查能量守恒那样查它吗？算得更准能多算多久？那还有什么可信？换一类系统答案还一样吗？现在不用解释结论。</p>
-    <p>每一段开头会再回到这张图，高亮要讲的那一行。页脚的格子一直跟着，提示讲到哪一步。点任一行可以直接跳到那一段。</p>
+    <p>先告诉大家今天怎么走。左边是题目，右边五行从上到下就是顺序：一段推导，四项检验。</p>
+    <p>绪论回答“方程从哪来、怎么放进计算机”：从 Rayleigh–Bénard 对流出发，三模 Galerkin 截断得到三行 ODE，再交给积分器。RK4 只讲一步迭代的原理，全篇实际计算只用 DOP853，只拧一个旋钮 rtol。</p>
+    <p>后面四段，每段用一个问题开头：</p>
+    <p class="q">① 能像查能量守恒那样查它吗？ ② 算得更准，能多算多久？ ③ 那还有什么可信？ ④ 换一类系统，答案还一样吗？</p>
+    <p>答案先摆在右边，现在不解释。只请大家记住第二行那个数：2.55。它会是今天出现次数最多的数，后面会一次次回到它。</p>
+    <p class="key">留下一句：一段推导，四项检验；记住 2.55。</p>
+    <p>每段开头会回到这张图，高亮要讲的那一行；页脚的格子一直跟着。点任一行可以直接跳过去。</p>
   </aside>
 </section>
 
 <!-- 3 悖论 -->
-<section class="slide" data-part="0" data-min="1.5" data-title="开场悖论">
-  <header><p class="eyebrow">开场</p><h2>同一个方程，同一个初值</h2></header>
-  <div class="split">
-    <figure class="fig"><img src="figures/fig01_paradox.png" alt="rtol=1e-6 与 rtol=1e-12 两条 x(t) 曲线，以及各自与参考解的距离"><figcaption>lorenz63 figure fig01</figcaption></figure>
-    <div class="col">
-      <p>唯一的区别是 <code>solve_ivp</code> 的相对容差：</p>
-      <p class="mono" style="font-size:30px"><span class="orbit">rtol = 1e-6</span><br><span class="navy">rtol = 1e-12</span></p>
-      <p>前十几个时间单位贴合得很好，之后各自脱钩，差到吸引子的尺度。</p>
+<section class="slide" id="paradoxSlide" data-part="0" data-min="2" data-title="开场悖论">
+  <header><p class="eyebrow">开场 · 现场演示</p><h2>同一个方程，同一个初值，同一个求解器</h2></header>
+  <div class="demo paradox">
+    <div class="pane">
+      <canvas id="paradoxX" width="1840" height="520" aria-label="参考解与所选 rtol 的 x(t)"></canvas>
+      <canvas id="paradoxLog" width="1840" height="520" aria-label="所选 rtol 的解与参考解的距离，纵轴为对数"></canvas>
+    </div>
+    <div class="pane">
+      <p class="readout">
+        <span><i class="swatch" style="background:var(--navy);height:6px"></i>参考解 rtol = 1e−13</span>
+        <span><i class="swatch" style="background:var(--orbit)"></i>所选 rtol</span>
+      </p>
+      <div class="ctrl">
+        <label for="paradoxTol">DOP853 的 rtol</label>
+        <input type="range" id="paradoxTol" min="3" max="12" step="1" value="6">
+        <span class="eps" id="paradoxTolV">1e−6</span>
+      </div>
+      <div class="ctrl">
+        <button type="button" id="paradoxSweep">1e−3 扫到 1e−12</button>
+        <button type="button" id="paradoxClear">清空</button>
+      </div>
+      <div class="kv small"><span class="v mono" id="paradoxT">—</span><span class="k">距离首次超过 1 的时刻</span></div>
+      <div class="kv small"><span class="v mono" id="paradoxSteps">—</span><span class="k">求解器走的步数（t ∈ [0, 45]）</span></div>
+      <p style="font-size:24px">唯一的旋钮是相对容差 rtol。前一段贴合，之后各自脱钩，差到吸引子的尺度。</p>
     </div>
   </div>
   <aside class="notes">
-    <p>上图是 x(t)，下图是两条各自与一个更精确的参考解（DOP853，rtol=1e-13）的距离。</p>
-    <p>抛出问题："哪一条是对的？" 停一下等观众回答。直觉的答案是容差紧的那条。这个答案在 t&lt;15 时对，在 t&gt;40 时没有意义。整个汇报就是解释为什么，以及失效之后还能主张什么。</p>
+    <p>上图是 x(t)：藏青宽线是参考解（DOP853，rtol = 1e−13），朱红细线是滑块选的 rtol。下图是两者的距离，纵轴取对数，虚线是 1。atol 取 rtol 的千分之一。同一个方程、同一个初值、同一个求解器，只拧 rtol。</p>
+    <p>先放 rtol = 1e−6。前 10 个时间单位，两条线重得分不开；下图的距离从很小一路往上爬，在 t ≈ 10.6 碰到 1。之后上面两条线各走各的，都还像蝴蝶，只是不再是同一条。</p>
+    <p class="q">开口先问：“rtol = 1e−6 的这条和参考解，哪一条是对的？”</p>
+    <p>停一下等回答。直觉说参考解对。脱钩之前这句话对；脱钩之后，两条都只是吸引子上的某一条轨道，“哪条对”这个问题本身没了意义。</p>
+    <p>那就算得更准一点。点“扫一遍”：rtol 从 1e−3 收紧到 1e−12，九个数量级。看右边的步数，从 300 多涨到 3700 多，十倍出头。再看下图虚线上的四个点：5.4、10.6、18.4、26.8。</p>
+    <p>后两个间隔都是 8 左右：每收紧 1000 倍，只多 8 个时间单位。第一个间隔短一些，因为 1e−3 太松，一开始误差就不小。这个 8 从哪来，第 ② 部分算给大家看。</p>
+    <p class="key">留下一句：容差收紧十亿倍，可信时间只从 5 走到 27。</p>
+    <p>演示在浏览器里现算，DOP853 照 scipy 的实现逐行移植：同一起点、同一容差，脱钩时刻与 Python 一致到 0.1，步数相差不到 1%（松容差的轨道本身对舍入敏感）。报告里的同一张图是 <code>lorenz63 figure fig01</code>。</p>
   </aside>
 </section>
 
 <!-- 4 分隔：绪论 -->
 <section class="slide" data-part="bg" data-min="0.25" data-title="分隔：绪论">
-  <header><p class="eyebrow">绪论</p><h2>从 Boussinesq 方程到 RK4 迭代</h2></header>
+  <header><p class="eyebrow">绪论</p><h2>从 Boussinesq 方程到时间积分</h2></header>
   <div class="map-host" data-focus="bg"></div>
   <aside class="notes">
-    <p class="q">开口先问："这组方程从哪来，怎么放进计算机？"</p>
-    <p>这一段走一遍计算物理的完整流程：从流体力学的基本方程出发，第 1 步把空间离散成三个模态，得到三行 ODE；第 2 步把 ODE 写成迭代。途中让 x、y、z 和 σ、ρ、β 都有一个看得见的物理意思。</p>
+    <p class="q">开口先问：“这组方程从哪来，怎么放进计算机？”</p>
+    <p>悬念先放一放。要判断算出来的东西能不能信，得先知道算的是什么。接下来十分钟走一遍计算物理的标准流程：物理图像、偏微分方程、空间离散成三个数、时间推进。每一步我只留一句话。</p>
   </aside>
 </section>
 
@@ -84,8 +106,8 @@
         <defs><marker id="rb-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"/></marker></defs>
         <rect x="20" y="20" width="560" height="22" fill="var(--navy)"/>
         <rect x="20" y="298" width="560" height="22" fill="var(--orbit)"/>
-        <text x="300" y="37" fill="#fff" font-size="16" text-anchor="middle">冷板 · 温度 T</text>
-        <text x="300" y="315" fill="#fff" font-size="16" text-anchor="middle">热板 · 温度 T + ΔT</text>
+        <text x="300" y="37" fill="#fff" font-size="16" text-anchor="middle">冷板 · 温度 T₀</text>
+        <text x="300" y="315" fill="#fff" font-size="16" text-anchor="middle">热板 · 温度 T₀ + ΔT</text>
         <ellipse cx="160" cy="170" rx="118" ry="92" fill="none" stroke="var(--ink)" stroke-width="2.5"/>
         <ellipse cx="440" cy="170" rx="118" ry="92" fill="none" stroke="var(--ink)" stroke-width="2.5"/>
         <path d="M42,180 L42,150" stroke="var(--ink)" stroke-width="2.5" marker-end="url(#rb-arrow)"/>
@@ -111,13 +133,16 @@
     </div>
   </div>
   <aside class="notes">
-    <p>先讲一个能想象的东西：锅里的水从下面加热。g 是重力加速度，α 是热膨胀系数，ν 是运动粘度，κ 是热扩散率，H 是层厚。</p>
-    <p>后面会反复用到一句话：ΔT 是我们能拧的旋钮，Ra 正比于 ΔT。下一页把这幅图写成方程。</p>
+    <p>从一个能想象的东西开始：锅里的水，底下烧。</p>
+    <p>底下的水热了变轻，想上去；上面的冷，重，想下来。谁拦着？粘性 ν 拖住流动，热扩散 κ 把温差抹平。Ra 就是两边的比：分子是想翻的（g 重力、α 热膨胀、ΔT 温差、H 层厚），分母是拦着的。</p>
+    <p>Ra 小，拦得住，水不动，热靠传导；Ra 过了临界值，拦不住，长出一排对流卷，就是图上这一对。</p>
+    <p>这些量里我们真正能拧的只有 ΔT，而 Ra 正比于 ΔT。请记住这个旋钮，后面它会改名叫 ρ。</p>
+    <p class="key">留下一句：Ra = 想翻的 ÷ 拦着的；ΔT 是旋钮。</p>
   </aside>
 </section>
 
 <!-- 6 出发点 -->
-<section class="slide" data-part="bg" data-min="2" data-title="出发点：两条偏微分方程">
+<section class="slide" data-part="bg" data-min="1" data-title="出发点：两条偏微分方程">
   <header><p class="eyebrow">绪论 · 出发点</p><h2>Boussinesq 方程与流函数形式</h2></header>
   <div class="split even">
     <div class="col">
@@ -130,25 +155,29 @@
       <ul class="plain" style="font-size:23px">
         <li>只看 X–Z 平面里的二维卷：令 \(u = -\partial_Z\psi,\ w = \partial_X\psi\)，质量守恒自动满足</li>
         <li>对动量方程取旋度，压力 p 消掉</li>
-        <li>温度写成线性传导剖面加偏离：\(T = T_0 + \Delta T\,(1 - Z/H) + \theta\)</li>
+        <li>温度拆成两份：\(T = \underbrace{T_0 + \Delta T\,(1 - Z/H)}_{\text{静止时的传导直线}} + \theta\)</li>
       </ul>
     </div>
     <div class="col">
-      <p style="font-size:24px">剩下两个未知场 ψ(X, Z, t) 和 θ(X, Z, t)：</p>
+      <p style="font-size:24px">剩下两个未知场：流函数 ψ(X, Z, t) 管流动，θ(X, Z, t) 是温度<strong>偏离传导直线</strong>的那部分。流体静止时 θ&nbsp;≡&nbsp;0。</p>
       <div style="font-size:23px">$$\partial_t\nabla^2\psi = \underbrace{-J(\psi,\nabla^2\psi)}_{\text{平流}} + \underbrace{\nu\nabla^4\psi}_{\text{粘性}} + \underbrace{g\alpha\,\partial_X\theta}_{\text{浮力}}$$
       $$\partial_t\theta = \underbrace{-J(\psi,\theta)}_{\text{平流}} + \underbrace{\tfrac{\Delta T}{H}\,\partial_X\psi}_{\text{搬运背景温度}} + \underbrace{\kappa\nabla^2\theta}_{\text{热扩散}}$$</div>
       <p class="muted" style="font-size:22px">\(J(a,b) = \partial_X a\,\partial_Z b - \partial_Z a\,\partial_X b\)，就是 \(\mathbf u\cdot\nabla b\)。这是 Lorenz 1963 的式 (17)–(18)。未知量是两个函数，所以是<strong>无穷维</strong>的。</p>
     </div>
   </div>
   <aside class="notes">
-    <p>左边三条就是课上见过的不可压 Navier–Stokes 加热传导方程，Boussinesq 近似只在浮力里保留密度随温度的变化。T 取相对参考温度的偏离，静水压的那部分并进 p。</p>
-    <p>两步化简：二维流动用流函数，质量守恒自动成立；对动量方程取旋度，压力消失，得到涡量 ∇²ψ 的方程。温度减去线性传导剖面后剩 θ，背景剖面被流体搬运就是 (ΔT/H)∂ψ/∂X 那一项。</p>
-    <p>落脚点：右边两条 PDE 的未知量是函数，要放进计算机，第一件事就是把它变成有限个数。下一页讲一般路线。</p>
+    <p>这页不逐项念。左边是大家见过的不可压 Navier–Stokes 加热传导，Boussinesq 近似只在浮力里让密度随温度变。</p>
+    <p>两步化简：二维流动用流函数，质量守恒自动满足；对动量方程取旋度，压力消掉。剩下右边两条，未知量是 ψ 和 θ。</p>
+    <p>θ 是什么？水不动的时候，温度从底板 T₀ + ΔT 到顶板 T₀ 沿一条直线往下降，这是纯传导。θ 就是实际温度减掉这条直线。水不动，θ = 0；θ 不为零，就是流动把温度搅偏了。所以 θ 量的是对流本身，不是温度本身。</p>
+    <p>减掉直线有个代价：流体上下走的时候，也把背景那条直线搬着走。w = ∂<sub>X</sub>ψ 往上走，把底下热的带上来，这就是“搬运背景温度”那一项 (ΔT/H)∂<sub>X</sub>ψ。</p>
+    <p>右边请只看花括号下的词：平流、粘性、热扩散、浮力。等会儿 Lorenz 方程的每一项，都能对回其中一个。</p>
+    <p>最要紧的是右下角那句：未知量是函数，无穷维。计算机放不下函数，第一件事就是把它变成有限个数。</p>
+    <p class="key">留下一句：两条 PDE，未知量是函数，要先变成有限个数。</p>
   </aside>
 </section>
 
 <!-- 7 数值路线 -->
-<section class="slide" data-part="bg" data-min="1.5" data-title="数值求解的路线">
+<section class="slide" data-part="bg" data-min="1" data-title="数值求解的路线">
   <header><p class="eyebrow">绪论 · 怎么放进计算机</p><h2>线方法：先空间离散，再时间积分</h2></header>
   <div class="center">
     <table class="data" style="font-size:24px">
@@ -156,19 +185,21 @@
       <tbody>
         <tr><td><strong>一般形式</strong></td><td>未知量是场，无穷维</td><td>选基函数或网格，只留 N 个数</td><td>\(\dot{\mathbf u} = \mathbf f(\mathbf u),\ \mathbf u\in\mathbb R^N\)</td><td>\(\mathbf u_{n+1} = \Phi_h(\mathbf u_n)\)</td></tr>
         <tr><td><strong>声场 FDTD</strong></td><td>波动方程 \(p_{tt} = c^2\nabla^2 p\)</td><td>差分网格，N 动辄上百万</td><td>线性</td><td>蛙跳格式</td></tr>
-        <tr class="hl-navy"><td><strong>Lorenz</strong></td><td>二维 Boussinesq 对流</td><td>3 个 Fourier 模态，N = 3</td><td>非线性，3 行</td><td>RK4 · RK45 · DOP853</td></tr>
+        <tr class="hl-navy"><td><strong>Lorenz</strong></td><td>二维 Boussinesq 对流</td><td>3 个 Fourier 模态，N = 3</td><td>非线性，3 行</td><td>RK4（原理）· DOP853（实算）</td></tr>
       </tbody>
     </table>
     <p class="lede" style="max-width:none">Lorenz 是线方法（method of lines）最小的例子：N&nbsp;=&nbsp;3，小到每一步都能看清。<br>后面四段都落在第 2 步上：每一步的误差会怎样累积。</p>
   </div>
   <aside class="notes">
-    <p>用大家熟悉的声学 FDTD 做对照：波动方程先在网格上差分，变成一个很大的线性 ODE 组，再用蛙跳格式推进。Lorenz 走的是同一条路，只是第 1 步用的是 Fourier 模态而不是网格，而且只留了 3 个。</p>
-    <p>接下来两页讲第 1 步，再一页讲第 2 步。</p>
+    <p>从大家熟悉的东西说起：声学 FDTD。波动方程先在网格上差分，变成一大组 ODE，再用蛙跳格式一步步推进。先空间，再时间，这叫线方法。</p>
+    <p>Lorenz 走的是同一条路，只有两处不同：第 1 步用 Fourier 模态，不用网格；而且只留 3 个，N = 3。</p>
+    <p>N = 3 的好处是小到每一步都看得清。后面四段，讲的全是第 2 步：每一步那一点点误差，会怎样累积。</p>
+    <p class="key">留下一句：Lorenz 是线方法，N = 3。</p>
   </aside>
 </section>
 
 <!-- 8 三个变量 -->
-<section class="slide" data-part="bg" data-min="2" data-title="三个变量">
+<section class="slide" data-part="bg" data-min="1.5" data-title="三个变量">
   <header><p class="eyebrow">绪论 · 第 1 步 空间离散</p><h2>三模 Fourier 截断：x、y、z 是模态振幅</h2></header>
   <div class="split">
     <figure class="fig"><img src="figures/fig18_convection.png" alt="三个模态各自的空间形状，以及三者在 C+ 处合成的定常对流卷"><figcaption>lorenz63 figure fig18</figcaption></figure>
@@ -183,14 +214,17 @@
     </div>
   </div>
   <aside class="notes">
-    <p>这里大写 X、Z 是空间坐标，小写 x、y、z 是 Lorenz 变量，别混。a 是卷的水平波数。比例系数和时间单位在报告 §1.2 里写全了。</p>
-    <p>看图：左上是 x 单独的样子，就是一对反向旋转的卷；中上是 y，左右边缘热、中间冷；右上是 z，水平均匀，只改竖直剖面，靠近上下板变陡、中间变平。下面是三者在不动点 C+ 合起来的样子：热流体在两边升起，冷流体在中间沉下，一对定常卷。</p>
-    <p>Nu 是 Nusselt 数，实际热流与纯传导热流之比。所以 z 有个很直接的读法：它就是这层流体在多大程度上靠对流在运热。</p>
+    <p>先提醒一句：大写 X、Z 是空间坐标，小写 x、y、z 是 Lorenz 变量。</p>
+    <p>把 ψ、θ 用满足边界条件的正弦展开，Lorenz 只留三项，三个系数就是 x、y、z。看图上一行：</p>
+    <p>左上 x：一对反向旋转的卷。x 越大转得越快，x 变号就是转向反了。中上 y：左右边缘热、中间冷，也就是上升流和下沉流之间的温差。右上 z：水平均匀，只改竖直剖面，靠近上下板变陡、中间拉平。</p>
+    <p>下面一格是三者在不动点 C+ 处合起来：热的在两边升，冷的在中间沉，一对定常卷。</p>
+    <p>z 有最直接的读法：Nu = 1 + 2z/ρ。Nu 是实际热流和纯传导热流之比。z = 0 只有传导，z 越大，对流多运走的热越多。比例系数和时间单位见报告 §1.2。</p>
+    <p class="key">留下一句：x 是转速，y 是温差，z 是多运的热。</p>
   </aside>
 </section>
 
 <!-- 9 Galerkin -->
-<section class="slide" data-part="bg" data-min="2" data-title="截断丢掉了什么">
+<section class="slide" data-part="bg" data-min="1.5" data-title="截断丢掉了什么">
   <header><p class="eyebrow">绪论 · 第 1 步 空间离散</p><h2>Galerkin 投影：截断丢掉了什么</h2></header>
   <div class="full" style="justify-content:center;gap:30px">
     <p style="font-size:26px">Galerkin 做法：把三项展开代入两条 PDE，乘以每个模态、在一个卷上积分，每个模态得到一条 ODE。线性项各回各的模态，要算的只有平流 J。取 H = 1，k = πa：</p>
@@ -205,13 +239,17 @@
     <p class="lede" style="font-size:26px;max-width:none">截断就是扔掉 sin 3πZ 这一类高阶项。z 必须留：它是 x·y 直接生出来的。不留 z，方程只剩线性部分，ρ &gt; 1 时振幅指数增长、停不下来。</p>
   </div>
   <aside class="notes">
-    <p>这页是给"三个模态为什么能自己闭合"的回答。两个乘积可以直接用积化和差验证：x 的卷与 y 的温差相乘，含 cos 2kX 的项正好抵消，只剩水平均匀的 sin 2πZ，所以 xy 只喂 z。x 与 z 相乘生出 sin πZ 和 sin 3πZ 两部分，前者落回 y，后者被丢掉。</p>
-    <p>对计算方法的读法：这就是谱 Galerkin 方法，模态取得越多越接近原 PDE。Lorenz 取到最少，换来一个能整个看清的三维系统，代价是 ρ 大了以后和流体对不上（后面"三模截断的适用范围"那页）。</p>
+    <p class="q">开口先问：“只留三项，为什么能自己闭合？扔掉了什么？”</p>
+    <p>Galerkin 一句话：代进去，乘以每个模态，在一个卷上积分，一个模态得一条 ODE。线性项各回各家，只有平流 J 会把模态搅在一起，所以只看平流。</p>
+    <p>表里三行。卷乘卷：零。卷 x 乘温差 y：乘出来恰好是 z 的形状，所以 ż 里有 +xy。卷 x 乘剖面 z：乘出两块，sin πZ 回到 y，就是 ẏ 里的 −xz；sin 3πZ 不在三个模态里，扔掉。</p>
+    <p>截断就是这一扔。为什么 z 非留不可？因为 xy 直接生出 z。没有 z，方程只剩线性部分，ρ &gt; 1 时振幅指数增长，没有东西让它停下来。z 就是那个刹车。</p>
+    <p class="key">留下一句：截断就是扔掉 sin 3πZ；z 是非线性的刹车。</p>
+    <p>被问到可以现场验证：用积化和差，x 与 y 相乘，含 cos 2kX 的项正好抵消，只剩 sin 2πZ。模态取得越多越接近原 PDE；Lorenz 取到最少，代价是 ρ 大了以后和流体对不上（后面“适用范围”那页）。</p>
   </aside>
 </section>
 
 <!-- 10 每一项 -->
-<section class="slide" data-part="bg" data-min="2" data-title="每一项的物理">
+<section class="slide" data-part="bg" data-min="1.5" data-title="每一项的物理">
   <header><p class="eyebrow">绪论 · 得到的 ODE</p><h2>Lorenz 方程逐项的物理意义</h2></header>
   <div class="center">
     <table class="data tight" style="font-size:23px">
@@ -229,14 +267,16 @@
     <p class="lede" style="font-size:26px">非线性只有标色的两项，都来自<strong>流体搬运温度</strong>（平流 u·∇θ）。时间以热扩散为单位，Lorenz 的 1 个时间单位约等于 H²/κ 的 1/15。</p>
   </div>
   <aside class="notes">
-    <p>这一页是想让方程不再是三个抽象的字母：线性项都是"驱动"或"扩散"，非线性项都是"搬运"。</p>
-    <p>ρx 那一项里的 ρ 就是 Ra/Ra_c：背景温度梯度越陡，同样的翻滚搬出的温差越大，所以 ρ 是驱动强度的旋钮。</p>
-    <p>时间单位：τ = π²(1+a²)κt/H²，a² = 1/2 时系数约 14.8。量级感：1 cm 厚的水层 H²/κ 约 700 秒，一个 Lorenz 时间单位约一分钟。</p>
+    <p>现在把方程当一句话来读。线性项只有两种：驱动和扩散。非线性项只有一种：搬运。</p>
+    <p>逐行过：σy，浮力推着卷转；−σx，粘性刹车。ρx，卷把底部热流体搬上去，制造温差；−y，热扩散抹平温差；−xz，剖面中段已被拉平，同样的翻滚搬来的温差打了折扣。xy，热的上升冷的下沉，净效果向上运热，把剖面拉弯；−βz，扩散把剖面拉直。</p>
+    <p>标色的两项都是 u·∇θ，流体搬运温度。这个系统里所有的非线性，也就是后面所有的混沌，都来自这一件事。</p>
+    <p>ρx 里的 ρ 就是 Ra/Ra_c，前面那个 ΔT 旋钮。时间单位以热扩散计：1 cm 厚的水层，一个 Lorenz 时间单位约一分钟（τ = π²(1+a²)κt/H²，系数约 14.8）。</p>
+    <p class="key">留下一句：驱动、扩散、搬运；混沌全来自搬运。</p>
   </aside>
 </section>
 
 <!-- 11 经典参数 -->
-<section class="slide" data-part="bg" data-min="2" data-title="经典的那一组数">
+<section class="slide" data-part="bg" data-min="1" data-title="经典的那一组数">
   <header><p class="eyebrow">绪论 · 参数</p><h2>经典参数 σ、β、ρ 的来由</h2></header>
   <div class="full" style="justify-content:center;gap:40px">
     <div class="strip" style="gap:72px">
@@ -252,14 +292,17 @@
     <p class="muted" style="font-size:23px">三个数都出自 Lorenz 1963 原文，此后的文献几乎都沿用，后面所有实验也都用这一组。ρ_H 在 ① 里会再出现。</p>
   </div>
   <aside class="notes">
-    <p>经常有人问"为什么是 8/3 这么怪的数"。答案是几何：它对应最容易被激发的那种卷的宽高比。Ra_c 那个公式是上下自由滑移边界的线性稳定性结果，仓库里有测试对它求最小值，检查恰好得到 β = 8/3。</p>
-    <p>σ 的条件 σ &gt; β+1 来自 ρ_H 分母：分母非正时没有 Hopf 分岔。</p>
-    <p>量级感（粗略，用室温水的物性）：1 cm 水层上下温差 1 K，Ra 约 1.5×10⁴，是自由边界临界值 657 的二十多倍；真实刚性板的临界值是 1708，倍数要小一些。</p>
+    <p class="q">开口先问：“为什么是 8/3 这么怪的数？”</p>
+    <p>三个数各有出处。β = 8/3 是几何：宽度不同的卷各有失稳阈值，最先失稳的那种卷 a² = 1/2，代进 4/(1+a²) 就是 8/3，卷宽是层厚的 √2 倍。仓库里有测试对 Ra_c(a) 求最小值，检查恰好得到 8/3。</p>
+    <p>σ = 10：和水同一量级，室温水约 7。它还得大于 β + 1，否则 ρ_H 的分母非正，C± 永远不会失稳，就没有后面的混沌。</p>
+    <p>ρ = 28：加热是刚起对流的 28 倍，略高于 24.74。过了 24.74，定常卷失稳。这个数第 ① 部分会再见。</p>
+    <p class="key">留下一句：8/3 是几何，10 是水，28 刚过失稳。</p>
+    <p>量级感（被问到再说）：1 cm 水层上下差 1 K，Ra 约 1.5×10⁴，是自由边界临界值 657 的二十多倍；真实刚性板的临界值是 1708。</p>
   </aside>
 </section>
 
 <!-- 12 边界 -->
-<section class="slide" data-part="bg" data-min="1" data-title="方程与它的边界">
+<section class="slide" data-part="bg" data-min="0.5" data-title="方程与它的边界">
   <header><p class="eyebrow">绪论 · 模型的边界</p><h2>三模截断的适用范围</h2></header>
   <div class="split even">
     <div class="col">
@@ -276,13 +319,15 @@
     </div>
   </div>
   <aside class="notes">
-    <p>很多科普会说"Lorenz 方程描述大气对流，所以天气不可预报"。正确的说法要弱得多：它展示了低维确定性系统也能有敏感依赖。这个定性教训可以迁移到大气，方程本身不能。</p>
-    <p>右边几个系统是给"有没有一个物理量对应"的回答：对流里这种对应只在近阈值成立，而在水车、热虹吸环、激光里，变量重新标度后方程是精确的，只是 σ、β、ρ 换成那些装置自己的参数。</p>
+    <p>一句诚实话：ρ = 28 时三模截断已经不是好的流体模型，被扔掉的高阶模态早就激发了。所以后面所有结论，都关于这三行方程这个数学对象，不关于流体，也不关于天气。</p>
+    <p>不过有几个装置，化简后恰好就是这组方程：Malkus 水车、热虹吸环、单模激光，只是 σ、β、ρ 换成装置自己的参数。</p>
+    <p class="key">留下一句：后面的结论关于方程本身，不关于天气。</p>
+    <p>被问到“所以天气不可预报？”：Lorenz 展示的是低维确定性系统也能敏感依赖初值。这个定性教训能迁移到大气，方程本身不能。</p>
   </aside>
 </section>
 
 <!-- 13 时间推进 -->
-<section class="slide" data-part="bg" data-min="2" data-title="把 ODE 变成迭代">
+<section class="slide" data-part="bg" data-min="1.5" data-title="把 ODE 变成迭代">
   <header><p class="eyebrow">绪论 · 第 2 步 时间推进</p><h2>时间积分：Euler、RK4 与自适应步长</h2></header>
   <div class="split even">
     <div class="col">
@@ -300,24 +345,28 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
     k3 = f(u + h/2 * k2)
     k4 = f(u + h * k3)
     return u + h/6 * (k1 + 2*k2 + 2*k3 + k4)</pre>
-      <p class="muted" style="font-size:20px">仓库里的 <code>integrate.rk4_step</code> 就是这几行（多一个时间参数）。幻灯片里的演示也用同一个 RK4，在浏览器里现算，默认 h = 0.005。</p>
+      <p class="muted" style="font-size:20px">仓库里的 <code>integrate.rk4_step</code> 就是这几行（多一个时间参数）。后面的计算和现场演示都用 DOP853，只调 rtol。</p>
     </div>
     <div class="col">
       <table class="data tight" style="font-size:22px">
-        <thead><tr><th>后面用到的积分器</th><th>步长怎么定</th></tr></thead>
+        <thead><tr><th>积分器</th><th>步长怎么定</th></tr></thead>
         <tbody>
-          <tr><td><strong>RK4</strong></td><td>固定 h；h 减半，误差约缩小 16 倍</td></tr>
-          <tr><td><strong>RK45</strong>（solve_ivp 默认）</td><td>每步估计局部误差，按 rtol 自动调 h</td></tr>
-          <tr><td><strong>DOP853</strong>，rtol = 1e-13</td><td>8 阶，当作参考解</td></tr>
+          <tr><td><strong>RK4</strong>（原理）</td><td>固定 h；h 减半，误差约缩小 16 倍</td></tr>
+          <tr><td><strong>DOP853</strong>（实算）</td><td>8 阶；每步估计局部误差，按 rtol 自动调 h</td></tr>
+          <tr><td>DOP853，rtol = 1e-13</td><td>当作参考解</td></tr>
         </tbody>
       </table>
-      <div class="callout navy-bg">开场那两条曲线，就是同一个 RK45 只把 rtol 从 1e-6 换成 1e-12。每一步的误差都很小，<strong>问题是这些误差怎么累积</strong>。</div>
+      <div class="callout navy-bg">开场的演示就是同一个 DOP853 只换 rtol。每一步的误差都很小，<strong>问题是这些误差怎么累积</strong>。</div>
+      <a class="goto" data-goto="integratorsSlide">备用：RK4、RK45 与 DOP853 →</a>
     </div>
   </div>
   <aside class="notes">
-    <p>这是整个计算的全部代码：一个右端函数，一个循环。Euler 每步只看起点的斜率；RK4 在一步里取四个斜率加权平均，误差阶从 1 提到 4。仓库里有一个测试，用有解析解的问题检查 RK4 确实是四阶。</p>
-    <p>RK45 和 DOP853 是 scipy 的自适应方法：每步同时算两个不同阶的结果，用它们的差估计误差，误差超过 rtol 就缩小步长重来。</p>
-    <p>过渡到第 ① 部分：学数值方法时，检验一个积分器最常用的办法是看守恒量漂不漂。Lorenz 能不能这样查？</p>
+    <p class="q">开口先问：“怎么让计算机往前走一步？”</p>
+    <p>左边就是整个计算的全部代码：一个右端函数 f，一个循环。Euler 每步只看起点的斜率；RK4 在一步里取四个斜率加权平均。h 减半，误差小 16 倍，这就是四阶。仓库里有测试用有解析解的问题检查它确实是四阶。</p>
+    <p>实际计算全篇只用 DOP853：8 阶，每步顺手估计自己的局部误差，超过 rtol 就缩小步长重来。所以全篇只有一个旋钮 rtol，开场的演示就是在拧它。</p>
+    <p>右下这句是关键：每一步的误差都很小。问题不在某一步，而在这些小误差之后被怎样放大。</p>
+    <p class="key">留下一句：每一步都很准；问题是误差怎么累积。</p>
+    <p>过渡：学数值方法时，验证积分器最常用的办法是看守恒量漂不漂。Lorenz 能这样查吗？</p>
   </aside>
 </section>
 
@@ -326,8 +375,8 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   <header><p class="eyebrow">第 ① 部分</p><h2>没有守恒量可查</h2></header>
   <div class="map-host" data-focus="1"></div>
   <aside class="notes">
-    <p class="q">开口先问："能像检查能量守恒那样检查它吗？"</p>
-    <p>学数值方法时最常用的验证是看守恒量漂不漂。这一段先现场拧 ρ 这个加热旋钮，看对流卷怎样从无到有、再到停不下来；然后看四个 ρ 下的相图，再说明 Lorenz 为什么没有守恒量可查。</p>
+    <p class="q">开口先问：“能像检查能量守恒那样检查它吗？”</p>
+    <p>算谐振子、算行星，我们检查程序对不对，最常用的就是看能量漂不漂。Lorenz 有没有这样一个量？这一段先拧加热旋钮，看它怎样从静止变成乱翻；然后在黑板上攒三条事实：停不下、跑不掉、体积缩到零。三条攒齐，答案自己出来。</p>
   </aside>
 </section>
 
@@ -356,15 +405,18 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
     </div>
   </div>
   <aside class="notes">
-    <p>左上是对流层本身：颜色是温度（底热顶冷），短线是流体往哪走。它不是另算的流体，而是用 x、y、z 按绪论里那三个模态拼回去的场。左下是 x(t)：x &gt; 0 时热流体在两侧上升、中间下沉，x &lt; 0 时反过来。右下是同一条轨道在 x–z 平面上，实心点稳定，空心点不稳定。</p>
-    <p>讲法：从 ρ = 0.5 开始，什么都不动，热只靠传导。慢慢拖过 1，卷自己长出来，停在一个转向上，Nu 大于 1。拖到 10，还是一对定常卷。拖过 24.74，卷开始不规则地翻转，x 在正负之间跳，再也停不下来，这就是蝴蝶。</p>
-    <p>可选：先停在 24.5，卷是定常的（ρ 接近 24.74，螺旋收得很慢）；点"推一下"（把 z 突然加 15），同样的 ρ 下它就不再回来，一直乱翻。说明 ρ = 24.5 时两种结局并存，取决于初值。下一页的四格相图就是这四个 ρ。</p>
-    <p>流体里总有微小扰动，演示每一帧给 x 加 10⁻³ 量级的噪声，所以 ρ 刚过 1 时卷能从静止长出来；"回到静止"把状态放回原点附近。短线按真实流速的 0.15 倍画，只示意方向和快慢。</p>
+    <p>先说画面。左上是对流层：颜色是温度（底热顶冷），短线是流体往哪走；它是用 x、y、z 按绪论那三个模态拼回去的场。左下是 x(t)：x &gt; 0 时热流体在两侧上升、中间下沉，x &lt; 0 反过来。右下是同一条轨道在 x–z 平面上，实心点稳定，空心点不稳定。</p>
+    <p class="q">每拖之前先让大家猜：“ρ 小于 1 会怎样？”“刚过 1 呢？”“一直加热下去呢？”</p>
+    <p>ρ = 0.5：什么都不动，热只靠传导。慢慢拖过 1：卷自己长出来，停在一个转向上，Nu 大于 1。往哪边转？看噪声，随机。拖到 10：还是一对定常卷，只是更强。</p>
+    <p>最后一个问题，多数人会猜“更快的定常卷”。拖过 24.74：卷开始不规则地翻转，x 在正负之间跳，再也停不下来。这就是蝴蝶。</p>
+    <p>可选：先停在 24.5，卷是定常的（螺旋收得很慢）；点“推一下”（把 z 突然加 15），同样的 ρ 它就不再回来，一直乱翻。ρ = 24.5 时两种结局并存，看初值。</p>
+    <p class="key">留下一句：同一组方程，拧 ρ，从静止到定常卷，再到停不下来的翻转。</p>
+    <p>实现细节（被问再说）：流体里总有微小扰动，演示每一帧给 x 加 10⁻³ 量级的噪声，所以刚过 1 时卷能长出来；“回到静止”把状态放回原点附近。短线按真实流速的 0.15 倍画，只示意方向和快慢。积分用 DOP853，rtol = 1e−8。</p>
   </aside>
 </section>
 
 <!-- 16 相图 -->
-<section class="slide" data-part="1" data-min="1.5" data-title="四个 ρ 下的相图">
+<section class="slide" data-part="1" data-min="1" data-title="四个 ρ 下的相图">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>四个区间，四种相图</h2></header>
   <div class="split">
     <figure class="fig"><img src="figures/fig13_phase_portraits.png" alt="ρ=0.5, 10, 24.5, 28 四格相图"><figcaption>lorenz63 figure fig13</figcaption></figure>
@@ -380,13 +432,15 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
     </div>
   </div>
   <aside class="notes">
-    <p>实心点稳定，空心点不稳定。ρ=24.5 这一格最有意思：蓝色轨道在两叶间游荡，绿色被困在 C+ 附近的小环里。这是亚临界 Hopf 的典型后果，在失稳阈值之下就已经有另一个吸引集。</p>
-    <p>其他所有图都先积 50 个时间单位再记录，只有这页保留瞬态。</p>
+    <p>刚才拧过的四个 ρ，相图摆在一起，从左往右读：0.5，一个点；10，螺旋落进 C±；24.5，两种结局都有；28，蝴蝶。</p>
+    <p>多看一眼 24.5 这格：C± 还稳定，蝴蝶已经在了。蓝色轨道在两叶间游荡，绿色被困在 C+ 附近的小环里。落到哪个，看初值。这是亚临界 Hopf 的典型后果：失稳阈值之下就已经有另一个吸引集。</p>
+    <p class="key">留下一句：ρ 过了 24.74，没有稳态可去。</p>
+    <p>其他所有图都先积 50 个时间单位丢掉瞬态，只有这页保留：要看的就是轨道怎样落上去。</p>
   </aside>
 </section>
 
 <!-- 17 不动点 -->
-<section class="slide" data-part="1" data-min="1.5" data-title="不动点稳定性">
+<section class="slide" data-part="1" data-min="1" data-title="不动点稳定性">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>三个不动点，ρ = 28 时全部不稳定</h2></header>
   <div class="split">
     <figure class="fig"><img src="figures/fig04_fixed_point_stability.png" alt="C+ 处 Jacobian 特征值最大实部随 ρ 的变化"><figcaption>lorenz63 figure fig04</figcaption></figure>
@@ -398,13 +452,15 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
     </div>
   </div>
   <aside class="notes">
-    <p>这张图是纯线性代数，不含任何积分：对每个 ρ 解析写出 C+，算 Jacobian 特征值，取实部最大者，它在 ρ_H 处穿零。</p>
-    <p>ρ = 28 在 ρ_H 右侧：三个不动点全不稳定，没有稳态可去。轨道停不下也跑不掉，只能在有界区域里永远游荡。</p>
+    <p>第一条事实：停不下。</p>
+    <p>三个不动点：原点和 C±，C± 的坐标右边写着。图是 C+ 处 Jacobian 特征值的最大实部，横轴是 ρ。这是纯线性代数，没有积分：对每个 ρ 写出 C+，求特征值，取实部最大的。它在 ρ_H = 24.74 穿过零。</p>
+    <p>ρ = 28 在右边：三个不动点全不稳定，没有稳态可去。</p>
+    <p class="key">黑板第一条：停不下，三个不动点全不稳。</p>
   </aside>
 </section>
 
 <!-- 18 有界 -->
-<section class="slide" data-part="1" data-min="1" data-title="有界性">
+<section class="slide" data-part="1" data-min="0.75" data-title="有界性">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>Lyapunov 函数：耗散但有界</h2></header>
   <div class="split even">
     <div class="col">
@@ -418,12 +474,15 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
     </div>
   </div>
   <aside class="notes">
-    <p>耗散不等于收缩到一点，也不等于跑到无穷。上一页说明轨道停不下来；这个 Lyapunov 函数说明它也跑不掉。两者合起来就是奇怪吸引子。</p>
+    <p>第二条事实：跑不掉。</p>
+    <p>V 是一个椭球形状的“能量”。它的导数在一个大椭球外面处处为负，所以 V 在那里只降不升：轨道从外面进来，就再也出不去。</p>
+    <p>停不下，又跑不掉，只能在一块有界区域里永远游荡。局部指数分开，全局又折回来：这是混沌，不是发散。</p>
+    <p class="key">黑板第二条：跑不掉，V 在大椭球外只降。</p>
   </aside>
 </section>
 
 <!-- 19 体积 -->
-<section class="slide" data-part="1" data-min="1.5" data-title="相空间体积">
+<section class="slide" data-part="1" data-min="1.25" data-title="相空间体积">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>Liouville 公式：相空间体积匀速坍缩</h2></header>
   <div class="split">
     <figure class="fig"><img src="figures/fig05_volume.png" alt="Lorenz 与谐振子的 ln det M(t) 对比"><figcaption>lorenz63 figure fig05</figcaption></figure>
@@ -438,8 +497,12 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
     </div>
   </div>
   <aside class="notes">
-    <p>由 Liouville 公式，体积按 e^(−13.667 t) 收缩，2 个时间单位缩到 1.35×10⁻¹²。验证方法：积分 M′ = JM，M(0)=I，det M 就是体积因子。</p>
-    <p>这一页就是第 ① 部分的答案：守恒系统可以监视能量、监视不变量，Lorenz 连出发点都没有。</p>
+    <p>第三条事实：体积。</p>
+    <p>Jacobian 的迹在每一点都等于 −(σ + 1 + β) = −13.67，是常数。所以相空间里任何一团初值，体积都按 e^(−13.67t) 缩：一个时间单位缩掉约一百万倍。</p>
+    <p>图上验证：解 M′ = JM、M(0) = I，ln det M 是一条直线，斜率与 −13.667 的相对差 6×10⁻⁵。旁边谐振子那条贴在 0：守恒系统保体积。</p>
+    <p>三条攒齐：停不下、跑不掉、体积缩到零。轨道最后落在一个体积为零、却永远绕不完的集合上，这就是奇怪吸引子。</p>
+    <p>回答开头的问题：能像查能量那样查它吗？不能。谐振子有能量、有辛结构；Lorenz 什么都不守，体积每时每刻都在缩。“该不该用辛方法”在这里是个空问题。</p>
+    <p class="key">黑板第三条：体积缩到零。所以没有守恒量可查。</p>
   </aside>
 </section>
 
@@ -448,8 +511,8 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   <header><p class="eyebrow">第 ② 部分</p><h2>精度只换来对数时间</h2></header>
   <div class="map-host" data-focus="2"></div>
   <aside class="notes">
-    <p class="q">开口先问："算得更准，能多算多久？"</p>
-    <p>先现场演示，让大家自己猜、自己看，再给名字（λ₁）和正式的证据（图 9）。</p>
+    <p class="q">开口先问：“算得更准，能多算多久？”</p>
+    <p>没有守恒量可查，就只剩一条路：算得更准。开场已经看到，容差收紧十亿倍，可信时间只从 5 走到 27。这一段把那个现象收成一个数。还是先演示、让大家猜，再给名字。</p>
   </aside>
 </section>
 
@@ -479,10 +542,14 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
     </div>
   </div>
   <aside class="notes">
-    <p>操作：拖滑块就从同一个起点用新的 ε 重跑，旧曲线留在右图上。"扫一遍"依次跑 10⁻²、10⁻⁴ … 10⁻¹⁴。两条轨道都用 RK4、h = 0.005 在浏览器里现算，"分开"指距离首次超过 1。</p>
-    <p>讲法：先用 ε = 10⁻⁶ 跑一次，左边两条线一开始完全重合，过一阵突然各走各的。然后问大家：<span class="q">把 ε 再缩小一百万倍到 10⁻¹²，能多看多久？</span>等几个人猜完，点"扫一遍"。</p>
-    <p>右图纵轴是对数，曲线在分开之前近似一条直线，说明误差是指数增长；每条线都是上一条平移过去的，斜率就是最大 Lyapunov 指数 λ₁。所以每缩小 10 倍只推后 ln10/λ₁ ≈ 2.55。双精度的尽头是 10⁻¹⁶，再往下不是算法问题，是数字本身表示不出来，对应约 41 个时间单位。</p>
-    <p>单条轨道相邻两次的差距会在 0.2 到 7 之间跳，因为局部拉伸率差别很大（备用页「有限时间 Lyapunov 指数」）。看拟合斜率，不看单次差距。正式的结果是后面图 9，8 个起点平均、换的是求解器容差。</p>
+    <p>这次不动求解器，它固定在参考精度。改动初值：两个起点差 ε。两条轨道拼成一个 6 维系统，用 DOP853（rtol = 1e−13）一起积，共用同一串步长；“分开”指距离首次超过 1。</p>
+    <p>先跑 ε = 10⁻⁶。左边两条线一开始重合，过一阵各走各的。右边是距离的对数：先是一条斜直线往上爬，到 1 附近变平。变平是因为吸引子就这么大，两条轨道再远也远不过它。</p>
+    <p class="q">然后问：“把 ε 缩小一百万倍到 10⁻¹²，能多看多久？”</p>
+    <p>等几个人猜完，点“扫一遍”。每条线都是上一条平移过去的。对数纵轴上的直线就是指数增长：|Δ| ≈ ε·e^(λ₁t)。</p>
+    <p>什么时候到 1？ε·e^(λ₁T) = 1，所以 T = ln(1/ε)/λ₁。ε 缩小 10 倍，T 只加 ln10/λ₁。λ₁ 约 0.9，ln10 约 2.3，相除就是目录里的 2.55。缩小一百万倍：6 × 2.55 ≈ 15。不是一百万倍的时间，是加 15。</p>
+    <p>双精度能表示的最小相对差约 10⁻¹⁶：16 × 2.55 ≈ 41。这是数字本身的天花板，不是算法问题。</p>
+    <p class="key">留下一句：精度乘 10，时间只加 2.55。</p>
+    <p>老实交代：单个起点相邻两次的间隔会在 0.2 到 7 之间跳，这一次扫出来的平均间隔约 2.2，因为局部拉伸率差别很大（备用页「有限时间 Lyapunov 指数」）。所以要看多个起点的平均，就是后面两张图。</p>
   </aside>
 </section>
 
@@ -492,16 +559,20 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   <div class="split">
     <figure class="fig"><img src="figures/fig07_ensemble.png" alt="16 个吸引子点各 4 个扰动的分离度随时间增长"><figcaption>lorenz63 figure fig07</figcaption></figure>
     <div class="col">
-      <p style="font-size:24px">16 个吸引子点 × 4 个随机方向，扰动 δ₀ = 1e−9，全部用参考精度积分。</p>
+      <div style="font-size:28px">$$|\Delta(t)| \approx \delta\,e^{\lambda_1 t}\quad\Rightarrow\quad T = \frac{\ln(1/\delta)}{\lambda_1}$$</div>
+      <p style="font-size:24px">16 个吸引子点 × 4 个随机方向，扰动 δ = 1e−9，全部用参考精度积分。</p>
       <div class="kv small"><span class="v">0.8750</span><span class="k">t ∈ [5, 22] 的拟合斜率，与变分方程算出的 0.9038（备用页）相差 3.2%，两条路径没有共用代码</span></div>
-      <div class="kv small"><span class="v">0.767</span><span class="k">倍增时间 ln 2 / λ₁</span></div>
+      <div class="kv small"><span class="v">2.55</span><span class="k">δ 每缩小 10 倍，T 多 ln 10 / λ₁</span></div>
       <div class="kv small"><span class="v orbit">40.76</span><span class="k">双精度预报极限 ln(10¹⁶) / λ₁</span></div>
     </div>
   </div>
   <aside class="notes">
-    <p>一个解变分方程，一个只是扰动初值，两种独立办法给出同一个 λ₁。</p>
-    <p>为什么要 16 个点？只扰动一个点，量到的是那一段轨道的有限时间指数，换个起点斜率能在 0.4 到 1.3 之间跳；点散布在吸引子上再取中位，才是 λ₁。</p>
-    <p>40.76 的意思：即便算法完美无误差，初值在双精度下只能表示到 10⁻¹⁶，超过约 41 个时间单位之后，你算的就不再是你想要的那条轨道。</p>
+    <p>刚才那条直线有名字：λ₁，最大 Lyapunov 指数。这页是正式测量：16 个吸引子点 × 4 个随机方向，扰动 10⁻⁹，全部用参考精度积分。直线段拟合斜率 0.875。</p>
+    <p>另一条完全独立的路，解变分方程（备用页），给出 0.904。两条路没有共用代码，相差 3%。</p>
+    <p>λ₁ 约 0.9，换成好记的说法：每 0.77 翻一倍，每 2.55 涨十倍。</p>
+    <p>现在回头算封面：差 10⁻⁵ 涨到 1，5 个数量级，5 × 2.55 ≈ 12.7。封面停在 13.6，对得上。（单个起点本来就会偏一点，ε 演示里会看到。）</p>
+    <p class="key">留下一句：|Δ| ≈ δ·e^(λ₁t)，所以 T = ln(1/δ)/λ₁。</p>
+    <p>被问到为什么要 16 个点：只扰动一个点，量到的是那一段轨道的有限时间指数，换个起点斜率能在 0.4 到 1.3 之间跳；散布在吸引子上再取中位，才是 λ₁。</p>
   </aside>
 </section>
 
@@ -514,32 +585,37 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
       <table class="data" style="font-size:24px">
         <thead><tr><th>rtol</th><th>T<sub>div</sub></th></tr></thead>
         <tbody>
-          <tr><td class="num">1e−4</td><td class="num">4.50</td></tr>
-          <tr><td class="num">1e−6</td><td class="num">11.51</td></tr>
-          <tr><td class="num">1e−8</td><td class="num">16.05</td></tr>
-          <tr><td class="num">1e−10</td><td class="num">19.41</td></tr>
-          <tr><td class="num">1e−12</td><td class="num">24.66</td></tr>
+          <tr><td class="num">1e−4</td><td class="num">5.69</td></tr>
+          <tr><td class="num">1e−6</td><td class="num">10.62</td></tr>
+          <tr><td class="num">1e−8</td><td class="num">16.11</td></tr>
+          <tr><td class="num">1e−10</td><td class="num">20.71</td></tr>
+          <tr><td class="num">1e−12</td><td class="num">26.88</td></tr>
         </tbody>
       </table>
-      <div class="callout orbit-bg">容差收紧 <strong>8 个数量级</strong>，只多买到 <strong class="orbit">20.2</strong> 个时间单位（理论 8 ln 10 / λ₁ = 20.4）。</div>
+      <div class="callout orbit-bg">容差收紧 <strong>8 个数量级</strong>，只多买到 <strong class="orbit">21.2</strong> 个时间单位（理论 8 ln 10 / λ₁ = 20.4）。</div>
     </div>
   </div>
   <aside class="notes">
-    <p>每个容差用 RK45 积分，与 DOP853@1e-13 的参考解比较，记录分离首次超过 1 的时刻 T_div，8 个起点平均。理论：T_div = λ₁⁻¹ ln(Δ/δ₀)，δ₀ ∝ rtol。</p>
-    <p>拟合斜率 1.0422，理论 1/λ₁ = 1.1065。拟合出的 λ₁ = 0.96 比 Benettin 高 6%，因为有效初始误差和 rtol 只是同阶，不严格成正比。</p>
-    <p>这条也是测试：test_predictability.py::test_divergence_time_grows_linearly_in_log_inverse_tolerance。</p>
+    <p>演示里动的是初值，可开场动的是 rtol。rtol 管的是每一步注入多少误差。它是不是也服从同一条公式？把 δ 换成 rtol，T 对 ln(1/rtol) 应该是一条直线，斜率 1/λ₁ = 1.107。</p>
+    <p>做法：8 个起点，每个容差用 DOP853 积分，和 rtol = 1e−13 的参考解比，记下距离首次超过 1 的时刻，取平均。拟合斜率 1.131，差 2%。</p>
+    <p>看表：每两个数量级，T 多 5 左右，而 2 × 2.55 = 5.1。8 个数量级一共多 21.2，理论 20.4。</p>
+    <p class="key">留下一句：rtol 也是 δ。收紧 8 个数量级，多 21 个时间单位。</p>
+    <p>被问到斜率为什么偏大 2%：有效初始误差和 rtol 只是同阶，不严格成正比。这条直线也是测试：test_predictability.py::test_divergence_time_grows_linearly_in_log_inverse_tolerance。</p>
   </aside>
 </section>
 
 <!-- 24 回答 -->
-<section class="slide" data-part="2" data-min="0.5" data-title="回答开场的问题">
+<section class="slide" data-part="2" data-min="0.75" data-title="回答开场的问题">
   <header><p class="eyebrow">② 精度只换来对数时间</p><h2>双精度下的预报极限</h2></header>
   <div class="center">
     <p class="big-statement">t &gt; 41 时，<br>算出的已不是那个初值的轨道。</p>
-    <p class="lede">从 rtol = 1e−4 收紧到 1e−12，计算量增加上百倍，预报时间从 4.5 涨到 24.7。再要 20 个时间单位需要再收紧 8 个数量级，而双精度已经到头了。</p>
+    <p class="lede">从 rtol = 1e−4 收紧到 1e−12，DOP853 的步数约多 10 倍，预报时间从 5.7 涨到 26.9。再要 20 个时间单位需要再收紧 8 个数量级，而双精度已经到头了。</p>
   </div>
   <aside class="notes">
-    <p>这一页回答开场的"哪一条是对的"：t &gt; 41 时这个问题没有答案。提高精度这条路的回报是对数的，走不通。到这里全是坏消息，下一页进入第 ③ 部分。</p>
+    <p>回到开场的问题：哪一条是对的？t 过了 41，这个问题在双精度下没有答案。</p>
+    <p>算笔账。rtol 从 1e−4 收紧到 1e−12，DOP853 的步数约多 10 倍：8 阶方法，步数随 rtol 的 −1/8 次方涨，8 个数量级正好是 10 倍。10 倍的计算，换来 5.7 到 26.9。再要 20 个时间单位，就得再收紧 8 个数量级，而双精度已经到头了。</p>
+    <p>到这里全是坏消息。</p>
+    <p class="key">留下一句：t &gt; 41，单条轨道在双精度下没有答案。</p>
   </aside>
 </section>
 
@@ -548,14 +624,14 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   <header><p class="eyebrow">第 ③ 部分</p><h2>单条轨道不可信，统计量可信</h2></header>
   <div class="map-host" data-focus="3"></div>
   <aside class="notes">
-    <p class="q">开口先问："单条轨道不可信，那还有什么可信？"</p>
-    <p>前一段全是坏消息。这一段给出好消息，以及它为什么站得住。</p>
+    <p class="q">开口先问：“单条轨道不可信，那还有什么可信？”</p>
+    <p>坏消息讲完了。可大家在教科书上看到的蝴蝶，就是这样算出来的。它是幻觉吗？这一段的回答是：不是。可信的东西换了，不是哪一条轨道，而是轨道的统计。</p>
   </aside>
 </section>
 
 <!-- 26 影随 -->
-<section class="slide" data-part="3" data-min="1.5" data-title="影随">
-  <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>影随：数值轨道跟着另一条真解</h2></header>
+<section class="slide" data-part="3" data-min="1" data-title="影随">
+  <header><p class="eyebrow">③ 统计量不随 rtol 变</p><h2>影随：数值轨道跟着另一条真解</h2></header>
   <div class="split even">
     <div class="col">
       <p>直觉：局部误差很小的数值轨道，虽然不是你要的那条真解，可能紧跟着<strong>另一条</strong>初值稍有不同的真解。</p>
@@ -568,49 +644,57 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
     </div>
   </div>
   <aside class="notes">
-    <p>Tucker 2002 解决的是 Smale 第 14 问题：证明 Lorenz 吸引子存在且结构稳定。</p>
-    <p class="q">可能被问："能不能直接把数值轨道修正成真轨道看看？" 回答：可以做多重打靶 + Newton 的有限时间影随实验，目前列在待补清单里。</p>
+    <p>先给直觉。数值轨道不是你要的那条真解，但它每一步的误差都很小，也许它一直紧跟着另一条真解，只是初值稍有不同。那画出来的蝴蝶就是真蝴蝶，只是不是“你那只”。</p>
+    <p>对一致双曲系统，这是定理，叫影随引理。Lorenz 不是一致双曲的：原点这个不动点就在吸引子里。Tucker 2002 用计算机辅助证明它是奇异双曲吸引子，顺带解决了 Smale 第 14 问题；数值影随的结果多是有限时间、逐案验证的。</p>
+    <p>所以影随只能提示方向，不能当证明。真正的辩护得能测量，下一页。</p>
+    <p class="key">留下一句：影随给方向，辩护靠测量。</p>
+    <p class="q">可能被问：“能不能直接把数值轨道修正成真轨道看看？” 回答：可以做多重打靶加 Newton 的有限时间影随实验，目前列在待补清单里。</p>
   </aside>
 </section>
 
 <!-- 27 中心实验 -->
 <section class="slide" data-part="3" data-min="2.5" data-title="中心实验">
-  <header><p class="eyebrow">③ 统计量不随求解器变 · 中心实验</p><h2>同一组数据：<span class="orbit">左边报废</span>，<span class="stat">右边完好</span></h2></header>
+  <header><p class="eyebrow">③ 统计量不随 rtol 变 · 中心实验</p><h2>同一组数据：<span class="orbit">左边报废</span>，<span class="stat">右边完好</span></h2></header>
   <div class="full">
     <figure class="fig"><img src="figures/fig10_trajectory_vs_statistics.png" alt="三次计算的 x(t) 与 Lorenz 映射"><figcaption>lorenz63 figure fig10</figcaption></figure>
     <div class="strip" style="gap:48px">
-      <div class="kv small"><span class="v orbit">13.6 / 18.3</span><span class="k">RK45@1e−6 与 @1e−9 的脱钩时刻</span></div>
-      <div class="kv small"><span class="v orbit">33.3</span><span class="k">DOP853@1e−13 也会脱钩（只差 atol）</span></div>
+      <div class="kv small"><span class="v orbit">10.5 / 18.3</span><span class="k">rtol = 1e−6 与 1e−9 的脱钩时刻</span></div>
+      <div class="kv small"><span class="v orbit">33.3</span><span class="k">rtol = 1e−13 也会脱钩（只差 atol）</span></div>
       <div class="kv small"><span class="v stat">8.6×10⁻⁵</span><span class="k">Lorenz 映射的厚度（占 z 值域）</span></div>
     </div>
   </div>
   <aside class="notes">
-    <p>三次计算：RK45@1e-6、RK45@1e-9、DOP853@1e-13，同一初值。左边按单条轨道的标准，前两次是废品。连最好的那次与参考解之间，只差 atol 取 1e-15 还是 1e-16，也撑不过 34 个时间单位，和双精度极限 40.76 是同一回事。</p>
-    <p>右边是 Lorenz 1963 原文的构造：z 的第 n 个极大对第 n+1 个。三种颜色重合到线宽以内。曲线斜率处处大于 1，所以任何不动点都不可能稳定，这就是混沌的来源。</p>
-    <p>这一页就是整个汇报的论点，多停一会儿。</p>
+    <p>这一页是整场的论点，我会多停一会儿。</p>
+    <p>同一个初值，三次计算：rtol = 1e−6、1e−9、1e−13。左边是 x(t)。1e−6 在 10.5 脱钩，1e−9 在 18.3 脱钩：差 3 个数量级，差 7.8，而 3 × 2.55 = 7.6。连 1e−13，和参考解之间只差一个 atol（1e−15 对 1e−16），也在 33 撑不住，和双精度天花板 41 是同一回事。按单条轨道的标准，三次都是废品。</p>
+    <p>右边，还是这三组数据，换一种看法。Lorenz 1963 原文的做法：把 z 的第 n 个极大值对第 n+1 个画出来。三种颜色重合到线宽以内，厚度只有 z 值域的万分之一。</p>
+    <p>为什么一边废、一边好？左边问的是“t 时刻你在哪”，这取决于初值，被 e^(λ₁t) 放大。右边问的是“从这么高的峰出发，下一个峰多高”，这是方程本身的性质，哪条轨道上都一样。</p>
+    <p>顺带：这条曲线的斜率处处大于 1，所以任何不动点都不可能稳定，这就是混沌的来源。</p>
+    <p class="key">留下一句：同一组数据，按时间看是废品，按映射看完好。</p>
   </aside>
 </section>
 
 <!-- 28 不变密度 -->
 <section class="slide" data-part="3" data-min="1" data-title="不变密度">
-  <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>不变密度同样不动</h2></header>
+  <header><p class="eyebrow">③ 统计量不随 rtol 变</p><h2>不变密度同样不动</h2></header>
   <div class="split">
     <figure class="fig"><img src="figures/fig11_invariant_density.png" alt="三个容差下 z 的不变密度"><figcaption>lorenz63 figure fig11</figcaption></figure>
     <div class="col">
-      <div class="kv"><span class="v stat">0.0182</span><span class="k">三种求解器之间 z 密度的最大总变差距离（T = 3000）</span></div>
+      <div class="kv"><span class="v stat">0.0099</span><span class="k">三个 rtol 之间 z 密度的最大总变差距离（T = 3000）</span></div>
       <p style="font-size:24px">两条结论都写成了测试：</p>
-      <p class="mono" style="font-size:18px;line-height:1.8">test_statistics.py::<br>test_lorenz_map_is_solver_independent<br>test_invariant_density_is_solver_independent</p>
+      <p class="mono" style="font-size:18px;line-height:1.8">test_statistics.py::<br>test_lorenz_map_is_tolerance_independent<br>test_invariant_density_is_tolerance_independent</p>
     </div>
   </div>
   <aside class="notes">
-    <p>1.8% 的残差主要来自有限采样，不是求解器差异。</p>
-    <p class="q">可能被问："你怎么知道 1.8% 是采样噪声？" 诚实回答：同一求解器两次独立长跑的噪声底实验还没做，列在待补清单里。也可能被问："统计量对错误的算法会不会也不动？" 同样是待补项：用大步长 Euler 或 ρ 的微扰当反例。</p>
+    <p>再换一个统计量：长时间里 z 落在各处的比例。三个 rtol，各跑 T = 3000，三条曲线叠在一起，最大总变差距离 1%。</p>
+    <p>两条结论都写成了测试，名字就在右边。</p>
+    <p class="key">留下一句：长时间统计不随 rtol 变。</p>
+    <p class="q">可能被问：“你怎么知道 1% 是采样噪声？” 诚实回答：同一求解器两次独立长跑的噪声底实验还没做，列在待补清单里。也可能被问：“统计量对错误的算法会不会也不动？” 同样是待补项：用大步长 Euler 或 ρ 的微扰当反例。</p>
   </aside>
 </section>
 
 <!-- 29 吸引子 -->
 <section class="slide" data-part="3" data-min="0.5" data-title="吸引子">
-  <header><p class="eyebrow">③ 统计量不随求解器变</p><h2>教科书上的蝴蝶不是幻觉</h2></header>
+  <header><p class="eyebrow">③ 统计量不随 rtol 变</p><h2>教科书上的蝴蝶不是幻觉</h2></header>
   <div class="split">
     <figure class="fig"><img src="figures/fig02_attractor.png" alt="Lorenz 吸引子三维图，标出三个不动点"><figcaption>lorenz63 figure fig02</figcaption></figure>
     <div class="col">
@@ -620,7 +704,8 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
     </div>
   </div>
   <aside class="notes">
-    <p>喘口气的一页。把第 ③ 部分收成一句话：蝴蝶是真的，可信的是它的形状和统计。</p>
+    <p>喘口气。把第 ③ 部分收成一句话：教科书上的蝴蝶不是幻觉。红点是三个不动点，两叶间的切换没有周期，切换序列正是 Lorenz 映射编码的东西。</p>
+    <p class="key">留下一句：可信的是这个形状和它的统计，不是其中任何一条轨道。</p>
   </aside>
 </section>
 
@@ -629,8 +714,8 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   <header><p class="eyebrow">第 ④ 部分</p><h2>可信的判据随系统类型变</h2></header>
   <div class="map-host" data-focus="4"></div>
   <aside class="notes">
-    <p class="q">开口先问："换一类系统，答案还一样吗？"</p>
-    <p>把 Lorenz 放回更大的图景里：换成守恒系统，判断可信的标准会变。</p>
+    <p class="q">开口先问：“换一类系统，答案还一样吗？”</p>
+    <p>前面是混沌系统的规矩。大家平时算的声场、行星、分子，大多是守恒系统。规矩还一样吗？</p>
   </aside>
 </section>
 
@@ -649,8 +734,11 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
     <p class="lede">混沌问题的验证协议：容差扫几个数量级、方法换几种，检查 λ₁、不变密度、Lorenz 映射是否稳定。第 ③ 部分就是在执行这套协议。</p>
   </div>
   <aside class="notes">
-    <p>第一行是分子动力学、天体力学的世界：H = T(p) + V(q) 可分离，于是有显式辛格式（Verlet、蛙跳、Yoshida 高阶复合），验证手段是监视能量有界震荡不漂移。</p>
-    <p>第一行在这个仓库里有对照实验，就是下一页。</p>
+    <p>三行，三类系统。</p>
+    <p>第一行，守恒：有能量、有辛结构可保，验证就是看能量是否有界、不漂；长时间单条轨道可信。分子动力学、天体力学都在这一行：H = T(p) + V(q) 可分离，于是有显式辛格式，Verlet、蛙跳、Yoshida 高阶复合。</p>
+    <p>第二行，耗散但不混沌：看收敛到的稳态或极限环对不对；也可信。</p>
+    <p>第三行，混沌：没有结构可保，超过 1/λ₁ 量级的单条轨道不可信。验证换成“统计量对方法不敏感”：扫几个数量级的容差，看 λ₁、不变密度、Lorenz 映射稳不稳。第 ③ 部分做的就是这件事。</p>
+    <p class="key">留下一句：判据跟着系统类型走。</p>
   </aside>
 </section>
 
@@ -666,10 +754,12 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
     </div>
   </div>
   <aside class="notes">
-    <p>RK4 每步算四次力、Verlet 一次，所以取 h_RK4 = 4 h_Verlet，代价相同。偏心率 0.6，Hairer–Lubich–Wanner 书里的标准例子。</p>
-    <p>(a) 能量：Verlet 有界震荡，RK4 线性漂移。Verlet 的角动量漂移 8×10⁻¹⁴，中心力下精确守恒。(b) 位置误差：Verlet ∝ t，RK4 趋向 ∝ t²；两者最后都饱和在轨道长轴 2，相位丢了，轨道形状还在。</p>
-    <p>(c) 要老实讲：RK4 的线在 Verlet 上面，同等代价下四阶方法的相位反而保持得更久。辛格式买到的不是更准，而是不漂，跑得越久越占优。对论点要紧的是两条线都是幂律：步长减半，Verlet 的可信时间翻四倍。对照图 9 的 Lorenz，8 个数量级只换来 20 个时间单位。</p>
-    <p class="q">可能被问："那 Verlet 到底好在哪？" 回答：能量和角动量不漂，所以轨道的形状永远对；误差是线性而不是平方增长，时间够长它一定反超。</p>
+    <p>给第一行一个对照实验：Kepler 问题，偏心率 0.6，Hairer–Lubich–Wanner 书里的标准例子。RK4 每步算 4 次力，Verlet 1 次，所以 RK4 的步长取 4 倍，代价相同。</p>
+    <p>(a) 能量：Verlet 有界震荡，RK4 线性漂移；Verlet 的角动量漂移 8×10⁻¹⁴，中心力下精确守恒。(b) 位置误差：Verlet 随 t 线性长，RK4 趋向 t²；最后都饱和在长轴 2，相位丢了，轨道形状还在。</p>
+    <p>(c) 要老实讲：同等代价下 RK4 的线在 Verlet 上面，四阶方法的相位反而保持得更久。辛格式买到的不是更准，而是不漂，跑得越久越占优。</p>
+    <p>对今天的论点最要紧的是 (c) 的形状：两条都是幂律。Verlet 斜率 2：计算量乘 10，可信时间乘 100。回去对照 Lorenz：计算量乘 10，可信时间加 21。</p>
+    <p class="key">留下一句：守恒系统里，精度换时间是乘法；混沌系统里，是加法。</p>
+    <p class="q">可能被问：“那 Verlet 到底好在哪？” 回答：能量和角动量不漂，所以轨道形状永远对；误差线性而不是平方增长，时间够长它一定反超。</p>
   </aside>
 </section>
 
@@ -689,7 +779,10 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
     </div>
   </div>
   <aside class="notes">
-    <p>把结论连回课程本身。左边对应判据表的保守行，右边对应混沌行。</p>
+    <p>回到大家自己的课。</p>
+    <p>左边，表的第一行：无耗散波动方程是哈密顿系统。Yee 的 FDTD 里 E 和 H 在时间上错开半格，那就是蛙跳，也就是辛积分器。FDTD 能长时间跑而不出现数值能量爆炸或人工衰减，原因在结构。</p>
+    <p>右边，表的第三行：非线性声学、声致湍流一旦进入混沌，单次实现的波形不该当作可复现的预报。该报告的是谱、相关函数、统计矩。</p>
+    <p class="key">留下一句：FDTD 在第一行，声湍流在第三行。</p>
   </aside>
 </section>
 
@@ -701,8 +794,9 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
       <ul class="plain">
         <li>Lorenz 没有守恒量，体积以 tr J = −13.667 坍缩。</li>
         <li>可预报时间被 λ₁ = 0.904 锁死在约 41 个时间单位，精度只换来对数的时间。</li>
-        <li>Lyapunov 谱、不变密度、Lorenz 映射对求解器不敏感。</li>
+        <li>不变密度、Lorenz 映射对 rtol 不敏感。</li>
       </ul>
+      <div class="callout navy-bg">精度换时间：守恒系统是<strong>乘法</strong>，混沌系统是<strong class="orbit">加法</strong>。</div>
     </div>
     <div class="col">
       <p class="muted" style="font-size:22px">全部数字与图都可复现，关键断言写成了测试：</p>
@@ -713,7 +807,12 @@ uv run lorenz63 figure all</pre>
     </div>
   </div>
   <aside class="notes">
-    <p>重复开头那句论点，收尾。然后进入提问。被问到细节时按 B 到备用目录，从那里跳到分岔图、Lyapunov 谱、RK4 稳定域或数字汇总。</p>
+    <p>最后把今天的黑板擦一遍，三句话。</p>
+    <p>一，Lorenz 没有守恒量：停不下、跑不掉，体积以 −13.67 的速率缩。二，误差按 e^(0.9t) 长：精度乘 10，只多 2.55 个时间单位，双精度的天花板是 41。三，单条轨道不可信，统计量可信：Lorenz 映射、不变密度不随 rtol 变。</p>
+    <p>收成一句：守恒系统看不变量，混沌系统看统计量。精度换时间，前者是乘法，后者是加法。</p>
+    <p>所有数字和图都能用右边四条命令复现，关键结论写成了测试。谢谢，请提问。</p>
+    <p class="key">留下一句：守恒系统看不变量，混沌系统看统计量。</p>
+    <p>提问时按 B 到备用目录，从那里跳到分岔图、Lyapunov 谱、RK4 稳定域或数字汇总。</p>
   </aside>
 </section>
 
@@ -722,11 +821,46 @@ uv run lorenz63 figure all</pre>
   <header><p class="eyebrow">备用</p><h2>备用页</h2></header>
   <ol class="backup-list" id="backupList"></ol>
   <aside class="notes">
-    <p>正文到上一页结束。提问时点这里的条目直接跳过去；在任何一页按 B 回到这里，按 Home 回封面。</p>
+    <p>正文到上一页结束。提问时点这里的条目直接跳过去；在任何一页按 B 回到这里。从正文进入备用页后，按 R 或底栏的“返回”回到离开时的那一页。</p>
   </aside>
 </section>
 
-<!-- 36 分岔 -->
+<!-- 36 积分器 -->
+<section class="slide" id="integratorsSlide" data-part="b" data-min="0" data-title="RK4、RK45 与 DOP853">
+  <header><p class="eyebrow">备用 · 绪论 · 时间推进</p><h2>三个积分器：阶数、步长、误差估计</h2></header>
+  <div class="split even">
+    <div class="col">
+      <table class="data" style="font-size:23px">
+        <thead><tr><th></th><th>RK4</th><th>RK45</th><th>DOP853</th></tr></thead>
+        <tbody>
+          <tr><td>阶数 p</td><td class="num">4</td><td class="num">5</td><td class="num"><strong>8</strong></td></tr>
+          <tr><td>步长</td><td>固定，人给</td><td>自适应</td><td>自适应</td></tr>
+          <tr><td>误差估计</td><td class="muted">无</td><td>5 阶 − 4 阶</td><td>5 阶与 3 阶组合</td></tr>
+          <tr><td>每步 f 次数</td><td class="num">4</td><td class="num">6</td><td class="num">12</td></tr>
+        </tbody>
+      </table>
+      <p class="muted" style="font-size:20px">RK45 即 scipy 的 Dormand–Prince 5(4)；DOP853 是 Hairer–Wanner 的 8(5,3)。演示里的 DOP853 由 scipy 逐行移植。</p>
+    </div>
+    <div class="col">
+      <div class="callout navy-bg" style="font-size:23px"><strong>嵌入式</strong>：同一组 \(k_i\)，两套权重，得到两个解；两者之差就是本步误差。<br>err ≤ 1 接受，否则重算；下一步 \(h \leftarrow 0.9\,h\,\text{err}^{-1/p}\)。</div>
+      <p style="font-size:24px">步数 \(\propto \text{rtol}^{-1/p}\)。rtol 收紧 10<sup>6</sup> 倍：</p>
+      <div class="strip" style="gap:40px">
+        <div class="kv small"><span class="v">10<sup>6/5</sup> ≈ 16</span><span class="k">RK45 步数倍增</span></div>
+        <div class="kv small"><span class="v stat">10<sup>6/8</sup> ≈ 5.6</span><span class="k">DOP853 步数倍增</span></div>
+      </div>
+      <p style="font-size:24px">积分器决定<strong>代价</strong>；每 10 倍 rtol 换 2.55 个时间单位，由 λ₁ 决定。</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p class="q">被问“为什么用 DOP853，不用 RK45 或 RK4？”时用这一页。</p>
+    <p>三个都是显式 Runge–Kutta：一步里取几个斜率，加权平均。RK4 取 4 个，没有误差估计，步长只能人给。RK45 和 DOP853 是嵌入式的：同一组斜率配两套权重，算出一高一低两个解，两者的差就是这一步的误差估计，几乎不花额外的 f。超过 rtol 就缩步重算。</p>
+    <p>心算：p 阶方法，步数随 rtol 的 −1/p 次方涨。rtol 收紧一百万倍，RK45 是 10 的 6/5 次方，约 16 倍；DOP853 是 10 的 6/8 次方，约 5.6 倍。DOP853 每步贵一倍，但步数涨得慢得多。实测（solve_ivp，t ∈ [0, 45]，1e−6 到 1e−12）：RK45 多 15.7 倍，DOP853 多 5.8 倍。rtol = 1e−4 时两者的 f 次数持平；容差越紧，DOP853 越划算。</p>
+    <p>2.55 和换哪个积分器无关：它是 ln10 / λ₁，由方程决定。积分器只决定把 rtol 压到那么小要花多少算力。</p>
+    <p class="key">留下一句：积分器决定代价，λ₁ 决定 2.55。</p>
+  </aside>
+</section>
+
+<!-- 37 分岔 -->
 <section class="slide" data-part="b" data-min="0" data-title="分岔图">
   <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>分岔图：叉式、同宿爆炸、Hopf</h2></header>
   <div class="full">
@@ -738,43 +872,61 @@ uv run lorenz63 figure all</pre>
     </div>
   </div>
   <aside class="notes">
-    <p>纵轴是 z 的局部极大值。ρ_H 以下极大值并没有变少，而是收敛到 ρ−1：轨道以衰减螺旋落向 C+，振幅趋于零。Hopf 点之后它们不再收敛，散成一条带。</p>
+    <p>纵轴：固定 ρ，甩掉暂态后把 z(t) 每个波峰的高度竖着点上去。落到不动点就缩成一点，混沌就铺成一条带。取 z 是因为两叶的峰落在同一根轴上，而且 z 就是传热。</p>
+    <p>ρ_H 以下峰并没有消失，而是收敛到 ρ−1：虚部让轨道绕 C+ 转出峰，负的实部让峰高逐圈收拢。</p>
+    <p>带在 ρ≈23.8 就出现了，比 ρ_H 早。这一段 C± 仍稳定，与混沌共存，看到哪个取决于初值。同宿爆炸那条线上图里什么也看不见，它生出的混沌集不吸引，只让轨道先游荡一阵。细节见报告 2.3 节。</p>
     <p>同宿爆炸的值是文献值，不是闭式，这里注明出处。</p>
   </aside>
 </section>
 
-<!-- 37 本征结构 -->
-<section class="slide" data-part="b" data-min="0" data-title="本征结构">
+<!-- 38 本征结构 -->
+<section class="slide" id="eigenSlide" data-part="b" data-min="0" data-title="本征结构">
   <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>不动点的本征结构决定吸引子形状</h2></header>
-  <div class="full">
-    <figure class="fig"><img src="figures/fig15_eigen_structure.png" alt="特征值在复平面上随 ρ 的路径，以及相空间中的本征方向和不变平面"><figcaption>lorenz63 figure fig15</figcaption></figure>
-    <pre class="eig">原点  +11.827723   −2.666667   −22.827723           <span class="muted">一正二负 → 鞍点</span>
-C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收缩方向 + 向外旋的不变平面</span></pre>
+  <div class="eig3d">
+    <figure class="fig crop-left"><div><img src="figures/fig15_eigen_structure.png" alt="特征值在复平面上随 ρ 的路径"></div><figcaption>lorenz63 figure fig15（左格）</figcaption></figure>
+    <div class="view3d">
+      <canvas id="eigenCanvas" width="1560" height="800" aria-label="ρ=28 处不动点的本征方向与不变平面，可拖动旋转"></canvas>
+      <ul class="legend3d">
+        <li><i style="background:var(--orbit)"></i>原点的不稳定方向 λ = +11.83</li>
+        <li><i style="background:var(--navy)"></i>稳定 / 收缩方向</li>
+        <li><i class="plane"></i>C± 的不变平面 0.094 ± 10.19i</li>
+      </ul>
+      <div class="ctrl">
+        <button type="button" data-view="home">默认</button><button type="button" data-view="xz">x–z 正视</button><button type="button" data-view="face">正对 C₊ 平面</button><button type="button" data-view="edge">贴着平面看</button>
+      </div>
+      <span class="readout" id="eigenView"></span><span class="hint3d">拖动旋转 · 滚轮缩放 · 双击复位</span>
+    </div>
   </div>
+  <pre class="eig">原点  +11.827723   −2.666667   −22.827723           <span class="muted">一正二负 → 鞍点</span>
+C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收缩方向 + 向外旋的不变平面</span></pre>
   <aside class="notes">
     <p>左图：ρ 从 0 扫到 32，特征值在复平面上的路径。ρ=1 处原点一个实特征值穿过原点（叉式）；ρ_H 处 C± 一对复特征值穿过虚轴，穿越点 ±9.6246i（Hopf），失稳形式是旋转着往外走。穿越时第三个特征值恰好等于 tr J = −13.667。</p>
     <p>右图：原点的不稳定方向（红）是两叶之间的通道；C± 处复特征值张成一张实的不变平面，轨道在平面内外旋，同时沿实特征方向被压进来。每一叶就是一张平面附近的螺旋外流。</p>
+    <p>右图可以拖。点“正对 C₊ 平面”：右叶的轨道在平面里一圈圈向外旋，这是 +0.094 ± 10.19i。点“贴着平面看”：右叶压成一条细带，贴着平面，这是 −13.85 把它压进来。0.094 和 13.85 差一百多倍，所以轨道几乎只在平面里走，吸引子才“薄”，D<sub>KY</sub> 只比 2 多 0.06。</p>
+    <p>实现：特征值和方向来自 Python（slides_data.js），轨道用页面里的 DOP853 积 12 个时间单位，与 fig15 同一段；正交投影、三轴等比例，屏幕上的夹角就是真实夹角（fig15 的 matplotlib 三轴各自缩放）。</p>
   </aside>
 </section>
 
-<!-- 38 Poincaré -->
+<!-- 39 Poincaré -->
 <section class="slide" data-part="b" data-min="0" data-title="Poincaré 截面">
   <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>三维流 → 二维截面 → 一维映射</h2></header>
   <div class="full">
-    <figure class="fig"><img src="figures/fig14_poincare.png" alt="z=27 截面上的穿越点与回归映射"><figcaption>lorenz63 figure fig14</figcaption></figure>
+    <figure class="fig"><img src="figures/fig14_poincare.png" alt="z=27 截面上的穿越点、四段回归映射与蛛网"><figcaption>lorenz63 figure fig14</figcaption></figure>
     <div class="strip">
       <div class="kv small"><span class="v">3992</span><span class="k">T = 3000 内上行穿越 z = 27 的次数</span></div>
       <div class="kv small"><span class="v">56.7%</span><span class="k">穿越后留在同一叶</span></div>
-      <p style="flex:1;min-width:12em;font-size:24px">截面上是两条细线，不是一片云。回归映射处处 |F′| &gt; 1，任何不动点都不可能稳定。</p>
+      <div class="kv small"><span class="v">13.25</span><span class="k">|x| 门槛：内侧留叶，外侧换叶</span></div>
+      <p style="flex:1;min-width:12em;font-size:24px">一个点是一步。越过门槛越少，落到对面越远，于是能连换好几次。</p>
     </div>
   </div>
   <aside class="notes">
-    <p>截面取在 C± 的高度 z = ρ−1 = 27。中间一格的两条细线，就是 Kaplan–Yorke 维数 2.06 的几何含义：横向厚度小到在这个尺度上看不见。</p>
-    <p>右格把截面压成一维：第 n 次穿越的 x 对第 n+1 次。第 ③ 部分里的 Lorenz 映射是另一条独立的降维路线，结论一致。</p>
+    <p>左图：截面取在 C± 的高度 z = ρ−1 = 27。每一叶是一张薄片，切过平面就是一条细线，两叶两条；细到看不出宽度，就是 D<sub>KY</sub> = 2.06。每条线按下一圈换不换叶分两截，靠里绿、靠外紫。</p>
+    <p>中图：第 n 次穿越的 x 对第 n+1 次。两条线各两截，正好四段。去掉符号只看 |x|：小于 13.25 留在本叶、下一圈更往外；大于 13.25 换到对面，而且越过得越少落得越远。映射处处 |F′| &gt; 1，任何不动点都不可能稳定。第 ③ 部分里的 Lorenz 映射是另一条独立的降维路线，结论一致。</p>
+    <p>右图蛛网：竖直走到曲线读下一步，水平走回 y = x 当新起点。0→1→2 沿绿色往外爬到门槛；2→3→4→5 连换三次：3 是 13.3，只越过 0.06，被甩到对面最外圈 −15.3；4 越过 2，反而落到右叶中心附近的 11.4。换叶之后马上再换的概率 47%，最长连换 9 次。</p>
   </aside>
 </section>
 
-<!-- 39 两件事 -->
+<!-- 40 两件事 -->
 <section class="slide" data-part="b" data-min="0" data-title="稳定性与 Lyapunov 指数">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>数值稳定性 ≠ Lyapunov 不稳定性</h2></header>
   <div class="center">
@@ -792,7 +944,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 40 稳定域 -->
+<!-- 41 稳定域 -->
 <section class="slide" data-part="b" data-min="0" data-title="RK4 稳定域">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>瓶颈是精度，不是稳定性</h2></header>
   <div class="split">
@@ -812,7 +964,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 41 正交化 -->
+<!-- 42 正交化 -->
 <section class="slide" data-part="b" data-min="0" data-title="QR 重正交化">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>Lyapunov 谱需要 QR 重正交</h2></header>
   <div class="full">
@@ -830,7 +982,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 42 谱 -->
+<!-- 43 谱 -->
 <section class="slide" data-part="b" data-min="0" data-title="Lyapunov 谱与自洽检验">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>自洽检验：Σλᵢ = tr J</h2></header>
   <div class="split">
@@ -844,11 +996,11 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </div>
   <aside class="notes">
     <p>Benettin 算法，T = 2000。λ₂ ≈ 0 是应该的：有界非定常流沿流方向总有一个零指数。</p>
-    <p>如果变分方程写错、QR 记账错、或者积分精度不够，这个和会明显偏掉。它对得上，λ₁ 就有了"看起来合理"之外的依据。这个恒等式就是测试 test_lyapunov.py::test_spectrum_sums_to_the_divergence 的断言。</p>
+    <p>如果变分方程写错、QR 记账错、或者积分精度不够，这个和会明显偏掉。它守的是总和：每个窗口的 Σ ln|R_ii| 就是体积的对数，由 Liouville 精确等于 tr J·Δt。三个指数怎么分这个和，它管不到；λ₁ 单独的依据是正文“误差增长”那页的系综斜率 0.875，那条路不解变分方程。这个恒等式就是测试 test_lyapunov.py::test_spectrum_sums_to_the_divergence 的断言。</p>
   </aside>
 </section>
 
-<!-- 43 FTLE -->
+<!-- 44 FTLE -->
 <section class="slide" data-part="b" data-min="0" data-title="有限时间 Lyapunov 指数">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>有限时间 Lyapunov 指数：局部拉伸率差别极大</h2></header>
   <div class="split">
@@ -871,7 +1023,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 44 收敛性 -->
+<!-- 45 收敛性 -->
 <section class="slide" data-part="b" data-min="0" data-title="收敛性研究的推论">
   <header><p class="eyebrow">备用 · ④ 判据随系统类型变</p><h2>推论：混沌问题的收敛阶要在短窗口里验</h2></header>
   <div class="split even">
@@ -890,7 +1042,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 45 数字汇总 -->
+<!-- 46 数字汇总 -->
 <section class="slide" data-part="b" data-min="0" data-title="数字汇总">
   <header><p class="eyebrow">备用</p><h2>数字汇总</h2></header>
   <div class="split even" style="font-size:21px">
@@ -909,10 +1061,10 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
       <tbody>
         <tr><td>双精度预报极限</td><td class="num">40.76</td><td class="muted">ln(10¹⁶)/λ₁</td></tr>
         <tr><td>λ₁（系综）</td><td class="num">0.8750</td><td class="muted">16 点 × 4 方向</td></tr>
-        <tr><td>λ₁（容差斜率）</td><td class="num">0.9595</td><td class="muted">T_div 拟合</td></tr>
+        <tr><td>λ₁（容差斜率）</td><td class="num">0.8839</td><td class="muted">T_div 拟合</td></tr>
         <tr><td>RK4 稳定步长上限</td><td class="num">0.1253</td><td class="muted">仅衰减模</td></tr>
         <tr><td>Lorenz 映射厚度</td><td class="num">8.6e−5</td><td class="muted">z 值域比例</td></tr>
-        <tr><td>不变密度最大总变差</td><td class="num">0.0182</td><td class="muted">三种求解器</td></tr>
+        <tr><td>不变密度最大总变差</td><td class="num">0.0099</td><td class="muted">三个 rtol</td></tr>
         <tr><td>有限时间 λ₁ 标准差</td><td class="num">2.60</td><td class="muted">窗口 0.5</td></tr>
       </tbody>
     </table>
@@ -941,7 +1093,8 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
     <button type="button" id="next" aria-label="下一页">→</button>
     <button type="button" id="notesBtn" aria-pressed="false">讲稿 N</button>
     <button type="button" id="fsBtn">全屏 F</button>
-    <span class="hint">← → 翻页 · N 讲稿 · F 全屏 · B 备用页</span>
+    <button type="button" id="backBtn" hidden></button>
+    <span class="hint">← → 翻页 · N 讲稿 · F 全屏 · B 备用页 · R 返回</span>
   </div>
 </div>
 
@@ -958,7 +1111,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
     <div class="mm-rows">
       <div class="mm-row" data-p="bg" title="跳到这一段">
         <div class="mm-q"><i>绪论</i>推导与离散</div>
-        <div class="mm-a"><span>Boussinesq → 三模 Galerkin 截断 → RK4 积分</span><small>Rayleigh–Bénard 对流 · fig18 · RK4 代码</small></div>
+        <div class="mm-a"><span>Boussinesq → 三模 Galerkin 截断 → DOP853 积分</span><small>Rayleigh–Bénard 对流 · fig18 · RK4 讲原理</small></div>
       </div>
       <div class="mm-row" data-p="1" title="跳到这一段">
         <div class="mm-q"><i>①</i>守恒量检验</div>
@@ -970,7 +1123,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
       </div>
       <div class="mm-row" data-p="3" title="跳到这一段">
         <div class="mm-q"><i>③</i>轨道与统计量</div>
-        <div class="mm-a"><span><strong class="stat">统计量</strong>：Lorenz 映射、不变密度不随求解器变</span><small>中心实验 fig10 · 不变密度 fig11</small></div>
+        <div class="mm-a"><span><strong class="stat">统计量</strong>：Lorenz 映射、不变密度不随 rtol 变</span><small>中心实验 fig10 · 不变密度 fig11</small></div>
       </div>
       <div class="mm-row" data-p="4" title="跳到这一段">
         <div class="mm-q"><i>④</i>换一类系统</div>
@@ -987,8 +1140,12 @@ window.MathJax = {
 };
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js" async></script>
+<script src="figures/slides_data.js"></script>
+<script src="slides/dop853_coefficients.js"></script>
 <script src="slides/lorenz.js"></script>
 <script src="slides/hero.js"></script>
+<script src="slides/paradox.js"></script>
 <script src="slides/split.js"></script>
 <script src="slides/roll.js"></script>
+<script src="slides/eigen3d.js"></script>
 <script src="slides/deck.js"></script>

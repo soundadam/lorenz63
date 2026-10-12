@@ -8,7 +8,7 @@ Lorenz (1963) 系统的可复现数值工程，为课程汇报《**从对流方�
 
 论点一句话：**判断数值结果可信的标准随系统类型而变。守恒系统靠不变量验证；混沌系统的单条轨道不可信，统计量可信。**
 
-Lorenz 是这个论点的理想载体：它没有守恒量可查，可预报时间被最大 Lyapunov 指数锁死，但它的 Lyapunov 谱、不变密度和 Lorenz 映射对求解器不敏感。具体数字由 `lorenz63 info` 打印，报告正文引用它们。
+Lorenz 是这个论点的理想载体：它没有守恒量可查，可预报时间被最大 Lyapunov 指数锁死，但它的 Lyapunov 谱、不变密度和 Lorenz 映射对积分容差不敏感。具体数字由 `lorenz63 info` 打印，报告正文引用它们。
 
 ## 安装
 
@@ -58,12 +58,15 @@ report/
   slides.html       汇报幻灯片：每页正文与讲稿（引用 figures/ 里的图）
   slides/           幻灯片的样式与脚本
     slides.css
-    lorenz.js       向量场与定步长 RK4，三个演示共用
-    hero.js         封面：两条相差 1e-5 的轨道，步长滑块
+    dop853_coefficients.js  DOP853 系数表（照 scipy）
+    lorenz.js       向量场与 DOP853，各演示共用
+    hero.js         封面：回放两条相差 1e-5 的轨道
+    paradox.js      开场悖论：换 rtol，看在哪个 t 与参考解脱钩
     roll.js         现场演示：拖 ρ 看对流卷
     split.js        现场演示：缩小初值差
+    eigen3d.js      备用「本征结构」：可旋转的本征方向与不变平面
     deck.js         翻页、讲稿、计时，进出页时开关演示
-  figures/          png 图
+  figures/          png 图；slides_data.js 是幻灯片用的数据（`lorenz63 figure slides`）
 tests/
 ```
 
@@ -71,7 +74,7 @@ tests/
 
 本仓库的断言不只写在报告里，也写成了测试：
 
-**`test_lyapunov.py::test_spectrum_sums_to_the_divergence`** — 对任何流 `Σλᵢ = ⟨tr J⟩`，而 Lorenz 的 `tr J` 是常数 `−(σ+1+β)`。计算出的谱必须精确加和到这个常数，无需拟合。这是报告引用 λ₁ 的依据。
+**`test_lyapunov.py::test_spectrum_sums_to_the_divergence`** — 对任何流 `Σλᵢ = ⟨tr J⟩`，而 Lorenz 的 `tr J` 是常数 `−(σ+1+β)`。计算出的谱必须精确加和到这个常数，无需拟合。它守的是变分方程、积分精度与 QR 记账；三个指数怎么分这个和，由报告 5.2 节独立的系综斜率核对。
 
 **`test_predictability.py::test_divergence_time_grows_linearly_in_log_inverse_tolerance`** — 可分辨时间对 `ln(1/rtol)` 呈直线，斜率应为 `1/λ₁`。这直接检验报告的核心论点：精度只换来对数的预报时间。
 

@@ -44,3 +44,6 @@ artifacts/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Claude Code session worktrees
+.claude/worktrees/

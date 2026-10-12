@@ -56,6 +56,7 @@ from lorenz63.portrait import (  # noqa: E402
     regime_trajectory,
 )
 from lorenz63.predictability import (  # noqa: E402
+    DEFAULT_THRESHOLD,
     divergence_time,
     ensemble_growth,
     separation,
@@ -71,6 +72,7 @@ from lorenz63.statistics import (  # noqa: E402
     lorenz_map,
     poincare_section,
     section_return_map,
+    wing_switch_threshold,
 )
 from lorenz63.system import (  # noqa: E402
     RHO_HOMOCLINIC,
@@ -176,17 +178,17 @@ def fig01_paradox(output: Path) -> Path:
     t_end = 60.0
     truth = reference_trajectory(CLASSICAL, u0, t_end, dt_out=0.005)
     loose = solve_adaptive(
-        CLASSICAL, u0, t_end, method="RK45", rtol=1e-6, atol=1e-9, dt_out=0.005
+        CLASSICAL, u0, t_end, method="DOP853", rtol=1e-6, atol=1e-9, dt_out=0.005
     )
     tight = solve_adaptive(
-        CLASSICAL, u0, t_end, method="RK45", rtol=1e-12, atol=1e-15, dt_out=0.005
+        CLASSICAL, u0, t_end, method="DOP853", rtol=1e-12, atol=1e-15, dt_out=0.005
     )
 
     fig, axes = plt.subplots(2, 1, figsize=(9.5, 6.0), sharex=True)
 
     ax = _style(axes[0])
-    ax.plot(loose.t, loose.x, color=C_LOOSE, lw=1.0, label="RK45  rtol=1e-6")
-    ax.plot(tight.t, tight.x, color=C_REF, lw=1.0, label="RK45  rtol=1e-12")
+    ax.plot(loose.t, loose.x, color=C_LOOSE, lw=1.0, label="DOP853  rtol=1e-6")
+    ax.plot(tight.t, tight.x, color=C_REF, lw=1.0, label="DOP853  rtol=1e-12")
     ax.set_ylabel("x(t)")
     ax.set_title("同一方程、同一初值、两个容差：谁是对的？")
     ax.legend(loc="upper left", fontsize=9)
@@ -636,7 +638,7 @@ def fig10_trajectory_vs_statistics(output: Path) -> Path:
     data = _cached("thesis", _thesis_data)
 
     fig, axes = plt.subplots(1, 2, figsize=(12.0, 5.0))
-    labels = ["RK45 rtol=1e-6", "RK45 rtol=1e-9", "DOP853 rtol=1e-13"]
+    labels = ["DOP853 rtol=1e-6", "DOP853 rtol=1e-9", "DOP853 rtol=1e-13"]
     colours = [C_LOOSE, C_MID, C_REF]
 
     ax = _style(axes[0])
@@ -682,7 +684,7 @@ def fig10_trajectory_vs_statistics(output: Path) -> Path:
 
 def _thesis_data() -> dict[str, NDArray]:
     u0 = on_attractor(CLASSICAL)
-    settings = [("RK45", 1e-6), ("RK45", 1e-9), ("DOP853", 1e-13)]
+    settings = [("DOP853", 1e-6), ("DOP853", 1e-9), ("DOP853", 1e-13)]
     truth = reference_trajectory(CLASSICAL, u0, 60.0, dt_out=0.005)
     out: dict[str, NDArray] = {"t_short": truth.t}
     t_div = []
@@ -709,7 +711,7 @@ def _thesis_data() -> dict[str, NDArray]:
 
 def fig11_invariant_density(output: Path) -> Path:
     data = _cached("density", _density_data)
-    labels = ["RK45 rtol=1e-6", "RK45 rtol=1e-9", "DOP853 rtol=1e-13"]
+    labels = ["DOP853 rtol=1e-6", "DOP853 rtol=1e-9", "DOP853 rtol=1e-13"]
     colours = [C_LOOSE, C_MID, C_REF]
 
     fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.7))
@@ -730,14 +732,14 @@ def fig11_invariant_density(output: Path) -> Path:
 
     tv = float(data["max_total_variation"])
     fig.suptitle(
-        f"统计量对求解器不敏感：三条密度的最大总变差距离 {tv:.4f}", fontsize=11
+        f"统计量对容差不敏感：三条密度的最大总变差距离 {tv:.4f}", fontsize=11
     )
     return _finish(fig, output, "fig11_invariant_density")
 
 
 def _density_data() -> dict[str, NDArray]:
     u0 = on_attractor(CLASSICAL)
-    settings = [("RK45", 1e-6), ("RK45", 1e-9), ("DOP853", 1e-13)]
+    settings = [("DOP853", 1e-6), ("DOP853", 1e-9), ("DOP853", 1e-13)]
     span = (0.0, 52.0)
     bins = 130
     out: dict[str, NDArray] = {}
@@ -905,70 +907,94 @@ def fig13_phase_portraits(output: Path) -> Path:
 
 
 def fig14_poincare(output: Path) -> Path:
-    """The section turns the 3D flow into a 2D map, and that map into a 1D curve."""
+    """The section turns the 3D flow into a 1D map; a cobweb walks the map."""
     data = _cached("section", _section_data)
     plane_z = CLASSICAL.rho - 1.0
+    x_n, x_next = data["map_n"], data["map_next"]
+    same_wing = np.sign(x_n) == np.sign(x_next)
+    cutoff = wing_switch_threshold(x_n, x_next)
+    lo = float(min(x_n.min(), x_next.min()))
+    hi = float(max(x_n.max(), x_next.max()))
+    branches = ((same_wing, C_MID, "留在同一叶"), (~same_wing, C_ACCENT, "换到另一叶"))
 
-    fig = plt.figure(figsize=(13.0, 4.6))
+    fig = plt.figure(figsize=(15.0, 5.4))
+    grid = fig.add_gridspec(1, 3)
 
     ax = _portrait_axes(
-        fig.add_subplot(1, 3, 1, projection="3d"), f"截面 z = ρ−1 = {plane_z:.0f}"
+        fig.add_subplot(grid[0], projection="3d"),
+        f"截面 z = ρ−1 = {plane_z:.0f}，按下一步是否换叶着色",
     )
-    ax.plot(data["orbit_x"], data["orbit_y"], data["orbit_z"], color=C_MUTED, lw=0.3, alpha=0.7)
+    ax.plot(data["orbit_x"], data["orbit_y"], data["orbit_z"], color=C_MUTED, lw=0.3, alpha=0.6)
     xs, ys, zs = plane_patch(
         np.array([0.0, 0.0, plane_z]),
         np.array([1.0, 0.0, 0.0]),
         np.array([0.0, 1.0, 0.0]),
         26.0,
     )
-    ax.plot_surface(xs, ys, zs, color=C_ACCENT, alpha=0.16, shade=False)
-    show = slice(0, 260)
-    ax.scatter(
-        data["sec_x"][show],
-        data["sec_y"][show],
-        np.full(data["sec_x"][show].size, plane_z),
-        color=C_LOOSE,
-        s=3.0,
-        depthshade=False,
-    )
-
-    ax = _style(fig.add_subplot(1, 3, 2))
-    right = data["sec_x"] > 0.0
-    ax.plot(data["sec_x"][right], data["sec_y"][right], ".", color=C_REF, ms=1.1, alpha=0.5)
-    ax.plot(data["sec_x"][~right], data["sec_y"][~right], ".", color=C_LOOSE, ms=1.1, alpha=0.5)
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_title(
-        f"截面上的 {data['sec_x'].size} 个穿越点（上行）\n两支分别绕 C+ 与 C−", fontsize=10
-    )
-
-    ax = _style(fig.add_subplot(1, 3, 3))
-    same_wing = np.sign(data["map_n"]) == np.sign(data["map_next"])
-    for mask, colour, label in (
-        (same_wing, C_MID, "留在同一叶"),
-        (~same_wing, C_ACCENT, "换到另一叶"),
-    ):
-        ax.plot(
-            data["map_n"][mask],
-            data["map_next"][mask],
-            ".",
+    ax.plot_surface(xs, ys, zs, color=C_MUTED, alpha=0.12, shade=False)
+    # Each wing crosses the plane along one thin curve; the cutoff splits each
+    # curve into an inner part that stays and an outer part that switches.
+    for mask, colour, _ in branches:
+        ax.scatter(
+            data["sec_x"][:-1][mask],
+            data["sec_y"][:-1][mask],
+            np.full(int(mask.sum()), plane_z),
             color=colour,
-            ms=1.3,
-            alpha=0.55,
-            label=label,
+            s=1.5,
+            depthshade=False,
         )
-    lo = float(min(data["map_n"].min(), data["map_next"].min()))
-    hi = float(max(data["map_n"].max(), data["map_next"].max()))
-    ax.plot([lo, hi], [lo, hi], color="k", ls=":", lw=0.9)
-    ax.set_xlabel("第 n 次穿越的 x")
-    ax.set_ylabel("第 n+1 次穿越的 x")
-    ax.set_title(
-        f"截面上的一维回归映射（{same_wing.mean() * 100:.0f}% 的穿越不换叶）", fontsize=10
-    )
-    ax.legend(loc="upper left", fontsize=8, markerscale=6)
+
+    def draw_map(ax: plt.Axes, alpha: float, label: bool) -> None:
+        for mask, colour, name in branches:
+            ax.plot(
+                x_n[mask],
+                x_next[mask],
+                ".",
+                color=colour,
+                ms=1.3,
+                alpha=alpha,
+                label=name if label else None,
+            )
+        ax.plot([lo, hi], [lo, hi], color="k", ls=":", lw=0.9)
+        for side in (-1.0, 1.0):
+            ax.axvline(side * cutoff, color=C_ACCENT, ls="--", lw=0.9)
+            ax.axvspan(side * cutoff, side * hi * 1.05, color=C_ACCENT, alpha=0.06, lw=0)
+        ax.set_xlabel("第 n 次穿越的 x")
+        ax.set_ylabel("第 n+1 次穿越的 x")
+
+    ax = _style(fig.add_subplot(grid[1]))
+    draw_map(ax, 0.55, label=True)
+    ax.plot([], [], color=C_ACCENT, ls="--", lw=0.9, label=f"门槛 |x| = {cutoff:.2f}")
+    ax.set_title(f"一维回归映射：四段，{same_wing.mean() * 100:.0f}% 的穿越不换叶", fontsize=10)
+    ax.legend(loc="upper left", bbox_to_anchor=(0.16, 0.98), fontsize=8, markerscale=4)
+
+    # Cobweb: vertical to the map reads x_{n+1}, horizontal back to the diagonal
+    # makes it the next x_n. These five steps from crossing 3 contain two stays,
+    # a switch landing just past the cutoff, the far throw that follows, and a
+    # far switch that lands near the other wing's centre.
+    ax = _style(fig.add_subplot(grid[2]))
+    draw_map(ax, 0.18, label=False)
+    start, steps = 3, 5
+    walk = np.concatenate([x_n[start : start + 1], x_next[start : start + steps]])
+    for k in range(steps):
+        a, b = walk[k], walk[k + 1]
+        colour = C_MID if np.sign(a) == np.sign(b) else C_ACCENT
+        ax.annotate(
+            "",
+            xy=(a, b),
+            xytext=(a, a),
+            arrowprops={"arrowstyle": "-|>", "color": colour, "lw": 1.3, "mutation_scale": 9},
+        )
+        ax.plot([a, b], [b, b], color=colour, lw=1.3)
+    ax.plot(walk, walk, "o", color="k", ms=3.5, zorder=5)
+    for k, v in enumerate(walk):
+        # Step numbers only, below-right of the diagonal where the panel is empty;
+        # the values are listed in the report's walk-through table.
+        ax.annotate(str(k), (v, v), xytext=(6, -12), textcoords="offset points", fontsize=9)
+    ax.set_title("蛛网：竖到映射读下一步，横回 y=x 当新起点", fontsize=10)
 
     fig.suptitle(
-        "Poincaré 截面：三维流 → 二维映射 → 一条一维曲线（吸引子横向厚度近乎为零）",
+        "Poincaré 截面：三维流 → 截面上两条细线 → 一条一维映射",
         fontsize=11,
     )
     return _finish(fig, output, "fig14_poincare")
@@ -1403,6 +1429,66 @@ def fig18_convection(output: Path) -> Path:
     return _finish(fig, output, "fig18_convection")
 
 
+# slides — data the HTML slides replay
+# ---------------------------------------------------------------------------
+
+#: Initial-condition offset on the cover, in x.
+HERO_DELTA = 1e-5
+
+
+def slides_data(output: Path) -> Path:
+    """The start point shared by every slide demo, the cover's two orbits, and fig15's 3-D panel.
+
+    The cover shows two reference-accuracy trajectories ``HERO_DELTA`` apart,
+    up to the first time their separation exceeds the report's threshold.
+    ``eigen`` is the rho=28 eigenstructure at each fixed point, for the slide
+    that redraws fig15's right panel as a rotatable view; a spiral point's
+    plane axes are orthonormalised exactly as in fig15.
+    Written as a script that sets ``window.LORENZ_DATA`` so that ``slides.html``
+    can load it from ``file://``, where ``fetch`` is blocked.
+    """
+    u0 = on_attractor(CLASSICAL)
+    dt = 0.005
+    a = reference_trajectory(CLASSICAL, u0, 30.0, dt_out=dt)
+    b = reference_trajectory(CLASSICAL, u0 + np.array([HERO_DELTA, 0.0, 0.0]), 30.0, dt_out=dt)
+    delta = separation(a, b)
+    n = int(np.flatnonzero(delta > DEFAULT_THRESHOLD)[0]) + 1
+
+    def series(v: NDArray) -> str:
+        return "[" + ",".join(f"{x:.4f}" for x in v[:n]) + "]"
+
+    def vec(v: NDArray) -> str:
+        return "[" + ",".join(f"{float(x):.6f}" for x in v) + "]"
+
+    eigen = []
+    for es in all_eigen_structures(CLASSICAL):
+        axes = es.directions if es.kind == "real" else np.array(
+            [es.directions[0], *_orthonormal_pair(es.spiral_plane)]
+        )
+        eigen.append(
+            f'{{"name":"{es.name}","kind":"{es.kind}","p":{vec(es.point)},'
+            f'"re":{vec(es.eigenvalues.real)},"im":{vec(es.eigenvalues.imag)},'
+            '"dirs":[' + ",".join(vec(d) for d in axes) + "]}"
+        )
+
+    output.mkdir(parents=True, exist_ok=True)
+    path = output / "slides_data.js"
+    path.write_text(
+        "// 由 `lorenz63 figure slides` 生成。u0 = on_attractor(CLASSICAL)；hero 是封面的两条轨道："
+        f"DOP853 rtol=1e-13，初值在 x 上差 {HERO_DELTA:g}，"
+        f"到 |Δ| 首次超过 {DEFAULT_THRESHOLD:g} 为止；"
+        "eigen 是 ρ=28 各不动点的特征值与方向（spiral 的后两个方向是不变平面的正交轴）。\n"
+        "window.LORENZ_DATA = {"
+        '"u0":[' + ",".join(repr(float(x)) for x in u0) + "],"
+        f'"hero":{{"dt":{dt},"delta":{HERO_DELTA},'
+        f'"ax":{series(a.x)},"az":{series(a.z)},"bx":{series(b.x)},"bz":{series(b.z)},'
+        '"logd":[' + ",".join(f"{x:.3f}" for x in np.log10(delta[:n])) + "]},"
+        '"eigen":[' + ",".join(eigen) + "]};\n",
+        encoding="utf-8",
+    )
+    return path
+
+
 # ---------------------------------------------------------------------------
 
 FIGURES: dict[str, Callable[[Path], Path]] = {
@@ -1424,4 +1510,5 @@ FIGURES: dict[str, Callable[[Path], Path]] = {
     "fig16": fig16_orthogonalisation,
     "fig17": fig17_conservative,
     "fig18": fig18_convection,
+    "slides": slides_data,
 }

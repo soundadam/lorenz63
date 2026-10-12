@@ -1,8 +1,8 @@
 """Invariant statistics, and the claim that they survive changing the solver.
 
-The test that matters here is ``test_lorenz_map_is_solver_independent``. Two
-solvers whose individual trajectories have nothing to do with each other after
-40 time units produce the *same* return map to within a fraction of a percent.
+The test that matters here is ``test_lorenz_map_is_tolerance_independent``.
+Two tolerances whose individual trajectories part after about 10 time units
+produce the *same* return map to within a fraction of a percent.
 That is the positive half of the report's argument.
 """
 
@@ -18,6 +18,8 @@ from lorenz63.statistics import (
     lorenz_map,
     map_thickness,
     poincare_section,
+    section_return_map,
+    wing_switch_threshold,
 )
 from lorenz63.system import LorenzParams
 
@@ -67,11 +69,11 @@ def test_lorenz_map_lies_above_the_unstable_fixed_point(long_trajectory) -> None
     assert lmap.z_n.min() > CLASSICAL.rho - 1.0
 
 
-def test_lorenz_map_is_solver_independent(long_trajectory) -> None:
+def test_lorenz_map_is_tolerance_independent(long_trajectory) -> None:
     """The thesis: single trajectories diverge, the return map does not."""
     u0 = on_attractor(CLASSICAL)
     loose = solve_adaptive(
-        CLASSICAL, u0, 1500.0, method="RK45", rtol=1e-6, atol=1e-9, dt_out=0.002
+        CLASSICAL, u0, 1500.0, method="DOP853", rtol=1e-6, atol=1e-9, dt_out=0.002
     )
     a = lorenz_map(long_trajectory)
     b = lorenz_map(loose)
@@ -118,6 +120,27 @@ def test_poincare_returns_empty_for_an_unreached_plane(long_trajectory) -> None:
     assert poincare_section(long_trajectory, plane_z=1e6).shape == (0, 3)
 
 
+def test_wing_switch_threshold_sits_in_the_gap() -> None:
+    s_n = np.array([10.0, -12.0, 14.0, -16.0])
+    s_next = np.array([12.0, -14.0, -16.0, 10.0])  # inside 12 stays, outside 14 switches
+    assert wing_switch_threshold(s_n, s_next) == pytest.approx(13.0)
+
+
+def test_wing_switch_threshold_refuses_overlap() -> None:
+    s_n = np.array([10.0, 15.0, 14.0])
+    s_next = np.array([12.0, 14.0, -10.0])  # 15 stays but 14 switches
+    with pytest.raises(ValueError, match="overlap"):
+        wing_switch_threshold(s_n, s_next)
+
+
+def test_wing_switch_is_decided_by_one_cutoff(long_trajectory) -> None:
+    """On the attractor, staying or switching wing is a function of |x| alone."""
+    crossings = poincare_section(long_trajectory, plane_z=CLASSICAL.rho - 1.0)
+    x_n, x_next = section_return_map(crossings)
+    cutoff = wing_switch_threshold(x_n, x_next)
+    assert np.abs(x_n).min() < cutoff < np.abs(x_n).max()
+
+
 def test_invariant_density_normalises(long_trajectory) -> None:
     centres, density = invariant_density(long_trajectory.z, bins=100)
     width = centres[1] - centres[0]
@@ -125,10 +148,10 @@ def test_invariant_density_normalises(long_trajectory) -> None:
     assert np.all(density >= 0.0)
 
 
-def test_invariant_density_is_solver_independent(long_trajectory) -> None:
+def test_invariant_density_is_tolerance_independent(long_trajectory) -> None:
     u0 = on_attractor(CLASSICAL)
     loose = solve_adaptive(
-        CLASSICAL, u0, 1500.0, method="RK45", rtol=1e-6, atol=1e-9, dt_out=0.002
+        CLASSICAL, u0, 1500.0, method="DOP853", rtol=1e-6, atol=1e-9, dt_out=0.002
     )
     span = (0.0, 50.0)
     _, da = invariant_density(long_trajectory.z, bins=50, value_range=span)

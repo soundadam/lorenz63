@@ -7,8 +7,10 @@ believe them. There is an exact one available here. For any flow,
 
 and for Lorenz ``tr J = -(sigma + 1 + beta)`` is a *constant*. So the computed
 spectrum must sum to -13.6667 with no fitting and no tuning. That identity is
-checked in ``tests/test_lyapunov.py`` and quoted in the report as the warrant
-for lambda_1.
+checked in ``tests/test_lyapunov.py``. It constrains the sum only -- each
+window's ``sum log|R_ii|`` is ``log det``, which Liouville fixes -- so it
+vouches for the variational equation, the integration accuracy and the QR
+bookkeeping, not for how the sum splits between the exponents.
 """
 
 from __future__ import annotations
