@@ -376,7 +376,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   <div class="map-host" data-focus="1"></div>
   <aside class="notes">
     <p class="q">开口先问：“能像检查能量守恒那样检查它吗？”</p>
-    <p>算谐振子、算行星，我们检查程序对不对，最常用的就是看能量漂不漂。Lorenz 有没有这样一个量？这一段先拧加热旋钮，看它怎样从静止变成乱翻；然后在黑板上攒三条事实：停不下、跑不掉、体积缩到零。三条攒齐，答案自己出来。</p>
+    <p>算谐振子、算行星，我们检查程序对不对，最常用的就是看能量漂不漂。Lorenz 有没有这样一个量？这一段先拧加热旋钮，看它怎样从静止变成乱翻；然后写出 Jacobian，在黑板上攒三条事实：停不下、体积缩到零、有一个方向在拉伸。三条攒齐，答案自己出来。</p>
   </aside>
 </section>
 
@@ -439,7 +439,37 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   </aside>
 </section>
 
-<!-- 17 不动点 -->
+<!-- 17 线性化 -->
+<section class="slide" data-part="1" data-min="1.5" data-title="线性化：Jacobian">
+  <header><p class="eyebrow">① 没有不变量可查</p><h2>线性化：Jacobian 逐行求偏导</h2></header>
+  <div class="split even">
+    <div class="col">
+      <div style="font-size:26px">$$\frac{\mathrm d}{\mathrm dt}\delta u = J(u)\,\delta u,\qquad J_{ij} = \frac{\partial f_i}{\partial u_j}$$
+      $$\begin{aligned}\dot x &= \sigma(y-x)\\ \dot y &= x(\rho-z) - y\\ \dot z &= xy - \beta z\end{aligned}
+      \quad\Longrightarrow\quad
+      J = \begin{pmatrix} -\sigma & \sigma & 0 \\ \rho - z & -1 & -x \\ y & x & -\beta \end{pmatrix}$$</div>
+      <p class="muted" style="font-size:22px">线性项求导得常数；xz、xy 求导留下 x、y、z，J 随轨道上的点变。</p>
+    </div>
+    <div class="col" style="font-size:24px">
+      <ul class="plain">
+        <li><strong>不动点上</strong>　J 是常数，看特征值：停不下</li>
+        <li><strong>对角线</strong>　tr J = −(σ+1+β)，与点无关：体积</li>
+        <li><strong>沿轨道</strong>　J 每一点都不同，没有固定的本征方向：边算边正交化，得 Lyapunov 谱</li>
+      </ul>
+      <div class="callout navy-bg">同一个 J，读三个侧面，本部分后面三页各用一个。</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p class="q">开口先问：“轨道旁边差一点点，这一点点下一刻怎么变？”</p>
+    <p>把 u + δu 代进方程，泰勒展开到一阶，δu 的变化率就是 J 乘 δu。J 的第 i 行回答：第 i 个变量的变化率，对 x、y、z 各自有多敏感。</p>
+    <p>板书逐行求：第一行 σ(y−x)，对 x、y、z 求导，−σ、σ、0。第二行 xρ − xz − y：对 x 是 ρ−z，对 y 是 −1，对 z 是 −x。第三行 xy − βz：y、x、−β。</p>
+    <p>看矩阵里哪些是数、哪些是变量：线性项求出来是常数，非线性项 xz、xy 求出来留下 x、y、z。所以轨道走到哪，J 就是哪个矩阵。</p>
+    <p>这张矩阵我们读三次。不动点上 x、y、z 固定，J 是常数，看特征值，下一页。对角线 −σ、−1、−β 里没有变量，迹在哪一点都一样，再下一页。沿着轨道 J 一直在变，再下一页讲这时候怎么算指数。</p>
+    <p class="key">留下一句：J 里有 x、y、z，所以它随轨道上的点变。</p>
+  </aside>
+</section>
+
+<!-- 18 不动点 -->
 <section class="slide" data-part="1" data-min="1" data-title="不动点稳定性">
   <header><p class="eyebrow">① 没有不变量可查</p><h2>三个不动点，ρ = 28 时全部不稳定</h2></header>
   <div class="split">
@@ -453,31 +483,9 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   </div>
   <aside class="notes">
     <p>第一条事实：停不下。</p>
-    <p>三个不动点：原点和 C±，C± 的坐标右边写着。图是 C+ 处 Jacobian 特征值的最大实部，横轴是 ρ。这是纯线性代数，没有积分：对每个 ρ 写出 C+，求特征值，取实部最大的。它在 ρ_H = 24.74 穿过零。</p>
+    <p>三个不动点：原点和 C±，C± 的坐标右边写着。把上一页的 J 放到 C+ 上，x、y、z 都是数，J 就是一个常数矩阵。图是它的特征值的最大实部，横轴是 ρ。这是纯线性代数，没有积分：对每个 ρ 写出 C+，求特征值，取实部最大的。它在 ρ_H = 24.74 穿过零。</p>
     <p>ρ = 28 在右边：三个不动点全不稳定，没有稳态可去。</p>
     <p class="key">黑板第一条：停不下，三个不动点全不稳。</p>
-  </aside>
-</section>
-
-<!-- 18 有界 -->
-<section class="slide" data-part="1" data-min="0.75" data-title="有界性">
-  <header><p class="eyebrow">① 没有不变量可查</p><h2>Lyapunov 函数：耗散但有界</h2></header>
-  <div class="split even">
-    <div class="col">
-      <div style="font-size:28px">$$V = \rho x^2 + \sigma y^2 + \sigma (z-2\rho)^2$$
-      $$\frac{\mathrm dV}{\mathrm dt} = -2\sigma\left[\rho x^2 + y^2 + \beta(z-\rho)^2 - \beta\rho^2\right]$$</div>
-    </div>
-    <div class="col">
-      <p>方括号在椭球 \(\rho x^2 + y^2 + \beta(z-\rho)^2 = \beta\rho^2\) 之外为正，V 在那里单调下降。</p>
-      <p>所有轨道最终被困在一个有界区域里。</p>
-      <div class="callout navy-bg"><strong>局部指数分离 + 全局折叠回来</strong><br>这是混沌，不是发散。</div>
-    </div>
-  </div>
-  <aside class="notes">
-    <p>第二条事实：跑不掉。</p>
-    <p>V 是一个椭球形状的“能量”。它的导数在一个大椭球外面处处为负，所以 V 在那里只降不升：轨道从外面进来，就再也出不去。</p>
-    <p>停不下，又跑不掉，只能在一块有界区域里永远游荡。局部指数分开，全局又折回来：这是混沌，不是发散。</p>
-    <p class="key">黑板第二条：跑不掉，V 在大椭球外只降。</p>
   </aside>
 </section>
 
@@ -487,7 +495,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   <div class="split">
     <figure class="fig"><img src="figures/fig05_volume.png" alt="Lorenz 与谐振子的 ln det M(t) 对比"><figcaption>lorenz63 figure fig05</figcaption></figure>
     <div class="col">
-      <p>Jacobian 的迹在任何一点都相同：</p>
+      <p>J 的对角线 −σ、−1、−β 里没有变量，迹在任何一点都相同：</p>
       <div style="font-size:30px">$$\operatorname{tr} J = -(\sigma+1+\beta) = -13.667$$</div>
       <div class="strip">
         <div class="kv small"><span class="v">−13.6675</span><span class="k">拟合斜率</span></div>
@@ -497,16 +505,39 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
     </div>
   </div>
   <aside class="notes">
-    <p>第三条事实：体积。</p>
-    <p>Jacobian 的迹在每一点都等于 −(σ + 1 + β) = −13.67，是常数。所以相空间里任何一团初值，体积都按 e^(−13.67t) 缩：一个时间单位缩掉约一百万倍。</p>
+    <p>第二条事实：体积。</p>
+    <p>回到 J 的对角线：−σ、−1、−β，正好是粘性和两项热扩散；非线性项 xz、xy 都不在对角线上。所以迹在每一点都等于 −(σ + 1 + β) = −13.67，是常数。Liouville 公式说，迹就是体积的变化率：相空间里任何一团初值，体积都按 e^(−13.67t) 缩，一个时间单位缩掉约一百万倍。搬运只挪体积，耗散才缩体积。</p>
     <p>图上验证：解 M′ = JM、M(0) = I，ln det M 是一条直线，斜率与 −13.667 的相对差 6×10⁻⁵。旁边谐振子那条贴在 0：守恒系统保体积。</p>
-    <p>三条攒齐：停不下、跑不掉、体积缩到零。轨道最后落在一个体积为零、却永远绕不完的集合上，这就是奇怪吸引子。</p>
+    <p>体积缩到零，轨道却也跑不到无穷：有一个椭球把它关在里面（备用页「有界性」）。停不下、又跑不掉，最后落在一个体积为零、却永远绕不完的集合上，这就是奇怪吸引子。</p>
     <p>回答开头的问题：能像查能量那样查它吗？不能。谐振子有能量、有辛结构；Lorenz 什么都不守，体积每时每刻都在缩。“该不该用辛方法”在这里是个空问题。</p>
-    <p class="key">黑板第三条：体积缩到零。所以没有守恒量可查。</p>
+    <p class="key">黑板第二条：体积缩到零。所以没有守恒量可查。</p>
   </aside>
 </section>
 
-<!-- 20 分隔：第 ② 部分 -->
+<!-- 20 正交化 -->
+<section class="slide" data-part="1" data-min="1.5" data-title="QR 重正交化">
+  <header><p class="eyebrow">① 没有不变量可查</p><h2>J 每点在变：Lyapunov 谱要边算边 QR 正交化</h2></header>
+  <div class="full">
+    <figure class="fig"><img src="figures/fig16_orthogonalisation.png" alt="运送的正交标架、不正交化时切向量夹角塌缩、log 范数斜率对照"><figcaption>lorenz63 figure fig16</figcaption></figure>
+    <div class="strip" style="gap:44px">
+      <div class="kv small"><span class="v orbit">3×10⁻¹⁴</span><span class="k">不做 QR，t = 30 时夹角（弧度），三个都只量出 λ₁</span></div>
+      <div class="kv small"><span class="v stat">0.92 / −0.003 / −14.58</span><span class="k">每段做 QR、累加 ln|R<sub>kk</sub>|，三个分开，和 = tr J</span></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p class="q">开口先问：“J 在不动点上看特征值就行，沿着轨道为什么不行？”</p>
+    <p>扰动每走一小段 Δt，就乘一次 I + J(u)Δt。在不动点上每次乘的都是同一个矩阵，特征值说了算。沿着轨道，J 里的 x、y、z 每一点都不同，乘上去的是一长串各不相同的矩阵，没有一组共用的本征方向。指数只能沿轨道一段一段算。</p>
+    <p>板书一个小例子：每步乘 diag(2, ½)，两个指数是 ±ln 2。跟两个向量 (1, 0) 和 (1, 1)，n 步后是 (2ⁿ, 0) 和 (2ⁿ, 2⁻ⁿ)。第二个向量也按 2ⁿ 长，量出来又是 +ln 2；−ln 2 藏在那个越来越小的 y 分量里，被 x 分量盖住了。把它沿第一个向量的分量减掉，剩 (0, 2⁻ⁿ)，−ln 2 出来了。这一步减法就是 Gram–Schmidt，矩阵写法叫 QR。</p>
+    <p>中图是不做这一步的 Lorenz：三个切向量的夹角按指数塌向 0。心算：夹角按 e^(−(λ₁−λ₂)t) 缩，这一段 λ₁ 约 1，t = 30 时 e^(−30) ≈ 10⁻¹³，实测 3×10⁻¹⁴。右图虚线是三个向量的长度，斜率 0.98、1.01、1.05，全是 λ₁。</p>
+    <p>所以计算时边走边做：每走 Δt = 1，对三个向量做 QR，ln|R₁₁| 记第一本账，ln|R₂₂| 记“第二个向量在第一个之外又长了多少”，ln|R₃₃| 记第三本；然后用正交的 Q 接着走。三条实线斜率分开成 0.92、−0.003、−14.58。中间那个零是沿流方向：顺着轨道推一下，只是同一条轨道早走一点，不长也不缩。</p>
+    <p>对一下上一页：三个加起来 −13.66，正是 tr J。三本账之和是体积，体积由迹管着。</p>
+    <p>三条攒齐：停不下、体积缩到零、一个方向按 e^(0.9t) 拉伸。下一部分只盯 λ₁ = 0.9 这一个数。</p>
+    <p class="key">黑板第三条：一个方向在拉伸，λ₁ ≈ 0.9。J 每点在变，所以要边算边正交化。</p>
+    <p>被问为什么每 Δt = 1 做一次而不是只在最后做：数学上分段累加和最后做一次是同一个数；但夹角到 10⁻¹⁶ 就低于双精度分辨率，λ₁ ≈ 0.9 时约 41 个时间单位就到，和双精度预报极限是同一个数；长度到 e^709 还会溢出。细节见报告 3.4 节。</p>
+  </aside>
+</section>
+
+<!-- 21 分隔：第 ② 部分 -->
 <section class="slide" data-part="2" data-min="0.25" data-title="分隔：第 ② 部分">
   <header><p class="eyebrow">第 ② 部分</p><h2>精度只换来对数时间</h2></header>
   <div class="map-host" data-focus="2"></div>
@@ -516,7 +547,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   </aside>
 </section>
 
-<!-- 21 演示：缩小 ε 能多看多久 -->
+<!-- 22 演示：缩小 ε 能多看多久 -->
 <section class="slide" id="splitSlide" data-part="2" data-min="3" data-title="现场演示：缩小初值差">
   <header><p class="eyebrow">② 精度只换来对数时间 · 现场演示</p><h2>从相差 ε 的两个初值出发</h2></header>
   <div class="demo">
@@ -553,7 +584,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   </aside>
 </section>
 
-<!-- 22 误差增长 -->
+<!-- 23 误差增长 -->
 <section class="slide" data-part="2" data-min="1.5" data-title="误差增长">
   <header><p class="eyebrow">② 精度只换来对数时间</p><h2>误差按 λ₁ 增长，到吸引子尺度饱和</h2></header>
   <div class="split">
@@ -561,14 +592,14 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
     <div class="col">
       <div style="font-size:28px">$$|\Delta(t)| \approx \delta\,e^{\lambda_1 t}\quad\Rightarrow\quad T = \frac{\ln(1/\delta)}{\lambda_1}$$</div>
       <p style="font-size:24px">16 个吸引子点 × 4 个随机方向，扰动 δ = 1e−9，全部用参考精度积分。</p>
-      <div class="kv small"><span class="v">0.8750</span><span class="k">t ∈ [5, 22] 的拟合斜率，与变分方程算出的 0.9038（备用页）相差 3.2%，两条路径没有共用代码</span></div>
+      <div class="kv small"><span class="v">0.8750</span><span class="k">t ∈ [5, 22] 的拟合斜率，与第 ① 部分 QR 算出的 0.9038 相差 3.2%，两条路径没有共用代码</span></div>
       <div class="kv small"><span class="v">2.55</span><span class="k">δ 每缩小 10 倍，T 多 ln 10 / λ₁</span></div>
       <div class="kv small"><span class="v orbit">40.76</span><span class="k">双精度预报极限 ln(10¹⁶) / λ₁</span></div>
     </div>
   </div>
   <aside class="notes">
     <p>刚才那条直线有名字：λ₁，最大 Lyapunov 指数。这页是正式测量：16 个吸引子点 × 4 个随机方向，扰动 10⁻⁹，全部用参考精度积分。直线段拟合斜率 0.875。</p>
-    <p>另一条完全独立的路，解变分方程（备用页），给出 0.904。两条路没有共用代码，相差 3%。</p>
+    <p>另一条完全独立的路，第 ① 部分末尾解变分方程、边算边 QR，给出 0.904。两条路没有共用代码，相差 3%。</p>
     <p>λ₁ 约 0.9，换成好记的说法：每 0.77 翻一倍，每 2.55 涨十倍。</p>
     <p>现在回头算封面：差 10⁻⁵ 涨到 1，5 个数量级，5 × 2.55 ≈ 12.7。封面停在 13.6，对得上。（单个起点本来就会偏一点，ε 演示里会看到。）</p>
     <p class="key">留下一句：|Δ| ≈ δ·e^(λ₁t)，所以 T = ln(1/δ)/λ₁。</p>
@@ -576,7 +607,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   </aside>
 </section>
 
-<!-- 23 容差扫描 -->
+<!-- 24 容差扫描 -->
 <section class="slide" data-part="2" data-min="2" data-title="容差扫描">
   <header><p class="eyebrow">② 精度只换来对数时间 · 核心证据</p><h2>可分辨时间对 ln(1/rtol) 是一条直线</h2></header>
   <div class="split">
@@ -604,7 +635,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   </aside>
 </section>
 
-<!-- 24 回答 -->
+<!-- 25 回答 -->
 <section class="slide" data-part="2" data-min="0.75" data-title="回答开场的问题">
   <header><p class="eyebrow">② 精度只换来对数时间</p><h2>双精度下的预报极限</h2></header>
   <div class="center">
@@ -619,7 +650,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   </aside>
 </section>
 
-<!-- 25 分隔：第 ③ 部分 -->
+<!-- 26 分隔：第 ③ 部分 -->
 <section class="slide" data-part="3" data-min="0.25" data-title="分隔：第 ③ 部分">
   <header><p class="eyebrow">第 ③ 部分</p><h2>单条轨道不可信，统计量可信</h2></header>
   <div class="map-host" data-focus="3"></div>
@@ -629,7 +660,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   </aside>
 </section>
 
-<!-- 26 影随 -->
+<!-- 27 影随 -->
 <section class="slide" data-part="3" data-min="1" data-title="影随">
   <header><p class="eyebrow">③ 统计量不随 rtol 变</p><h2>影随：数值轨道跟着另一条真解</h2></header>
   <div class="split even">
@@ -652,7 +683,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   </aside>
 </section>
 
-<!-- 27 中心实验 -->
+<!-- 28 中心实验 -->
 <section class="slide" data-part="3" data-min="2.5" data-title="中心实验">
   <header><p class="eyebrow">③ 统计量不随 rtol 变 · 中心实验</p><h2>同一组数据：<span class="orbit">左边报废</span>，<span class="stat">右边完好</span></h2></header>
   <div class="full">
@@ -673,7 +704,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   </aside>
 </section>
 
-<!-- 28 不变密度 -->
+<!-- 29 不变密度 -->
 <section class="slide" data-part="3" data-min="1" data-title="不变密度">
   <header><p class="eyebrow">③ 统计量不随 rtol 变</p><h2>不变密度同样不动</h2></header>
   <div class="split">
@@ -692,7 +723,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   </aside>
 </section>
 
-<!-- 29 吸引子 -->
+<!-- 30 吸引子 -->
 <section class="slide" data-part="3" data-min="0.5" data-title="吸引子">
   <header><p class="eyebrow">③ 统计量不随 rtol 变</p><h2>教科书上的蝴蝶不是幻觉</h2></header>
   <div class="split">
@@ -709,7 +740,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   </aside>
 </section>
 
-<!-- 30 分隔：第 ④ 部分 -->
+<!-- 31 分隔：第 ④ 部分 -->
 <section class="slide" data-part="4" data-min="0.25" data-title="分隔：第 ④ 部分">
   <header><p class="eyebrow">第 ④ 部分</p><h2>可信的判据随系统类型变</h2></header>
   <div class="map-host" data-focus="4"></div>
@@ -719,7 +750,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   </aside>
 </section>
 
-<!-- 31 判据表 -->
+<!-- 32 判据表 -->
 <section class="slide" data-part="4" data-min="1.5" data-title="判据表">
   <header><p class="eyebrow">④ 判据随系统类型变</p><h2>三类系统的验证判据</h2></header>
   <div class="center">
@@ -742,7 +773,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   </aside>
 </section>
 
-<!-- 32 守恒对照 -->
+<!-- 33 守恒对照 -->
 <section class="slide" data-part="4" data-min="2" data-title="守恒系统对照">
   <header><p class="eyebrow">④ 判据随系统类型变</p><h2>守恒系统里，精度换来成倍的时间</h2></header>
   <div class="full">
@@ -763,7 +794,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   </aside>
 </section>
 
-<!-- 33 声学 -->
+<!-- 34 声学 -->
 <section class="slide" data-part="4" data-min="1" data-title="回到声学">
   <header><p class="eyebrow">④ 判据随系统类型变</p><h2>回到声学</h2></header>
   <div class="split even">
@@ -786,7 +817,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
   </aside>
 </section>
 
-<!-- 34 结论 -->
+<!-- 35 结论 -->
 <section class="slide" data-part="4" data-min="1" data-title="结论与复现">
   <header><p class="eyebrow">结论</p><h2>守恒系统看不变量，混沌系统看统计量</h2></header>
   <div class="split even">
@@ -816,7 +847,7 @@ uv run lorenz63 figure all</pre>
   </aside>
 </section>
 
-<!-- 35 备用目录 -->
+<!-- 36 备用目录 -->
 <section class="slide" id="backupIndex" data-part="b" data-min="0" data-title="备用页">
   <header><p class="eyebrow">备用</p><h2>备用页</h2></header>
   <ol class="backup-list" id="backupList"></ol>
@@ -825,7 +856,7 @@ uv run lorenz63 figure all</pre>
   </aside>
 </section>
 
-<!-- 36 积分器 -->
+<!-- 37 积分器 -->
 <section class="slide" id="integratorsSlide" data-part="b" data-min="0" data-title="RK4、RK45 与 DOP853">
   <header><p class="eyebrow">备用 · 绪论 · 时间推进</p><h2>三个积分器：阶数、步长、误差估计</h2></header>
   <div class="split even">
@@ -860,7 +891,28 @@ uv run lorenz63 figure all</pre>
   </aside>
 </section>
 
-<!-- 37 分岔 -->
+<!-- 38 有界 -->
+<section class="slide" data-part="b" data-min="0" data-title="有界性">
+  <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>Lyapunov 函数：耗散但有界</h2></header>
+  <div class="split even">
+    <div class="col">
+      <div style="font-size:28px">$$V = \rho x^2 + \sigma y^2 + \sigma (z-2\rho)^2$$
+      $$\frac{\mathrm dV}{\mathrm dt} = -2\sigma\left[\rho x^2 + y^2 + \beta(z-\rho)^2 - \beta\rho^2\right]$$</div>
+    </div>
+    <div class="col">
+      <p>方括号在椭球 \(\rho x^2 + y^2 + \beta(z-\rho)^2 = \beta\rho^2\) 之外为正，V 在那里单调下降。</p>
+      <p>所有轨道最终被困在一个有界区域里。</p>
+      <div class="callout navy-bg"><strong>局部指数分离 + 全局折叠回来</strong><br>这是混沌，不是发散。</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>被问到“λ₁ 为正，轨道会不会跑到无穷”时用这一页。</p>
+    <p>V 是一个椭球形状的“能量”。它的导数在一个大椭球外面处处为负，所以 V 在那里只降不升：轨道从外面进来，就再也出不去。</p>
+    <p>局部指数分开，全局又折回来：这是混沌，不是发散。细节见报告 2.2 节。</p>
+  </aside>
+</section>
+
+<!-- 39 分岔 -->
 <section class="slide" data-part="b" data-min="0" data-title="分岔图">
   <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>分岔图：叉式、同宿爆炸、Hopf</h2></header>
   <div class="full">
@@ -879,7 +931,7 @@ uv run lorenz63 figure all</pre>
   </aside>
 </section>
 
-<!-- 38 本征结构 -->
+<!-- 40 本征结构 -->
 <section class="slide" id="eigenSlide" data-part="b" data-min="0" data-title="本征结构">
   <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>不动点的本征结构决定吸引子形状</h2></header>
   <div class="eig3d">
@@ -907,7 +959,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 39 截面的三种典型 -->
+<!-- 41 截面的三种典型 -->
 <section class="slide" data-part="b" data-min="0" data-title="截面的三种典型">
   <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>Poincaré 截面：周期、准周期、混沌</h2></header>
   <div class="full">
@@ -930,7 +982,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 40 Poincaré -->
+<!-- 42 Poincaré -->
 <section class="slide" data-part="b" data-min="0" data-title="Poincaré 截面">
   <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>三维流 → 二维截面 → 一维映射</h2></header>
   <div class="full">
@@ -949,7 +1001,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 41 两件事 -->
+<!-- 43 两件事 -->
 <section class="slide" data-part="b" data-min="0" data-title="稳定性与 Lyapunov 指数">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>数值稳定性 ≠ Lyapunov 不稳定性</h2></header>
   <div class="center">
@@ -967,7 +1019,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 42 hλ -->
+<!-- 44 hλ -->
 <section class="slide" data-part="b" data-min="0" data-title="hλ 与稳定性函数">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>hλ：一步跨过模的几个时间尺度</h2></header>
   <div class="split even">
@@ -1004,7 +1056,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 43 稳定域 -->
+<!-- 45 稳定域 -->
 <section class="slide" data-part="b" data-min="0" data-title="RK4 稳定域">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>瓶颈是精度，不是稳定性</h2></header>
   <div class="split">
@@ -1024,7 +1076,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 44 自适应稳定域 -->
+<!-- 46 自适应稳定域 -->
 <section class="slide" data-part="b" data-min="0" data-title="自适应格式的稳定域">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>自适应：稳定域不变，守它的换成控制器</h2></header>
   <div class="split even">
@@ -1065,7 +1117,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 45 自适应稳定域图 -->
+<!-- 47 自适应稳定域图 -->
 <section class="slide" data-part="b" data-min="0" data-title="稳定域与精度域">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>衰减模走出了精度域，没走出稳定域</h2></header>
   <div class="split">
@@ -1093,7 +1145,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 工作量对精度 -->
+<!-- 48 工作量对精度 -->
 <section class="slide" data-part="b" data-min="0" data-title="阶数什么时候值钱">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>阶数在精度定步长时才值钱</h2></header>
   <div class="split">
@@ -1129,25 +1181,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 46 正交化 -->
-<section class="slide" data-part="b" data-min="0" data-title="QR 重正交化">
-  <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>Lyapunov 谱需要 QR 重正交</h2></header>
-  <div class="full">
-    <figure class="fig"><img src="figures/fig16_orthogonalisation.png" alt="运送的正交标架、不正交化时切向量夹角塌缩、log 范数斜率对照"><figcaption>lorenz63 figure fig16</figcaption></figure>
-    <div class="strip" style="gap:44px">
-      <div class="kv small"><span class="v orbit">3×10⁻¹⁴</span><span class="k">不做 QR，t = 30 时切向量夹角（弧度）</span></div>
-      <div class="kv small"><span class="v orbit">0.98 / 1.01 / 1.05</span><span class="k">不做 QR：三个"指数"全是 λ₁</span></div>
-      <div class="kv small"><span class="v stat">0.92 / −0.003 / −14.58</span><span class="k">做 QR 后分开</span></div>
-    </div>
-  </div>
-  <aside class="notes">
-    <p>做法：沿轨道积分变分方程 Q′ = J(u)Q，带着三个切向量走，每隔一小段做 QR，把 log|R_ii| 累加。</p>
-    <p>不做 QR：任何一般向量都含最不稳定方向的分量，按 e^(λ₁t) 长，于是三个向量都倒向同一条线，λ₂、λ₃ 一点痕迹都没有。QR 每次把第 k 个向量投影到前 k−1 个的正交补上，是唯一让它们可见的机制。</p>
-    <p>附带好处：不归一化的话 e^1800 早就溢出了。右格是 T=200 的短跑，和下一页 T=2000 的谱在第二位小数上一致。</p>
-  </aside>
-</section>
-
-<!-- 47 谱 -->
+<!-- 49 谱 -->
 <section class="slide" data-part="b" data-min="0" data-title="Lyapunov 谱与自洽检验">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>自洽检验：Σλᵢ = tr J</h2></header>
   <div class="split">
@@ -1165,7 +1199,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 48 FTLE -->
+<!-- 50 FTLE -->
 <section class="slide" data-part="b" data-min="0" data-title="有限时间 Lyapunov 指数">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>有限时间 Lyapunov 指数：局部拉伸率差别极大</h2></header>
   <div class="split">
@@ -1188,7 +1222,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 49 收敛性 -->
+<!-- 51 收敛性 -->
 <section class="slide" data-part="b" data-min="0" data-title="收敛性研究的推论">
   <header><p class="eyebrow">备用 · ④ 判据随系统类型变</p><h2>推论：混沌问题的收敛阶要在短窗口里验</h2></header>
   <div class="split even">
@@ -1207,7 +1241,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 50 数字汇总 -->
+<!-- 52 数字汇总 -->
 <section class="slide" data-part="b" data-min="0" data-title="数字汇总">
   <header><p class="eyebrow">备用</p><h2>数字汇总</h2></header>
   <div class="split even" style="font-size:21px">
@@ -1280,7 +1314,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
       </div>
       <div class="mm-row" data-p="1" title="跳到这一段">
         <div class="mm-q"><i>①</i>守恒量检验</div>
-        <div class="mm-a"><span><strong>没有守恒量</strong>，相空间体积一直在缩</span><small>现场演示 · 四个 ρ 的相图 fig13 · 体积 fig05</small></div>
+        <div class="mm-a"><span><strong>没有守恒量</strong>，相空间体积一直在缩</span><small>现场演示 · 四个 ρ 的相图 fig13 · 体积 fig05 · QR 正交化 fig16</small></div>
       </div>
       <div class="mm-row" data-p="2" title="跳到这一段">
         <div class="mm-q"><i>②</i>精度与预报时间</div>
