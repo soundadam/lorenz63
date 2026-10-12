@@ -1038,7 +1038,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
         </tbody>
       </table>
       <p style="font-size:22px">R(z) 由 Butcher 表算出；上限 = 交点 / 21.85。<strong>与 rtol 无关。</strong></p>
-      <div class="callout navy-bg" style="font-size:22px">rtol 只圈出<strong>精度域</strong> |E(z)| ≤ rtol。精度域在稳定域里：稳定域碰不到。伸出去：误差估计拒步，h 卡在边界上振荡，这就是刚性。</div>
+      <div class="callout navy-bg" style="font-size:22px">rtol 只圈出<strong>精度域</strong> |E(z)| ≤ rtol，管的是承载解的慢模。衰减模跟着乘同一个 h：hλ 在稳定域里，碰不到；出去了，误差估计拒步，h 卡在边界上振荡，这就是刚性。</div>
     </div>
     <div class="col">
       <p style="font-size:22px">DOP853 在吸引子上的最大步长，占稳定上限：</p>
@@ -1059,13 +1059,41 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
     <p class="q">被问“DOP853 用相对误差控制步长，那稳定域还怎么算”时，接在上一页之后用这一页。</p>
     <p>两层分开说。第一层，稳定域是格式的性质：RK45 推进 5 阶解，DOP853 推进 8 阶解，用在 y′ = λy 上一步照样乘一个 R(hλ)，只是多项式换了。阶数越高，R 贴着 e^z 走得越远，稳定域越大：RK4 到 −2.8，DOP853 到 −6.4。rtol 是相对还是绝对，这张表都不动。</p>
     <p>第二层，容差决定控制器挑哪个 h。嵌入式格式一步给两个解，差就是误差估计。纯相对容差下 |y| 约掉，条件只剩 |E(z)| ≤ rtol，在 z 平面上是原点附近一小片，叫它精度域。精度域在稳定域里面，稳定性就不起作用。伸出去的时候，衰减模每步被放大，长到误差估计看得见，这一步被拒、h 缩回来，于是 h 在边界上来回振荡：不炸，但步数被稳定性定死，放松 rtol 也省不下来。这就是刚性。</p>
-    <p>读右表。rtol = 10⁻³ 时最大步正好顶到边界，比全文最松的容差还松一档。10⁻¹³ 时只用掉 7%。上限是拿整个吸引子上最强的阻尼算的，偏保守。</p>
+    <p>读右表。上限是拿整个吸引子上最强的阻尼算的，偏保守：10⁻³ 那行的 1.01，逐步算 hλ 其实只到 0.75。10⁻¹³ 时只用掉 7%。真正开始碰边界的是 RK45 在 10⁻³，有 0.2% 的点出界。</p>
     <p>固定步长时由人事先选 h 守住稳定域；自适应时由误差估计事后发现、拒步守住。细节见报告 4.4 节。</p>
     <p class="key">留下一句：稳定域还是 R(z) 那一片；自适应时守它的是误差估计，Lorenz 上它根本用不着守。</p>
   </aside>
 </section>
 
-<!-- 45 正交化 -->
+<!-- 45 自适应稳定域图 -->
+<section class="slide" data-part="b" data-min="0" data-title="稳定域与精度域">
+  <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>衰减模走出了精度域，没走出稳定域</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig20_adaptive_regions.png" alt="RK45 与 DOP853 的稳定域、精度域，以及 rtol = 1e-4 时每步的 hλ"><figcaption>lorenz63 figure fig20</figcaption></figure>
+    <div class="col">
+      <p style="font-size:22px">沿负实轴，rtol = 10⁻⁴：</p>
+      <table class="data" style="font-size:22px">
+        <thead><tr><th></th><th>精度域</th><th>衰减模 hλ</th><th>稳定域</th></tr></thead>
+        <tbody>
+          <tr><td>RK45</td><td class="num">−0.63</td><td class="num">−1.81</td><td class="num">−3.31</td></tr>
+          <tr><td>DOP853</td><td class="num">−1.81</td><td class="num">−4.57</td><td class="num">−6.39</td></tr>
+        </tbody>
+      </table>
+      <div class="callout navy-bg" style="font-size:22px">衰减模已经衰减没了，控制器<strong>不管它的精度</strong>，h 由慢模定。它被带出精度域，但还在稳定域里。</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p class="q">被问“精度域怎么就在稳定域里面”“RK45、DOP853 的稳定域长什么样”时，接在上一页之后用这一页。</p>
+    <p>先认颜色。绿色是 |R(z)| ≤ 1，两个格式各自一片：RK45 沿负实轴比 RK4 的灰虚线略远，DOP853 远一倍，到 −6.4。紫色是 |E(z)| ≤ rtol，原点附近的小圆，粗的是 10⁻⁴，细的更紧。点是 rtol = 10⁻⁴ 跑吸引子时，每一步的 h 乘那一点 Jacobian 的三个特征值。</p>
+    <p>读负实轴那条蓝线。它是 λ ≈ −22 的强收缩方向。看 DOP853：精度域只到 −1.8，蓝线到 −4.6，稳定域到 −6.4。蓝线比紫圈远，因为轨道贴在吸引子上，这个方向的分量早没了，误差估计里它的贡献是 |E(hλ)| 乘一个很小的振幅，控制器看不见它。所以精度域是“这个模承载整个解”时的要求，对已经衰减的模放大了很多倍。</p>
+    <p>红点和蓝线分工不同。红点是增长模，吸引子上的运动就沿着它们展开，振幅大，误差估计看得见，控制器按它们的精度选 h，所以红点挤在紫圈附近；它们 |R| &gt; 1 是对的，不用问稳定性。蓝线是衰减模，没有振幅，没有精度管它，只剩稳定性管它。一句话：增长模和慢模由精度管，衰减模由稳定性管。</p>
+    <p>蓝线比绿边近，稳定性就没碰到。h 是慢模的精度定的，强收缩方向只是顺带被乘上同一个 h，正好还在稳定域里。哪天蓝线越过绿边，那个模开始每步变大，大到误差估计看得见，就拒步：这就是上一页说的刚性。</p>
+    <p>两个 1.81 是巧合。细节见报告 4.4 节。</p>
+    <p class="key">留下一句：步长由慢模的精度定，衰减模只要还在稳定域里就没事。</p>
+  </aside>
+</section>
+
+<!-- 46 正交化 -->
 <section class="slide" data-part="b" data-min="0" data-title="QR 重正交化">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>Lyapunov 谱需要 QR 重正交</h2></header>
   <div class="full">
@@ -1083,7 +1111,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 46 谱 -->
+<!-- 47 谱 -->
 <section class="slide" data-part="b" data-min="0" data-title="Lyapunov 谱与自洽检验">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>自洽检验：Σλᵢ = tr J</h2></header>
   <div class="split">
@@ -1101,7 +1129,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 47 FTLE -->
+<!-- 48 FTLE -->
 <section class="slide" data-part="b" data-min="0" data-title="有限时间 Lyapunov 指数">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>有限时间 Lyapunov 指数：局部拉伸率差别极大</h2></header>
   <div class="split">
@@ -1124,7 +1152,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 48 收敛性 -->
+<!-- 49 收敛性 -->
 <section class="slide" data-part="b" data-min="0" data-title="收敛性研究的推论">
   <header><p class="eyebrow">备用 · ④ 判据随系统类型变</p><h2>推论：混沌问题的收敛阶要在短窗口里验</h2></header>
   <div class="split even">
@@ -1143,7 +1171,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 49 数字汇总 -->
+<!-- 50 数字汇总 -->
 <section class="slide" data-part="b" data-min="0" data-title="数字汇总">
   <header><p class="eyebrow">备用</p><h2>数字汇总</h2></header>
   <div class="split even" style="font-size:21px">

@@ -19,6 +19,8 @@ from lorenz63.stability import (
     RK4_REAL_AXIS_LIMIT,
     adaptive_step_usage,
     attractor_eigenvalues,
+    controller_spectrum,
+    error_function,
     max_stable_step,
     real_axis_limit,
     rk4_stability_function,
@@ -121,6 +123,27 @@ def test_adaptive_controller_stays_inside_the_region_at_working_tolerances() -> 
     loose = adaptive_step_usage(CLASSICAL, "DOP853", 1e-6, t_end=50.0)
     tight = adaptive_step_usage(CLASSICAL, "DOP853", 1e-9, t_end=50.0)
     assert tight < loose < 1.0
+
+
+@pytest.mark.parametrize("cls", [RK45, DOP853], ids=["RK45", "DOP853"])
+def test_error_estimate_shrinks_at_the_estimators_order(cls: type) -> None:
+    """|E(z)| ~ |z|^(q+1), q the order scipy declares for the error estimator."""
+    # Small, but not so small that DOP853's ~1e-20 estimate drowns in rounding.
+    small = np.array([-0.03, -0.06])
+    e = error_function(cls.__name__, small)
+    assert np.log2(e[1] / e[0]) == pytest.approx(cls.error_estimator_order + 1, abs=0.1)
+
+
+@pytest.mark.parametrize("method", ["RK45", "DOP853"])
+def test_damped_steps_leave_the_accuracy_region_but_not_the_stability_region(
+    method: str,
+) -> None:
+    """The damped mode has decayed, so its accuracy is not what sets h; stability is not hit."""
+    rtol = 1e-6
+    steps = controller_spectrum(CLASSICAL, method, rtol, t_end=50.0)
+    damped = steps[steps.real < 0.0]
+    assert np.all(np.abs(stability_function(method, damped)) <= 1.0)
+    assert np.any(error_function(method, damped) > rtol)
 
 
 def test_c_plus_real_part_crosses_zero_at_the_hopf_point() -> None:
