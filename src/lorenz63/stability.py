@@ -19,11 +19,17 @@ from __future__ import annotations
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.integrate import solve_ivp
 from scipy.integrate._ivp.rk import DOP853, RK45
 from scipy.optimize import brentq
 
-from lorenz63.integrate import on_attractor, reference_trajectory, solve_adaptive
-from lorenz63.system import LorenzParams, jacobian
+from lorenz63.integrate import (
+    REFERENCE_ATOL,
+    on_attractor,
+    reference_trajectory,
+    solve_adaptive,
+)
+from lorenz63.system import LorenzParams, jacobian, rhs
 
 #: |R(z)| = 1 crossings for classical RK4 along each axis.
 RK4_REAL_AXIS_LIMIT = 2.7852935634
@@ -144,6 +150,55 @@ def real_axis_limit(method: str) -> float:
     xs = np.linspace(1e-3, 20.0, 20000)
     i = int(np.argmax(np.abs(stability_function(method, -xs)) > 1.0))
     return float(brentq(lambda x: abs(stability_function(method, -x)) - 1.0, xs[i - 1], xs[i]))
+
+
+#: scipy classes of the embedded pairs, for their error-estimate weights.
+_EMBEDDED = {"RK45": RK45, "DOP853": DOP853}
+
+
+def _stage_values(method: str, z: NDArray[np.complexfloating]) -> list[NDArray[np.complexfloating]]:
+    """Stage values y_i / y_n on y' = lambda*y, plus y_{n+1} / y_n as the last entry."""
+    a, b = _TABLEAUX[method]
+    z = np.asarray(z, complex)
+    ys = [np.ones_like(z)]
+    for i in range(1, b.size):
+        ys.append(1.0 + z * sum(a[i, j] * ys[j] for j in range(i)))
+    ys.append(1.0 + z * sum(b[j] * ys[j] for j in range(b.size)))
+    return ys
+
+
+def error_function(method: str, z: NDArray[np.complexfloating]) -> NDArray[np.floating]:
+    """|E(z)|: the error norm scipy's controller computes on y' = lambda*y, per unit |y|.
+
+    The step is accepted when the norm, measured against ``atol + rtol*|y|``, is
+    at most 1. With atol negligible that is ``|E(z)| <= rtol``, the accuracy
+    region. The stage after y_{n+1} is f at the new point (scipy's FSAL row),
+    which on the test equation is lambda * R(z) * y_n. DOP853 blends a 5th- and
+    a 3rd-order difference exactly as ``DOP853._estimate_error_norm`` does.
+    """
+    ys = _stage_values(method, z)
+    cls = _EMBEDDED[method]
+    if method == "DOP853":
+        e5 = np.abs(z * sum(w * y for w, y in zip(cls.E5, ys, strict=True)))
+        e3 = np.abs(z * sum(w * y for w, y in zip(cls.E3, ys, strict=True)))
+        return e5**2 / np.sqrt(e5**2 + 0.01 * e3**2)
+    return np.abs(z * sum(w * y for w, y in zip(cls.E, ys, strict=True)))
+
+
+def controller_spectrum(
+    p: LorenzParams, method: str, rtol: float, *, t_end: float = 100.0
+) -> NDArray[np.complexfloating]:
+    """h_n * lambda_J(u_n) for every step the controller takes on the attractor.
+
+    These are the points the method actually multiplies by R: one triple of
+    eigenvalues per accepted step, scaled by that step's h.
+    """
+    sol = solve_ivp(
+        rhs, (0.0, t_end), on_attractor(p), args=(p,), method=method, rtol=rtol, atol=REFERENCE_ATOL
+    )
+    h = np.diff(sol.t)
+    eigs = np.array([np.linalg.eigvals(jacobian(u, p)) for u in sol.y.T[:-1]])
+    return (h[:, None] * eigs).ravel()
 
 
 def adaptive_step_usage(

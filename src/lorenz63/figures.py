@@ -67,8 +67,12 @@ from lorenz63.predictability import (  # noqa: E402
 )
 from lorenz63.stability import (  # noqa: E402
     attractor_eigenvalues,
+    controller_spectrum,
+    error_function,
     max_stable_step,
+    real_axis_limit,
     rk4_stability_mask,
+    stability_function,
 )
 from lorenz63.statistics import (  # noqa: E402
     invariant_density,
@@ -427,6 +431,76 @@ def fig06_stability(output: Path) -> Path:
         fontsize=11,
     )
     return _finish(fig, output, "fig06_stability")
+
+
+# ---------------------------------------------------------------------------
+# 20 — the adaptive pairs: stability region, accuracy region, actual steps
+# ---------------------------------------------------------------------------
+
+#: The tolerance whose controller steps are scattered (the loosest the report
+#: uses); its accuracy region is drawn bold, the tighter ones thin.
+SCATTER_RTOL = 1e-4
+ACCURACY_RTOLS = (1e-9, 1e-6, SCATTER_RTOL)
+
+
+def fig20_adaptive_regions(output: Path) -> Path:
+    re = np.linspace(-7.5, 2.5, 1000)
+    im = np.linspace(-7.0, 7.0, 1400)
+    z = re[None, :] + 1j * im[:, None]
+    rk4 = rk4_stability_mask(re, im)
+
+    fig, axes = plt.subplots(1, 2, figsize=(9.6, 5.6), sharey=True)
+    for ax, method in zip(axes, ("RK45", "DOP853"), strict=True):
+        _style(ax)
+        stable = np.abs(stability_function(method, z)) <= 1.0
+        ax.contourf(re, im, stable, levels=[0.5, 1.5], colors=[C_MID], alpha=0.15)
+        ax.contour(re, im, stable, levels=[0.5], colors=[C_MID], linewidths=1.6)
+        ax.contour(re, im, rk4, levels=[0.5], colors=[C_MUTED], linewidths=1.0, linestyles="--")
+
+        # E(z) also vanishes at isolated points far from the origin; the islands
+        # around them are not where any controller step goes, so keep the disc.
+        err = np.where(np.abs(z) < 4.0, error_function(method, z), np.inf)
+        lines = ax.contour(
+            re, im, err, levels=ACCURACY_RTOLS, colors=[C_ACCENT], linewidths=[0.8, 0.8, 1.8]
+        )
+        ax.clabel(lines, levels=[SCATTER_RTOL], fmt=f"rtol {SCATTER_RTOL:.0e}", fontsize=7)
+
+        steps = controller_spectrum(CLASSICAL, method, SCATTER_RTOL)
+        damped = steps[steps.real < 0.0]
+        growing = steps[steps.real >= 0.0]
+        ax.plot(damped.real, damped.imag, ".", color=C_REF, ms=1.5, alpha=0.5)
+        ax.plot(growing.real, growing.imag, ".", color=C_LOOSE, ms=1.5, alpha=0.5)
+
+        limit = real_axis_limit(method)
+        ax.plot([-limit], [0.0], "o", color=C_MID, ms=4)
+        ax.annotate(
+            f"−{limit:.2f}", (-limit, 0.0), xytext=(-4, 8), textcoords="offset points",
+            ha="right", fontsize=8, color=C_MID,
+        )
+        ax.axhline(0, color="k", lw=0.6)
+        ax.axvline(0, color="k", lw=0.6)
+        ax.set_xlabel("Re z")
+        ax.set_title(f"{method}：衰减模最远到 Re(hλ) = {damped.real.min():.2f}", fontsize=10)
+        ax.set_xlim(re[0], re[-1])
+        ax.set_ylim(im[0], im[-1])
+        ax.set_aspect("equal")
+    axes[0].set_ylabel("Im z")
+    axes[0].text(
+        0.03,
+        0.97,
+        "绿：稳定域 |R(z)| ≤ 1\n灰虚线：RK4 稳定域\n紫：精度域 |E(z)| ≤ rtol\n"
+        "（粗 1e-4，细 1e-6、1e-9）\n"
+        f"点：rtol = {SCATTER_RTOL:.0e} 时每一步的 h·λ_J\n（蓝衰减，红增长）",
+        transform=axes[0].transAxes,
+        fontsize=8,
+        va="top",
+        bbox={"boxstyle": "round", "fc": "white", "ec": C_MUTED, "alpha": 0.9},
+    )
+    fig.suptitle(
+        "衰减模的 hλ 走出了精度域，但没走出稳定域",
+        fontsize=11,
+    )
+    return _finish(fig, output, "fig20_adaptive_regions")
 
 
 # ---------------------------------------------------------------------------
@@ -1647,5 +1721,6 @@ FIGURES: dict[str, Callable[[Path], Path]] = {
     "fig17": fig17_conservative,
     "fig18": fig18_convection,
     "fig19": fig19_section_types,
+    "fig20": fig20_adaptive_regions,
     "slides": slides_data,
 }
