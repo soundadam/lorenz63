@@ -72,6 +72,7 @@ from lorenz63.statistics import (  # noqa: E402
     lorenz_map,
     poincare_section,
     section_return_map,
+    wing_switch_threshold,
 )
 from lorenz63.system import (  # noqa: E402
     RHO_HOMOCLINIC,
@@ -910,10 +911,11 @@ def fig14_poincare(output: Path) -> Path:
     data = _cached("section", _section_data)
     plane_z = CLASSICAL.rho - 1.0
 
-    fig = plt.figure(figsize=(13.0, 4.6))
+    fig = plt.figure(figsize=(15.0, 5.6))
+    grid = fig.add_gridspec(1, 3, width_ratios=[1.0, 1.0, 1.45])
 
     ax = _portrait_axes(
-        fig.add_subplot(1, 3, 1, projection="3d"), f"截面 z = ρ−1 = {plane_z:.0f}"
+        fig.add_subplot(grid[0], projection="3d"), f"截面 z = ρ−1 = {plane_z:.0f}"
     )
     ax.plot(data["orbit_x"], data["orbit_y"], data["orbit_z"], color=C_MUTED, lw=0.3, alpha=0.7)
     xs, ys, zs = plane_patch(
@@ -933,7 +935,7 @@ def fig14_poincare(output: Path) -> Path:
         depthshade=False,
     )
 
-    ax = _style(fig.add_subplot(1, 3, 2))
+    ax = _style(fig.add_subplot(grid[1]))
     right = data["sec_x"] > 0.0
     ax.plot(data["sec_x"][right], data["sec_y"][right], ".", color=C_REF, ms=1.1, alpha=0.5)
     ax.plot(data["sec_x"][~right], data["sec_y"][~right], ".", color=C_LOOSE, ms=1.1, alpha=0.5)
@@ -943,7 +945,7 @@ def fig14_poincare(output: Path) -> Path:
         f"截面上的 {data['sec_x'].size} 个穿越点（上行）\n两支分别绕 C+ 与 C−", fontsize=10
     )
 
-    ax = _style(fig.add_subplot(1, 3, 3))
+    ax = _style(fig.add_subplot(grid[2]))
     same_wing = np.sign(data["map_n"]) == np.sign(data["map_next"])
     for mask, colour, label in (
         (same_wing, C_MID, "留在同一叶"),
@@ -961,12 +963,39 @@ def fig14_poincare(output: Path) -> Path:
     lo = float(min(data["map_n"].min(), data["map_next"].min()))
     hi = float(max(data["map_n"].max(), data["map_next"].max()))
     ax.plot([lo, hi], [lo, hi], color="k", ls=":", lw=0.9)
+
+    # Outside the cutoff every crossing switches wing, inside it every one stays.
+    cutoff = wing_switch_threshold(data["map_n"], data["map_next"])
+    for side in (-1.0, 1.0):
+        ax.axvline(side * cutoff, color=C_ACCENT, ls="--", lw=0.9)
+        ax.axvspan(side * cutoff, side * hi * 1.05, color=C_ACCENT, alpha=0.06, lw=0)
+    ax.plot([], [], color=C_ACCENT, ls="--", lw=0.9, label=f"门槛 |x| = {cutoff:.2f}")
+
+    # Cobweb: up/down to the map gives x_{n+1}, across to the diagonal makes it
+    # the next x_n. The first crossings already show a run of switches and a stay.
+    steps = 8
+    walk = np.concatenate([data["map_n"][:1], data["map_next"][:steps]])
+    web_x = np.repeat(walk, 2)[1:-1]
+    web_y = np.repeat(walk, 2)[2:]
+    ax.plot(
+        np.concatenate([walk[:1], web_x]),
+        np.concatenate([walk[:1], web_y]),
+        color="k",
+        lw=0.8,
+        alpha=0.85,
+        label="蛛网：竖到映射、横回对角线",
+    )
+    ax.plot(walk, walk, "o", color="k", ms=3.0)
+    for k, v in enumerate(walk):
+        # Left wing labels go above-left of the diagonal, right wing below-right.
+        offset = (-10, 3) if v < 0 else (5, -10)
+        ax.annotate(str(k), (v, v), xytext=offset, textcoords="offset points", fontsize=8)
     ax.set_xlabel("第 n 次穿越的 x")
     ax.set_ylabel("第 n+1 次穿越的 x")
     ax.set_title(
         f"截面上的一维回归映射（{same_wing.mean() * 100:.0f}% 的穿越不换叶）", fontsize=10
     )
-    ax.legend(loc="upper left", fontsize=8, markerscale=6)
+    ax.legend(loc="upper left", bbox_to_anchor=(0.16, 0.98), fontsize=8, markerscale=4)
 
     fig.suptitle(
         "Poincaré 截面：三维流 → 二维映射 → 一条一维曲线（吸引子横向厚度近乎为零）",

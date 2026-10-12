@@ -18,6 +18,8 @@ from lorenz63.statistics import (
     lorenz_map,
     map_thickness,
     poincare_section,
+    section_return_map,
+    wing_switch_threshold,
 )
 from lorenz63.system import LorenzParams
 
@@ -116,6 +118,27 @@ def test_poincare_directions_are_disjoint_but_equinumerous(long_trajectory) -> N
 
 def test_poincare_returns_empty_for_an_unreached_plane(long_trajectory) -> None:
     assert poincare_section(long_trajectory, plane_z=1e6).shape == (0, 3)
+
+
+def test_wing_switch_threshold_sits_in_the_gap() -> None:
+    s_n = np.array([10.0, -12.0, 14.0, -16.0])
+    s_next = np.array([12.0, -14.0, -16.0, 10.0])  # inside 12 stays, outside 14 switches
+    assert wing_switch_threshold(s_n, s_next) == pytest.approx(13.0)
+
+
+def test_wing_switch_threshold_refuses_overlap() -> None:
+    s_n = np.array([10.0, 15.0, 14.0])
+    s_next = np.array([12.0, 14.0, -10.0])  # 15 stays but 14 switches
+    with pytest.raises(ValueError, match="overlap"):
+        wing_switch_threshold(s_n, s_next)
+
+
+def test_wing_switch_is_decided_by_one_cutoff(long_trajectory) -> None:
+    """On the attractor, staying or switching wing is a function of |x| alone."""
+    crossings = poincare_section(long_trajectory, plane_z=CLASSICAL.rho - 1.0)
+    x_n, x_next = section_return_map(crossings)
+    cutoff = wing_switch_threshold(x_n, x_next)
+    assert np.abs(x_n).min() < cutoff < np.abs(x_n).max()
 
 
 def test_invariant_density_normalises(long_trajectory) -> None:
