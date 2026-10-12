@@ -216,6 +216,8 @@ pre.eig {
 .backup-list { margin: 0; padding: 0 0 0 1.6em; columns: 2; column-gap: 72px; font-size: 26px; line-height: 1.5; }
 .backup-list li { break-inside: avoid; padding: 8px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
 .backup-list li:hover { color: var(--navy); }
+.goto { align-self: flex-start; font-size: 18px; color: var(--ink-2); cursor: pointer; border-bottom: 1px dashed var(--rule); }
+.goto:hover { color: var(--navy); border-color: var(--navy); }
 .backup-list li span { font-size: 18px; color: var(--ink-2); margin-left: 12px; }
 
 /* ---------- persistent footer: argument chain ---------- */

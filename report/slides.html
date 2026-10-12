@@ -357,6 +357,7 @@ def rk4_step(u, h):      <span class="muted"># 经典 RK4：四阶</span>
         </tbody>
       </table>
       <div class="callout navy-bg">开场的演示就是同一个 DOP853 只换 rtol。每一步的误差都很小，<strong>问题是这些误差怎么累积</strong>。</div>
+      <a class="goto" data-goto="integratorsSlide">备用：RK4、RK45 与 DOP853 →</a>
     </div>
   </div>
   <aside class="notes">
@@ -820,11 +821,46 @@ uv run lorenz63 figure all</pre>
   <header><p class="eyebrow">备用</p><h2>备用页</h2></header>
   <ol class="backup-list" id="backupList"></ol>
   <aside class="notes">
-    <p>正文到上一页结束。提问时点这里的条目直接跳过去；在任何一页按 B 回到这里，按 Home 回封面。</p>
+    <p>正文到上一页结束。提问时点这里的条目直接跳过去；在任何一页按 B 回到这里。从正文进入备用页后，按 R 或底栏的“返回”回到离开时的那一页。</p>
   </aside>
 </section>
 
-<!-- 36 分岔 -->
+<!-- 36 积分器 -->
+<section class="slide" id="integratorsSlide" data-part="b" data-min="0" data-title="RK4、RK45 与 DOP853">
+  <header><p class="eyebrow">备用 · 绪论 · 时间推进</p><h2>三个积分器：阶数、步长、误差估计</h2></header>
+  <div class="split even">
+    <div class="col">
+      <table class="data" style="font-size:23px">
+        <thead><tr><th></th><th>RK4</th><th>RK45</th><th>DOP853</th></tr></thead>
+        <tbody>
+          <tr><td>阶数 p</td><td class="num">4</td><td class="num">5</td><td class="num"><strong>8</strong></td></tr>
+          <tr><td>步长</td><td>固定，人给</td><td>自适应</td><td>自适应</td></tr>
+          <tr><td>误差估计</td><td class="muted">无</td><td>5 阶 − 4 阶</td><td>5 阶与 3 阶组合</td></tr>
+          <tr><td>每步 f 次数</td><td class="num">4</td><td class="num">6</td><td class="num">12</td></tr>
+        </tbody>
+      </table>
+      <p class="muted" style="font-size:20px">RK45 即 scipy 的 Dormand–Prince 5(4)；DOP853 是 Hairer–Wanner 的 8(5,3)。演示里的 DOP853 由 scipy 逐行移植。</p>
+    </div>
+    <div class="col">
+      <div class="callout navy-bg" style="font-size:23px"><strong>嵌入式</strong>：同一组 \(k_i\)，两套权重，得到两个解；两者之差就是本步误差。<br>err ≤ 1 接受，否则重算；下一步 \(h \leftarrow 0.9\,h\,\text{err}^{-1/p}\)。</div>
+      <p style="font-size:24px">步数 \(\propto \text{rtol}^{-1/p}\)。rtol 收紧 10<sup>6</sup> 倍：</p>
+      <div class="strip" style="gap:40px">
+        <div class="kv small"><span class="v">10<sup>6/5</sup> ≈ 16</span><span class="k">RK45 步数倍增</span></div>
+        <div class="kv small"><span class="v stat">10<sup>6/8</sup> ≈ 5.6</span><span class="k">DOP853 步数倍增</span></div>
+      </div>
+      <p style="font-size:24px">积分器决定<strong>代价</strong>；每 10 倍 rtol 换 2.55 个时间单位，由 λ₁ 决定。</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p class="q">被问“为什么用 DOP853，不用 RK45 或 RK4？”时用这一页。</p>
+    <p>三个都是显式 Runge–Kutta：一步里取几个斜率，加权平均。RK4 取 4 个，没有误差估计，步长只能人给。RK45 和 DOP853 是嵌入式的：同一组斜率配两套权重，算出一高一低两个解，两者的差就是这一步的误差估计，几乎不花额外的 f。超过 rtol 就缩步重算。</p>
+    <p>心算：p 阶方法，步数随 rtol 的 −1/p 次方涨。rtol 收紧一百万倍，RK45 是 10 的 6/5 次方，约 16 倍；DOP853 是 10 的 6/8 次方，约 5.6 倍。DOP853 每步贵一倍，但步数涨得慢得多。实测（solve_ivp，t ∈ [0, 45]，1e−6 到 1e−12）：RK45 多 15.7 倍，DOP853 多 5.8 倍。rtol = 1e−4 时两者的 f 次数持平；容差越紧，DOP853 越划算。</p>
+    <p>2.55 和换哪个积分器无关：它是 ln10 / λ₁，由方程决定。积分器只决定把 rtol 压到那么小要花多少算力。</p>
+    <p class="key">留下一句：积分器决定代价，λ₁ 决定 2.55。</p>
+  </aside>
+</section>
+
+<!-- 37 分岔 -->
 <section class="slide" data-part="b" data-min="0" data-title="分岔图">
   <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>分岔图：叉式、同宿爆炸、Hopf</h2></header>
   <div class="full">
@@ -841,7 +877,7 @@ uv run lorenz63 figure all</pre>
   </aside>
 </section>
 
-<!-- 37 本征结构 -->
+<!-- 38 本征结构 -->
 <section class="slide" data-part="b" data-min="0" data-title="本征结构">
   <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>不动点的本征结构决定吸引子形状</h2></header>
   <div class="full">
@@ -855,7 +891,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 38 Poincaré -->
+<!-- 39 Poincaré -->
 <section class="slide" data-part="b" data-min="0" data-title="Poincaré 截面">
   <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>三维流 → 二维截面 → 一维映射</h2></header>
   <div class="full">
@@ -872,7 +908,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 39 两件事 -->
+<!-- 40 两件事 -->
 <section class="slide" data-part="b" data-min="0" data-title="稳定性与 Lyapunov 指数">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>数值稳定性 ≠ Lyapunov 不稳定性</h2></header>
   <div class="center">
@@ -890,7 +926,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 40 稳定域 -->
+<!-- 41 稳定域 -->
 <section class="slide" data-part="b" data-min="0" data-title="RK4 稳定域">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>瓶颈是精度，不是稳定性</h2></header>
   <div class="split">
@@ -910,7 +946,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 41 正交化 -->
+<!-- 42 正交化 -->
 <section class="slide" data-part="b" data-min="0" data-title="QR 重正交化">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>Lyapunov 谱需要 QR 重正交</h2></header>
   <div class="full">
@@ -928,7 +964,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 42 谱 -->
+<!-- 43 谱 -->
 <section class="slide" data-part="b" data-min="0" data-title="Lyapunov 谱与自洽检验">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>自洽检验：Σλᵢ = tr J</h2></header>
   <div class="split">
@@ -946,7 +982,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 43 FTLE -->
+<!-- 44 FTLE -->
 <section class="slide" data-part="b" data-min="0" data-title="有限时间 Lyapunov 指数">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>有限时间 Lyapunov 指数：局部拉伸率差别极大</h2></header>
   <div class="split">
@@ -969,7 +1005,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 44 收敛性 -->
+<!-- 45 收敛性 -->
 <section class="slide" data-part="b" data-min="0" data-title="收敛性研究的推论">
   <header><p class="eyebrow">备用 · ④ 判据随系统类型变</p><h2>推论：混沌问题的收敛阶要在短窗口里验</h2></header>
   <div class="split even">
@@ -988,7 +1024,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 45 数字汇总 -->
+<!-- 46 数字汇总 -->
 <section class="slide" data-part="b" data-min="0" data-title="数字汇总">
   <header><p class="eyebrow">备用</p><h2>数字汇总</h2></header>
   <div class="split even" style="font-size:21px">
@@ -1039,7 +1075,8 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
     <button type="button" id="next" aria-label="下一页">→</button>
     <button type="button" id="notesBtn" aria-pressed="false">讲稿 N</button>
     <button type="button" id="fsBtn">全屏 F</button>
-    <span class="hint">← → 翻页 · N 讲稿 · F 全屏 · B 备用页</span>
+    <button type="button" id="backBtn" hidden></button>
+    <span class="hint">← → 翻页 · N 讲稿 · F 全屏 · B 备用页 · R 返回</span>
   </div>
 </div>
 

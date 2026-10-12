@@ -6,6 +6,7 @@
   const chips = Array.from(document.querySelectorAll("#chain span"));
   const panel = document.getElementById("notesPanel");
   const notesBtn = document.getElementById("notesBtn");
+  const backBtn = document.getElementById("backBtn");
   const N = slides.length;
 
   // 目录和各段分隔页共用一张思维导图；点一行跳到那一段的分隔页
@@ -22,6 +23,10 @@
     map.querySelectorAll(".mm-row").forEach(row =>
       row.addEventListener("click", () => go(firstOf(row.dataset.p))));
   });
+
+  // 正文里的 data-goto 链接：跳到那个 id 的页
+  document.querySelectorAll("[data-goto]").forEach(a =>
+    a.addEventListener("click", () => go(slides.findIndex(s => s.id === a.dataset.goto))));
 
   // 备用目录：列出它后面的每一页
   const backupAt = slides.findIndex(s => s.id === "backupIndex");
@@ -44,6 +49,7 @@
   const total = cumulative[N - 1];
 
   let cur = 0;
+  let ret = null;   // 从正文进入备用页时记下离开的那一页，R 或“返回”回去
   const fromHash = /^#s(\d+)$/.exec(location.hash || "");
   if (fromHash) cur = Math.min(N - 1, Math.max(0, parseInt(fromHash[1], 10) - 1));
 
@@ -56,7 +62,10 @@
   function fmt(m) { return (Math.round(m * 2) / 2).toFixed(1).replace(/\.0$/, ""); }
 
   function go(n) {
-    cur = Math.min(N - 1, Math.max(0, n));
+    n = Math.min(N - 1, Math.max(0, n));
+    if (n < backupAt) ret = null;
+    else if (cur < backupAt && ret === null && n !== cur) ret = cur;
+    cur = n;
     slides.forEach((s, k) => s.classList.toggle("active", k === cur));
     const sl = slides[cur];
     const part = sl.dataset.part;
@@ -65,6 +74,8 @@
     const label = cur > backupAt ? "备用 " + (cur - backupAt) : cur === backupAt ? "备用" : (cur + 1) + " / " + backupAt;
     document.getElementById("pg").textContent = label;
     document.getElementById("count").textContent = label;
+    backBtn.hidden = ret === null;
+    if (ret !== null) backBtn.textContent = "↩ 返回第 " + (ret + 1) + " 页 R";
     const notes = sl.querySelector(".notes");
     document.getElementById("nBody").innerHTML = notes ? notes.innerHTML : "";
     document.getElementById("nTime").textContent =
@@ -98,6 +109,7 @@
   document.getElementById("next").addEventListener("click", () => go(cur + 1));
   notesBtn.addEventListener("click", () => toggleNotes());
   document.getElementById("fsBtn").addEventListener("click", toggleFullscreen);
+  backBtn.addEventListener("click", () => { if (ret !== null) go(ret); });
 
   document.addEventListener("keydown", e => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -106,6 +118,7 @@
     else if (k === "ArrowLeft" || k === "ArrowUp" || k === "PageUp") { e.preventDefault(); go(cur - 1); }
     else if (k === "Home") go(0);
     else if (k === "b" || k === "B") go(backupAt);
+    else if ((k === "r" || k === "R") && ret !== null) go(ret);
     else if (k === "End") go(N - 1);
     else if (k === "n" || k === "N") toggleNotes();
     else if (k === "f" || k === "F") toggleFullscreen();
