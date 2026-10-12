@@ -1,4 +1,4 @@
-/* ---------- 翻页、讲稿、计时；进出页时开关 hero / split / roll 三个演示 ---------- */
+/* ---------- 翻页、讲稿、计时；进出页时开关各页的演示 ---------- */
 (function () {
   const stage = document.getElementById("stage");
   const area = document.getElementById("stageArea");
@@ -87,6 +87,7 @@
     paradox.toggle(sl.id === "paradoxSlide");
     split.toggle(sl.id === "splitSlide");
     roll.toggle(sl.id === "rollSlide");
+    eigen3d.toggle(sl.id === "eigenSlide");
   }
 
   function toggleNotes(force) {

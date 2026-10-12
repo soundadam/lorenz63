@@ -348,20 +348,63 @@ C±     −13.854578,  +0.093956 ± 10.194505 i       一实一对 → 收缩方
 
 右格把截面进一步压成一维：把第 n 次穿越的 x 对第 n+1 次的 x 作图。四段曲线，按是否换叶着色——**56.7% 的穿越留在同一叶**。这张图和 6.2 节那张 Lorenz 映射（z 的极大值序列）是两条独立的降维路线，得到的结论一致：**三维的混沌流，其长期行为由一条一维映射编码**。而那条映射处处 |F′|>1，所以它的任何不动点都不可能稳定——混沌的来源。
 
-### 3.4 正交化：为什么 Lyapunov 谱必须重正交
+### 3.4 Lyapunov 指数与 QR 重正交化
+
+**λ 是什么。** 用 §2.0 的记号：轨道旁的小扰动满足 δu̇ = J(u(t)) δu，解是 δu(t) = M(t) δu₀，M′ = J M、M(0) = I。M(t) 把初始扰动送到 t 时刻。Lyapunov 指数是它的长期对数增长率：
+
+$$
+\lambda = \lim_{t\to\infty} \frac{1}{t}\ln\frac{|M(t)\,\delta u_0|}{|\delta u_0|}.
+$$
+
+随手取一个 δu₀，得到的都是最大的那个 λ₁。三个指数 λ₁ ≥ λ₂ ≥ λ₃ 要这样读：一般的线段按 $e^{\lambda_1 t}$ 长，一般的平行四边形面积按 $e^{(\lambda_1+\lambda_2)t}$ 长，体积按 $e^{(\lambda_1+\lambda_2+\lambda_3)t}$ 长。
+
+**为什么不能直接取 J 的特征值。** J 是常数时可以：M = e<sup>Jt</sup>，λ 就是特征值的实部（§2.3 在不动点上用的正是这个）。吸引子上 J 沿轨道一直在变——§4.2 沿吸引子采样，特征值实部从 −21.9 到 +10.6，36% 为正——M 是一长串不同矩阵的乘积，乘积的增长率不是各个因子特征值的平均。只有一个例外：迹。由 Liouville 公式 det M = exp∫tr J dt，体积的增长率可以直接从 J 读出来，所以**三个指数之和**等于 tr J 的时间平均；单个指数没有这样的捷径。
+
+**板书的例子。** 每过一个时间单位，x 方向拉长 2 倍、y 方向压扁一半：每步乘 diag(2, 1/2)，两个指数是 ±ln 2 = ±0.69。拿两个向量 v₁ = (1, 0)、v₂ = (1, 1) 去跟，n 步之后
+
+$$
+v_1 = (2^n,\ 0),\qquad v_2 = (2^n,\ 2^{-n}).
+$$
+
+- v₂ 的长度约 2ⁿ，量出来的增长率是 +ln 2：又是 λ₁。
+- v₂ 与 v₁ 的夹角约 2⁻ⁿ / 2ⁿ = 4⁻ⁿ。n = 10 时 4⁻¹⁰ ≈ 10⁻⁶ 弧度，两个向量已经分不开。
+- −ln 2 藏在 v₂ 那个越来越小的 y 分量里，被 2ⁿ 的 x 分量盖住了。
+
+把 v₂ 沿 v₁ 的分量减掉（Gram–Schmidt），剩下 (0, 2⁻ⁿ)，长度的增长率是 −ln 2：λ₂ 出来了。也可以从面积看：v₁、v₂ 张成的平行四边形面积是行列式 2ⁿ · 2⁻ⁿ − 0 = 1，永远不变，所以 λ₁ + λ₂ = 0，λ₂ = −λ₁。
+
+**QR 就是这一步 Gram–Schmidt。** 把 M 的三列做 QR 分解 M = QR，Q 的列正交归一，R 上三角。Gram–Schmidt 逐列做的事和上面一样，于是对角元各有几何意义：
+
+- |R₁₁| = 第一列的长度 → 增长率 λ₁；
+- |R₁₁R₂₂| = 前两列张成的平行四边形面积 → λ₁ + λ₂；
+- |R₁₁R₂₂R₃₃| = |det M|，体积 → λ₁ + λ₂ + λ₃。
+
+ln|R<sub>kk</sub>| 量的是"第 k 列在前 k−1 列张成的空间之外长出来的那一部分"，除以时间就是 λ<sub>k</sub>。
+
+**为什么隔一段做一次。** 把 [0, T] 切成窗口，第 k 个窗口的 M 记为 M<sub>k</sub>，从上一个窗口留下的正交标架 Q<sub>k−1</sub> 出发再做 QR：M<sub>k</sub>Q<sub>k−1</sub> = Q<sub>k</sub>R<sub>k</sub>。连起来，
+
+$$
+M_n \cdots M_2 M_1 = Q_n\,R_n \cdots R_2 R_1 .
+$$
+
+上三角矩阵相乘还是上三角，对角元就是各自对角元相乘。所以逐窗口累加 ln|R<sub>ii</sub><sup>(k)</sup>|，和最后对整个 M 做一次 QR，**数学上是同一个数**。分段只是记账方式不同；为什么在双精度下非分段不可，下面这张图给出实测。
 
 ![正交化](figures/fig16_orthogonalisation.png)
 
-计算 Lyapunov 谱的做法是：沿轨道同时积分变分方程 $\dot{Q} = J(u)\,Q$，带着三个切向量走，每隔一小段做一次 QR 重正交化，把 $\log|R_{ii}|$ 累加起来。左格画的就是这个"运送着的正交标架"。
+代码（`lyapunov.py` 的 Benettin 循环）：状态和 3×3 的切向量矩阵一起用 DOP853 积分一个窗口（Δt = 1），对切向量矩阵做 QR，把 ln|R<sub>ii</sub>| 加进累加器，用 Q 替换它，进入下一个窗口。左格画的是这个"运送着的正交标架"。
 
 **如果不做正交化会怎样？**中间和右边两格是实测的对照（同一条轨道，同一个变分方程，只是从不做 QR）：
 
-- **中格**：三个切向量两两之间的夹角从 90° 按指数塌向 0——到 t=30 时只剩 **3×10⁻¹⁴ 弧度**。原因很简单：任何一般的向量都含有最不稳定方向的分量，这个分量按 $e^{\lambda_1 t}$ 长，其余按更小的率长，于是三个向量都倒向同一条线，塌缩率约为 λ₁−λ₂。
+- **中格**：三个切向量两两之间的夹角从 90° 按指数塌向 0——到 t=30 时只剩 **3×10⁻¹⁴ 弧度**。这就是板书例子里的 4⁻ⁿ：一般的向量都含有最不稳定方向的分量，这个分量按 $e^{\lambda_1 t}$ 长，其余按更小的率长，于是三个向量都倒向同一条线，塌缩率约为 λ₁−λ₂。心算：这一段的有限时间 λ₁ 约 1.0（右格虚线的斜率），λ₂ ≈ 0，e<sup>−30</sup> = 10<sup>−30/2.3</sup> ≈ 10⁻¹³，实测 3×10⁻¹⁴。
 - **右格**：三条虚线是不正交化时三个向量的 log 范数，斜率分别是 **0.98 / 1.01 / 1.05**——**全是 λ₁**（T=30 的有限时间涨落使它们略高于 0.904）。λ₂ 和 λ₃ 一点痕迹都没有。做了 QR 之后，三条实线（$\sum\log|R_{ii}|$ 的累积）的斜率才分开成 0.92 / −0.003 / −14.58（这一格是 T=200 的短跑，与 5.1 节 T=2000 的谱在第二位小数上一致）。
 
-所以重正交化不是数值上的"清理"，而是**唯一让 λ₂、λ₃ 可见的机制**：QR 每次把第 k 个向量投影到前 k−1 个的正交补上，强行保住那些正在被指数压扁的方向。这也解释了为什么 5.1 节那个 Σλᵢ = tr J 的检验有意义——它同时检验了变分方程和 QR 记账两件事。
+所以 QR 不是数值上的"清理"，而是**让 λ₂、λ₃ 可见的机制**：它每次把第 k 个向量投影到前 k−1 个的正交补上，保住那些正在被指数压扁的方向。"隔一段做一次"才是数值上的需要，原因有两条：
 
-数值上还有一个附带好处：不正交化的话，三个向量的范数在 t=30 时已经是 $e^{30}\approx 10^{13}$，而 Benettin 要积到 T=2000——$e^{1800}$ 早就溢出了。每个窗口把范数取出来放进累加器、把向量归一化，顺手解决了这个问题。
+- **方向**：夹角到 10⁻¹⁶ 就低于双精度的分辨率，那时第二列减掉第一列的分量只剩舍入误差，λ₂ 再也取不回来。按 λ₁ ≈ 0.9 心算，ln(10¹⁶)/0.9 ≈ 41 个时间单位之后就是这样——和 5.2 节的双精度预报极限是同一个数，同一个 e<sup>λ₁t</sup> 吃掉同样的 16 位。窗口取 Δt = 1，每个窗口里夹角只缩 e<sup>−0.9</sup> ≈ 0.4 倍，毫无压力。
+- **大小**：范数在 T=2000 时是 $e^{0.9\times 2000} = e^{1800}$，而双精度在 e<sup>709</sup> 就溢出。每个窗口把范数取出来放进累加器、把向量归一化，顺手解决。
+
+**λ₂ 与 λ₃ 怎样心算。** λ₂ = 0：沿流方向的扰动 δu = ε f(u) 就是"同一条轨道早走 ε"，它随轨道走成 ε f(u(t))，有界、又不趋于零（轨道不停下），增长率是零。λ₃ 不用另算：三个之和是 tr J = −(σ+1+β) = −41/3 ≈ −13.67，所以 λ₃ = −13.67 − 0.90 − 0 = −14.57，与 5.1 节实测的 −14.570 对上。
+
+**和式检验守什么、不守什么。** 由 QR 那三条的最后一条，每个窗口里 Σ ln|R<sub>ii</sub>| = ln|det M<sub>k</sub>| 都应当精确等于 tr J · Δt。实测前 50 个 Δt = 1 的窗口，每个窗口的 Σ ln|R<sub>ii</sub>| 都落在 −13.6666667 ± 2×10⁻⁷ 之内，而单窗口的 ln|R₁₁| 在 −1.9 到 +4.2 之间跳。所以 5.1 节的 Σλᵢ = tr J 守的是三件事：变分方程写对了、积分够准、QR 记账没错。三个指数**怎么分**这个总和，它管不到；λ₁ 单独的依据是 5.2 节的系综斜率 0.875，那条路根本不解变分方程。
 
 ---
 
@@ -415,7 +458,7 @@ $$
 \lambda = (\ +0.903764,\ -0.000411,\ -14.570019\ )
 $$
 
-λ₂≈0 是应该的：任何有界非定常流沿流方向都有一个零指数。
+λ₂≈0 是应该的：任何有界非定常流沿流方向都有一个零指数（3.4 节末）。
 
 **诚实点 2：λ₁ 本身是个数值结果，凭什么信它？**
 
@@ -435,7 +478,7 @@ tr J（精确）= -13.666666667
 
 ![Lyapunov](figures/fig08_lyapunov.png)
 
-这个恒等式同时是 `tests/test_lyapunov.py::test_spectrum_sums_to_the_divergence` 的断言。如果变分方程写错、QR 记账错、或者积分精度不够，这个和会明显偏掉。它对得上，λ₁ 就有了独立于"看起来合理"的依据。
+这个恒等式同时是 `tests/test_lyapunov.py::test_spectrum_sums_to_the_divergence` 的断言。如果变分方程写错、QR 记账错、或者积分精度不够，这个和会明显偏掉。它守的是总和，三个指数怎么分这个和它管不到（3.4 节末）；λ₁ 单独的依据是下一节没有共用代码的系综斜率。
 
 由谱可得 Kaplan–Yorke 维数
 
@@ -689,18 +732,6 @@ $$
 
 **Nusselt 数。** 底板 Z=0 处，水平平均后 B 项的 cos kX 平均为零，只剩 C 项：∂T̄/∂Z = −ΔT/H − 2mC。除以传导斜率 −ΔT/H 得 Nu = 1 + 2πC/ΔT。按 §1.2 的标度 C = zΔT/(πρ)，于是 Nu = 1 + 2z/ρ。
 
-## 参考
-
-1. E. N. Lorenz, *Deterministic Nonperiodic Flow*, J. Atmos. Sci. **20**, 130 (1963).
-2. C. Sparrow, *The Lorenz Equations: Bifurcations, Chaos, and Strange Attractors*, Springer (1982).
-3. W. Tucker, *A Rigorous ODE Solver and Smale's 14th Problem*, Found. Comput. Math. **2**, 53 (2002).
-4. G. Benettin et al., *Lyapunov Characteristic Exponents for Smooth Dynamical Systems*, Meccanica **15**, 9 (1980).
-5. E. Hairer, C. Lubich, G. Wanner, *Geometric Numerical Integration*, 2nd ed., Springer (2006).
-6. J. C. Sprott, *Chaos and Time-Series Analysis*, Oxford (2003).
-7. B. Saltzman, *Finite Amplitude Free Convection as an Initial Value Problem — I*, J. Atmos. Sci. **19**, 329 (1962).
-8. H. Haken, *Analogy between Higher Instabilities in Fluids and Lasers*, Phys. Lett. A **53**, 77 (1975).
-9. M. Gorman, P. J. Widmann, K. A. Robbins, *Nonlinear Dynamics of a Convection Loop*, Physica D **19**, 45 (1986).
-10. S. H. Strogatz, *Nonlinear Dynamics and Chaos*, 2nd ed., Westview (2015), §9.1（Malkus 水车）.
 ## 附录 D：三次多项式的根，§2.3 用到的五件事
 
 p(λ) = λ³ + a₂λ² + a₁λ + a₀，系数是实数。
@@ -741,3 +772,15 @@ $$
 
 方括号恒正，a₂a₁ − a₀ 与 α 反号：a₂a₁ > a₀ ⇔ α < 0 ⇔ 复根对在左半平面。加上第 1 条的系数全正（保证实根 −r < 0），就是三次的 Routh–Hurwitz 判据。α = 0 时 a₀ = a₂a₁，p 分解成 (λ + a₂)(λ² + a₁)：穿越频率 ω² = a₁，第三个根 −a₂。
 
+## 参考
+
+1. E. N. Lorenz, *Deterministic Nonperiodic Flow*, J. Atmos. Sci. **20**, 130 (1963).
+2. C. Sparrow, *The Lorenz Equations: Bifurcations, Chaos, and Strange Attractors*, Springer (1982).
+3. W. Tucker, *A Rigorous ODE Solver and Smale's 14th Problem*, Found. Comput. Math. **2**, 53 (2002).
+4. G. Benettin et al., *Lyapunov Characteristic Exponents for Smooth Dynamical Systems*, Meccanica **15**, 9 (1980).
+5. E. Hairer, C. Lubich, G. Wanner, *Geometric Numerical Integration*, 2nd ed., Springer (2006).
+6. J. C. Sprott, *Chaos and Time-Series Analysis*, Oxford (2003).
+7. B. Saltzman, *Finite Amplitude Free Convection as an Initial Value Problem — I*, J. Atmos. Sci. **19**, 329 (1962).
+8. H. Haken, *Analogy between Higher Instabilities in Fluids and Lasers*, Phys. Lett. A **53**, 77 (1975).
+9. M. Gorman, P. J. Widmann, K. A. Robbins, *Nonlinear Dynamics of a Convection Loop*, Physica D **19**, 45 (1986).
+10. S. H. Strogatz, *Nonlinear Dynamics and Chaos*, 2nd ed., Westview (2015), §9.1（Malkus 水车）.

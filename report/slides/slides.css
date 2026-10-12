@@ -123,6 +123,22 @@ table.data tr.hl td { background: var(--wash-orbit); }
 table.data tr.hl-navy td { background: var(--wash-navy); }
 table.data.tight th, table.data.tight td { padding: 8px 18px; }
 
+/* 备用「本征结构」：左边裁出 fig15 的左格，右边是可旋转的三维视图 */
+.eig3d { flex: 1; min-height: 0; display: grid; grid-template-columns: 500px 1fr; gap: 36px; margin-bottom: 18px; }
+.crop-left > div { overflow: hidden; aspect-ratio: 975 / 780; }
+.crop-left img { width: calc(1920 / 975 * 100%); max-width: none; margin-top: -6.2%; object-fit: initial; flex: none; }
+.view3d { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 8px; position: relative; }
+.view3d canvas { width: 780px; height: 400px; display: block; background: var(--wash-navy); border-radius: 4px; cursor: grab; touch-action: none; }
+.view3d canvas:active { cursor: grabbing; }
+.legend3d { position: absolute; top: 10px; left: 14px; margin: 0; padding: 0; list-style: none; font-size: 16px; line-height: 1.6; color: var(--ink-2); pointer-events: none; }
+.legend3d i { display: inline-block; width: 22px; height: 4px; margin-right: 8px; vertical-align: middle; }
+.legend3d i.plane { height: 12px; background: var(--orbit); opacity: .3; }
+.view3d .ctrl { gap: 10px; flex-wrap: wrap; align-items: center; }
+.view3d .ctrl button { padding: 4px 12px; }
+.view3d .readout, .view3d .hint3d { position: absolute; top: 372px; font-size: 16px; color: var(--ink-2); pointer-events: none; }
+.view3d .readout { left: 14px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.view3d .hint3d { right: 14px; }
+
 pre.eig {
   margin: 0; font-family: var(--mono); font-size: 22px; line-height: 1.7;
   background: var(--wash-navy); padding: 18px 26px; border-radius: 4px; overflow-x: auto;

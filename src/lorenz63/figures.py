@@ -1412,10 +1412,13 @@ HERO_DELTA = 1e-5
 
 
 def slides_data(output: Path) -> Path:
-    """The start point shared by every slide demo, and the cover's two orbits.
+    """The start point shared by every slide demo, the cover's two orbits, and fig15's 3-D panel.
 
     The cover shows two reference-accuracy trajectories ``HERO_DELTA`` apart,
     up to the first time their separation exceeds the report's threshold.
+    ``eigen`` is the rho=28 eigenstructure at each fixed point, for the slide
+    that redraws fig15's right panel as a rotatable view; a spiral point's
+    plane axes are orthonormalised exactly as in fig15.
     Written as a script that sets ``window.LORENZ_DATA`` so that ``slides.html``
     can load it from ``file://``, where ``fetch`` is blocked.
     """
@@ -1429,17 +1432,33 @@ def slides_data(output: Path) -> Path:
     def series(v: NDArray) -> str:
         return "[" + ",".join(f"{x:.4f}" for x in v[:n]) + "]"
 
+    def vec(v: NDArray) -> str:
+        return "[" + ",".join(f"{float(x):.6f}" for x in v) + "]"
+
+    eigen = []
+    for es in all_eigen_structures(CLASSICAL):
+        axes = es.directions if es.kind == "real" else np.array(
+            [es.directions[0], *_orthonormal_pair(es.spiral_plane)]
+        )
+        eigen.append(
+            f'{{"name":"{es.name}","kind":"{es.kind}","p":{vec(es.point)},'
+            f'"re":{vec(es.eigenvalues.real)},"im":{vec(es.eigenvalues.imag)},'
+            '"dirs":[' + ",".join(vec(d) for d in axes) + "]}"
+        )
+
     output.mkdir(parents=True, exist_ok=True)
     path = output / "slides_data.js"
     path.write_text(
         "// 由 `lorenz63 figure slides` 生成。u0 = on_attractor(CLASSICAL)；hero 是封面的两条轨道："
         f"DOP853 rtol=1e-13，初值在 x 上差 {HERO_DELTA:g}，"
-        f"到 |Δ| 首次超过 {DEFAULT_THRESHOLD:g} 为止。\n"
+        f"到 |Δ| 首次超过 {DEFAULT_THRESHOLD:g} 为止；"
+        "eigen 是 ρ=28 各不动点的特征值与方向（spiral 的后两个方向是不变平面的正交轴）。\n"
         "window.LORENZ_DATA = {"
         '"u0":[' + ",".join(repr(float(x)) for x in u0) + "],"
         f'"hero":{{"dt":{dt},"delta":{HERO_DELTA},'
         f'"ax":{series(a.x)},"az":{series(a.z)},"bx":{series(b.x)},"bz":{series(b.z)},'
-        '"logd":[' + ",".join(f"{x:.3f}" for x in np.log10(delta[:n])) + "]}};\n",
+        '"logd":[' + ",".join(f"{x:.3f}" for x in np.log10(delta[:n])) + "]},"
+        '"eigen":[' + ",".join(eigen) + "]};\n",
         encoding="utf-8",
     )
     return path

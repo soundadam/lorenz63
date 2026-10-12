@@ -878,16 +878,30 @@ uv run lorenz63 figure all</pre>
 </section>
 
 <!-- 38 本征结构 -->
-<section class="slide" data-part="b" data-min="0" data-title="本征结构">
+<section class="slide" id="eigenSlide" data-part="b" data-min="0" data-title="本征结构">
   <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>不动点的本征结构决定吸引子形状</h2></header>
-  <div class="full">
-    <figure class="fig"><img src="figures/fig15_eigen_structure.png" alt="特征值在复平面上随 ρ 的路径，以及相空间中的本征方向和不变平面"><figcaption>lorenz63 figure fig15</figcaption></figure>
-    <pre class="eig">原点  +11.827723   −2.666667   −22.827723           <span class="muted">一正二负 → 鞍点</span>
-C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收缩方向 + 向外旋的不变平面</span></pre>
+  <div class="eig3d">
+    <figure class="fig crop-left"><div><img src="figures/fig15_eigen_structure.png" alt="特征值在复平面上随 ρ 的路径"></div><figcaption>lorenz63 figure fig15（左格）</figcaption></figure>
+    <div class="view3d">
+      <canvas id="eigenCanvas" width="1560" height="800" aria-label="ρ=28 处不动点的本征方向与不变平面，可拖动旋转"></canvas>
+      <ul class="legend3d">
+        <li><i style="background:var(--orbit)"></i>原点的不稳定方向 λ = +11.83</li>
+        <li><i style="background:var(--navy)"></i>稳定 / 收缩方向</li>
+        <li><i class="plane"></i>C± 的不变平面 0.094 ± 10.19i</li>
+      </ul>
+      <div class="ctrl">
+        <button type="button" data-view="home">默认</button><button type="button" data-view="xz">x–z 正视</button><button type="button" data-view="face">正对 C₊ 平面</button><button type="button" data-view="edge">贴着平面看</button>
+      </div>
+      <span class="readout" id="eigenView"></span><span class="hint3d">拖动旋转 · 滚轮缩放 · 双击复位</span>
+    </div>
   </div>
+  <pre class="eig">原点  +11.827723   −2.666667   −22.827723           <span class="muted">一正二负 → 鞍点</span>
+C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收缩方向 + 向外旋的不变平面</span></pre>
   <aside class="notes">
     <p>左图：ρ 从 0 扫到 32，特征值在复平面上的路径。ρ=1 处原点一个实特征值穿过原点（叉式）；ρ_H 处 C± 一对复特征值穿过虚轴，穿越点 ±9.6246i（Hopf），失稳形式是旋转着往外走。穿越时第三个特征值恰好等于 tr J = −13.667。</p>
     <p>右图：原点的不稳定方向（红）是两叶之间的通道；C± 处复特征值张成一张实的不变平面，轨道在平面内外旋，同时沿实特征方向被压进来。每一叶就是一张平面附近的螺旋外流。</p>
+    <p>右图可以拖。点“正对 C₊ 平面”：右叶的轨道在平面里一圈圈向外旋，这是 +0.094 ± 10.19i。点“贴着平面看”：右叶压成一条细带，贴着平面，这是 −13.85 把它压进来。0.094 和 13.85 差一百多倍，所以轨道几乎只在平面里走，吸引子才“薄”，D<sub>KY</sub> 只比 2 多 0.06。</p>
+    <p>实现：特征值和方向来自 Python（slides_data.js），轨道用页面里的 DOP853 积 12 个时间单位，与 fig15 同一段；正交投影、三轴等比例，屏幕上的夹角就是真实夹角（fig15 的 matplotlib 三轴各自缩放）。</p>
   </aside>
 </section>
 
@@ -978,7 +992,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </div>
   <aside class="notes">
     <p>Benettin 算法，T = 2000。λ₂ ≈ 0 是应该的：有界非定常流沿流方向总有一个零指数。</p>
-    <p>如果变分方程写错、QR 记账错、或者积分精度不够，这个和会明显偏掉。它对得上，λ₁ 就有了"看起来合理"之外的依据。这个恒等式就是测试 test_lyapunov.py::test_spectrum_sums_to_the_divergence 的断言。</p>
+    <p>如果变分方程写错、QR 记账错、或者积分精度不够，这个和会明显偏掉。它守的是总和：每个窗口的 Σ ln|R_ii| 就是体积的对数，由 Liouville 精确等于 tr J·Δt。三个指数怎么分这个和，它管不到；λ₁ 单独的依据是正文“误差增长”那页的系综斜率 0.875，那条路不解变分方程。这个恒等式就是测试 test_lyapunov.py::test_spectrum_sums_to_the_divergence 的断言。</p>
   </aside>
 </section>
 
@@ -1129,4 +1143,5 @@ window.MathJax = {
 <script src="slides/paradox.js"></script>
 <script src="slides/split.js"></script>
 <script src="slides/roll.js"></script>
+<script src="slides/eigen3d.js"></script>
 <script src="slides/deck.js"></script>
