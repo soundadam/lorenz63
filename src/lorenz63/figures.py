@@ -51,9 +51,12 @@ from lorenz63.lyapunov import (  # noqa: E402
     unrenormalised_tangents,
 )
 from lorenz63.portrait import (  # noqa: E402
+    GOLDEN_ROTATION,
     all_eigen_structures,
     plane_patch,
     regime_trajectory,
+    torus_orbit,
+    torus_section,
 )
 from lorenz63.predictability import (  # noqa: E402
     DEFAULT_THRESHOLD,
@@ -1017,6 +1020,139 @@ def _section_data() -> dict[str, NDArray]:
     }
 
 
+#: A stable periodic orbit of the Lorenz system: one loop round each wing, so
+#: the rising section z = rho - 1 is crossed at two points, one per wing.
+PERIODIC_RHO = 350.0
+
+
+def fig19_section_types(output: Path) -> Path:
+    """What a Poincare section shows for a periodic, a quasi-periodic and a chaotic orbit."""
+    periodic = _cached("section_periodic", _periodic_section_data)
+    chaotic = _cached("section", _section_data)
+    golden_label = f"{GOLDEN_ROTATION:.3f}"
+    columns = [
+        ("周期：Lorenz ρ = 350", "截面上收拢到 2 个点"),
+        ("周期：环面，ω = 2/5", "5 圈闭合 → 5 个点"),
+        (f"准周期：环面，ω = (√5−1)/2 ≈ {golden_label}", "永不闭合 → 点铺满一条闭曲线"),
+        ("混沌：Lorenz ρ = 28", "点落在两条细线上，次序乱跳"),
+    ]
+
+    fig = plt.figure(figsize=(17.0, 8.4))
+    grid = fig.add_gridspec(2, 4, height_ratios=[1.15, 1.0])
+    tops = [fig.add_subplot(grid[0, k], projection="3d") for k in range(4)]
+    bottoms = [_style(fig.add_subplot(grid[1, k])) for k in range(4)]
+    for ax, (title, _) in zip(tops, columns, strict=True):
+        _portrait_axes(ax, title)
+    for ax, (_, title) in zip(bottoms, columns, strict=True):
+        ax.set_title(title, fontsize=10)
+
+    # Periodic Lorenz: the transient is kept, so the bottom panel shows the
+    # crossings closing in on the two points of the orbit.
+    plane_z = PERIODIC_RHO - 1.0
+    ax = tops[0]
+    ax.plot(periodic["orbit_x"], periodic["orbit_y"], periodic["orbit_z"], color=C_REF, lw=0.4)
+    xs, ys, zs = plane_patch(
+        np.array([0.0, 0.0, plane_z]), np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]), 70.0
+    )
+    ax.plot_surface(xs, ys, zs, color=C_MUTED, alpha=0.15, shade=False)
+    ax.scatter(
+        periodic["sec_x"][-2:], periodic["sec_y"][-2:], [plane_z] * 2,
+        color=C_LOOSE, s=30, depthshade=False,
+    )
+    ax = bottoms[0]
+    # Zoom on the right-wing point: the crossings march in along a line,
+    # each one nearer than the last; the left-wing point is its mirror image.
+    right = periodic["sec_x"] > 0
+    sec_x, sec_y = periodic["sec_x"][right], periodic["sec_y"][right]
+    index = np.flatnonzero(right)
+    order = ax.scatter(sec_x, sec_y, c=index, cmap="viridis_r", s=14, zorder=3)
+    ax.plot(sec_x[-1:], sec_y[-1:], "x", color=C_LOOSE, ms=10, mew=2, zorder=4)
+    fig.colorbar(order, ax=ax, label="第几次穿越", fraction=0.05)
+    ax.set_xlim(sec_x[-1] - 4.0, sec_x[-1] + 2.0)
+    ax.set_ylim(sec_y[-1] - 12.0, sec_y[-1] + 4.0)
+    ax.set_title(columns[0][1] + "（放大右叶那一个）", fontsize=10)
+    ax.set_xlabel(f"x（截面 z = {plane_z:.0f}）")
+    ax.set_ylabel("y")
+
+    # Torus: the same surface twice; only the frequency ratio differs.
+    for ax_top, ax_bottom, omega, laps, n_returns in (
+        (tops[1], bottoms[1], 2.0 / 5.0, 5, 5),
+        (tops[2], bottoms[2], GOLDEN_ROTATION, 30, 400),
+    ):
+        u, v = np.meshgrid(np.linspace(0, 2 * np.pi, 60), np.linspace(0, 2 * np.pi, 30))
+        ring = 3.0 + np.cos(v)
+        ax_top.plot_surface(
+            ring * np.cos(u), ring * np.sin(u), np.sin(v), color=C_MUTED, alpha=0.08, shade=False
+        )
+        orbit = torus_orbit(omega, np.linspace(0.0, 2 * np.pi * laps, 400 * laps))
+        ax_top.plot(*orbit.T, color=C_REF, lw=0.7)
+        half_x, half_z = np.meshgrid([1.6, 4.4], [-1.4, 1.4])
+        ax_top.plot_surface(
+            half_x, np.zeros_like(half_x), half_z, color=C_LOOSE, alpha=0.18, shade=False
+        )
+        points = torus_section(omega, n_returns)
+        ax_top.scatter(points[:, 0], 0.0, points[:, 1], color=C_LOOSE, s=8, depthshade=False)
+        ax_top.set_zlim(-3, 3)
+
+        circle = np.linspace(0, 2 * np.pi, 200)
+        ax_bottom.plot(3.0 + np.cos(circle), np.sin(circle), color=C_MUTED, lw=0.6, ls=":")
+        ax_bottom.plot(points[:, 0], points[:, 1], "o", color=C_LOOSE, ms=3 if n_returns > 5 else 6)
+        for k, (px, pz) in enumerate(points[:6]):
+            ax_bottom.annotate(
+                str(k), (px, pz), xytext=(3.0 + 1.22 * (px - 3.0), 1.22 * pz),
+                ha="center", va="center", fontsize=9,
+            )
+        ax_bottom.set_aspect("equal")
+        ax_bottom.set_xlim(1.6, 4.4)
+        ax_bottom.set_ylim(-1.4, 1.4)
+        ax_bottom.set_xlabel("x（截面 y = 0 半平面）")
+        ax_bottom.set_ylabel("z")
+
+    # Chaotic Lorenz: the same section as fig14, drawn flat.
+    plane_z = CLASSICAL.rho - 1.0
+    ax = tops[3]
+    ax.plot(
+        chaotic["orbit_x"], chaotic["orbit_y"], chaotic["orbit_z"], color=C_REF, lw=0.3, alpha=0.6
+    )
+    xs, ys, zs = plane_patch(
+        np.array([0.0, 0.0, plane_z]), np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]), 26.0
+    )
+    ax.plot_surface(xs, ys, zs, color=C_MUTED, alpha=0.15, shade=False)
+    ax.scatter(
+        chaotic["sec_x"], chaotic["sec_y"], np.full(chaotic["sec_x"].size, plane_z),
+        color=C_LOOSE, s=1.0, depthshade=False,
+    )
+    ax = bottoms[3]
+    ax.plot(chaotic["sec_x"], chaotic["sec_y"], ".", color=C_LOOSE, ms=1.2, alpha=0.5)
+    # The six crossings fig14's cobweb walks (crossings 3-8), renumbered from 0.
+    start = 3
+    offsets = [(-16, 4), (-16, -4), (-16, -12), (8, -4), (8, -4), (8, -4)]
+    for k, offset in enumerate(offsets):
+        px, py = chaotic["sec_x"][start + k], chaotic["sec_y"][start + k]
+        ax.plot(px, py, "o", color="k", ms=3)
+        ax.annotate(str(k), (px, py), xytext=offset, textcoords="offset points", fontsize=9)
+    ax.set_xlabel(f"x（截面 z = {plane_z:.0f}）")
+    ax.set_ylabel("y")
+
+    fig.suptitle(
+        "Poincaré 截面：每绕一圈记一个点。上：轨道与截面；下：截面上的点（数字 = 第几次穿越）",
+        fontsize=11,
+    )
+    return _finish(fig, output, "fig19_section_types")
+
+
+def _periodic_section_data() -> dict[str, NDArray]:
+    traj = regime_trajectory(PERIODIC_RHO, np.array([1.0, 1.0, 1.0]), 40.0, dt_out=0.0005)
+    section = poincare_section(traj, plane_z=PERIODIC_RHO - 1.0)
+    return {
+        "orbit_x": traj.x,
+        "orbit_y": traj.y,
+        "orbit_z": traj.z,
+        "sec_x": section[:, 0],
+        "sec_y": section[:, 1],
+    }
+
+
 def fig15_eigen_structure(output: Path) -> Path:
     """Left: where the eigenvalues go as rho grows. Right: where they point at rho=28."""
     rho_values = np.linspace(0.02, 32.0, 900)
@@ -1510,5 +1646,6 @@ FIGURES: dict[str, Callable[[Path], Path]] = {
     "fig16": fig16_orthogonalisation,
     "fig17": fig17_conservative,
     "fig18": fig18_convection,
+    "fig19": fig19_section_types,
     "slides": slides_data,
 }

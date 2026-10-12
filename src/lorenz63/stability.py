@@ -7,10 +7,11 @@ Purpose in the report: to separate two things that are easy to conflate.
 * *Lyapunov exponents* are a property of the flow. The step size cannot change
   them; the true solution separates exponentially whatever you do.
 
-On the Lorenz attractor the Jacobian eigenvalues reach magnitude ~30, so RK4
-needs h < 2.785/30 ~ 0.09 to stay stable. Practical runs use h ~ 0.01 or an
-adaptive controller that goes far below that. So stability is never the binding
-constraint here -- accuracy is. Saying "I must limit h to stop it blowing up"
+On the Lorenz attractor the most strongly damped Jacobian eigenvalue has real
+part about -21.9, so RK4 needs h < 2.785/21.9 ~ 0.13 to stay stable. The
+fixed-step runs use h = 0.01, and DOP853 at the report's tolerances steps well
+inside its own, wider region. So stability is never the binding constraint
+here -- accuracy is. Saying "I must limit h to stop it blowing up"
 gets the right action for the wrong reason.
 """
 
@@ -18,8 +19,10 @@ from __future__ import annotations
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.integrate._ivp.rk import DOP853, RK45
+from scipy.optimize import brentq
 
-from lorenz63.integrate import on_attractor, reference_trajectory
+from lorenz63.integrate import on_attractor, reference_trajectory, solve_adaptive
 from lorenz63.system import LorenzParams, jacobian
 
 #: |R(z)| = 1 crossings for classical RK4 along each axis.
@@ -92,3 +95,69 @@ def spectral_extent(p: LorenzParams, **kwargs: float) -> dict[str, float]:
         "max_real": float(eigs.real.max()),
         "fraction_expanding": float((eigs.real > 0.0).mean()),
     }
+
+
+#: Butcher tableaux (A, b) of the stage that each method propagates. Classical
+#: RK4 is written out; RK45 (Dormand-Prince 5) and DOP853 are read from scipy, so
+#: the polynomials below are those of the solvers the report actually runs.
+_TABLEAUX: dict[str, tuple[NDArray[np.floating], NDArray[np.floating]]] = {
+    "RK4": (
+        np.array([[0, 0, 0, 0], [0.5, 0, 0, 0], [0, 0.5, 0, 0], [0, 0, 1, 0]], float),
+        np.array([1, 2, 2, 1], float) / 6.0,
+    ),
+    "RK45": (np.asarray(RK45.A, float), np.asarray(RK45.B, float)),
+    "DOP853": (
+        np.asarray(DOP853.A, float)[: DOP853.n_stages, : DOP853.n_stages],
+        np.asarray(DOP853.B, float),
+    ),
+}
+
+
+def stability_polynomial(method: str) -> NDArray[np.floating]:
+    """Coefficients c_k of R(z) = sum_k c_k z^k, lowest power first.
+
+    For an explicit method A is strictly lower triangular, so
+    (I - zA)^{-1} = sum_k z^k A^k terminates and
+    R(z) = 1 + z b^T (I - zA)^{-1} 1 = 1 + sum_k (b^T A^k 1) z^{k+1}.
+    """
+    a, b = _TABLEAUX[method]
+    s = b.size
+    a_sq = np.zeros((s, s))
+    a_sq[: a.shape[0], : a.shape[1]] = a
+    coeffs = [1.0]
+    v = np.ones(s)
+    for _ in range(s):
+        coeffs.append(float(b @ v))
+        v = a_sq @ v
+    return np.array(coeffs)
+
+
+def stability_function(method: str, z: NDArray[np.complexfloating]) -> NDArray[np.complexfloating]:
+    """R(z) of ``method`` ("RK4", "RK45" or "DOP853") evaluated at ``z``."""
+    return np.polynomial.polynomial.polyval(z, stability_polynomial(method))
+
+
+def real_axis_limit(method: str) -> float:
+    """Distance from 0 to where the region's boundary crosses the negative real axis."""
+    # Bracket the first crossing on a grid that starts just off the origin,
+    # where |R| = 1 trivially, then refine it.
+    xs = np.linspace(1e-3, 20.0, 20000)
+    i = int(np.argmax(np.abs(stability_function(method, -xs)) > 1.0))
+    return float(brentq(lambda x: abs(stability_function(method, -x)) - 1.0, xs[i - 1], xs[i]))
+
+
+def adaptive_step_usage(
+    p: LorenzParams, method: str, rtol: float, *, t_end: float = 100.0
+) -> float:
+    """Largest step the controller takes, as a fraction of the stability bound.
+
+    The bound is ``real_axis_limit / |min Re lambda_J|`` over the attractor: the
+    most damped mode anywhere, so the fraction errs on the high side. Below 1 the
+    controller's accuracy demand keeps every step inside the region and stability
+    never binds; near 1 the error estimate is what holds the step at the edge.
+    """
+    traj = solve_adaptive(p, on_attractor(p), t_end, method=method, rtol=rtol, dt_out=t_end)
+    assert traj.solver_t is not None
+    h_max = float(np.diff(traj.solver_t).max())
+    damping = abs(spectral_extent(p)["min_real"])
+    return h_max * damping / real_axis_limit(method)

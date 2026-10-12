@@ -174,6 +174,48 @@ def plane_patch(
     return grid[..., 0], grid[..., 1], grid[..., 2]
 
 
+#: The most irrational rotation number: its continued fraction is all ones, so no
+#: rational p/q approximates it well and the section circle fills most evenly.
+GOLDEN_ROTATION = (np.sqrt(5.0) - 1.0) / 2.0
+
+
+def torus_orbit(
+    omega: float,
+    t: NDArray[np.floating],
+    *,
+    major: float = 3.0,
+    minor: float = 1.0,
+) -> NDArray[np.floating]:
+    """``(n, 3)`` points of the flow ``theta_1' = 1, theta_2' = omega`` on a torus.
+
+    The Lorenz system has no quasi-periodic regime, so the section plate borrows
+    the textbook one: two independent rotations, the long way round at rate 1
+    and the short way round at rate ``omega``. Rational ``omega`` closes the
+    orbit; irrational ``omega`` never does and covers the torus densely.
+    """
+    t = np.asarray(t, dtype=float)
+    a, b = t, omega * t
+    ring = major + minor * np.cos(b)
+    return np.column_stack([ring * np.cos(a), ring * np.sin(a), minor * np.sin(b)])
+
+
+def torus_section(
+    omega: float,
+    n_returns: int,
+    *,
+    major: float = 3.0,
+    minor: float = 1.0,
+) -> NDArray[np.floating]:
+    """Returns of :func:`torus_orbit` to the half-plane ``y = 0, x > 0``.
+
+    Each lap of ``theta_1`` takes time ``2 pi``, during which ``theta_2``
+    advances by ``2 pi omega``; so the return map is a rotation of the section
+    circle by ``omega`` of a turn. Returned as ``(n, 2)`` points ``(x, z)``.
+    """
+    angle = 2.0 * np.pi * omega * np.arange(n_returns)
+    return np.column_stack([major + minor * np.cos(angle), minor * np.sin(angle)])
+
+
 def origin_eigenvalues_closed_form(p: LorenzParams) -> NDArray[np.floating]:
     """Eigenvalues at the origin, in closed form.
 

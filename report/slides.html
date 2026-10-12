@@ -907,7 +907,30 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 39 Poincaré -->
+<!-- 39 截面的三种典型 -->
+<section class="slide" data-part="b" data-min="0" data-title="截面的三种典型">
+  <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>Poincaré 截面：周期、准周期、混沌</h2></header>
+  <div class="full">
+    <figure class="fig"><img src="figures/fig19_section_types.png" alt="周期、有理环面、无理环面、混沌四种轨道的 Poincaré 截面"><figcaption>lorenz63 figure fig19</figcaption></figure>
+    <div class="strip">
+      <div class="kv small"><span class="v">k 个点</span><span class="k">周期：近邻收拢，λ = 0, −, −</span></div>
+      <div class="kv small"><span class="v">闭曲线</span><span class="k">准周期：无理转数的转动，λ = 0, 0, −</span></div>
+      <div class="kv small"><span class="v orbit">细线</span><span class="k">混沌：近邻指数散开，λ = +, 0, −</span></div>
+      <p style="flex:1;min-width:12em;font-size:24px">形状分出周期与非周期；近邻怎么走，分出准周期与混沌。</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p class="q">开口先问：一条三维轨道越画越乱，怎么看出它是周期的、准周期的还是混沌的？</p>
+    <p>Poincaré 的办法：竖一块平面，轨道每从同一侧穿过一次就记一个点，其余全扔掉。流是确定的，第 n 个点决定第 n+1 个，这就是回归映射。三维的流变成平面上的映射，时间换成了“第几圈”。</p>
+    <p>左一列，Lorenz 在 ρ = 350：一条稳定的周期轨道，左右各绕一圈，周期 0.39。每周期上行穿过 z = 349 两次，截面上就两个点。下格放大右叶那个：点沿一条线往里走，每回来一次距离乘 0.75。心算：λ₂ = −0.73，乘周期 0.39，约 0.28，e<sup>−0.28</sup> ≈ 0.75。</p>
+    <p>中间两列是同一个环面，只差频率比。Lorenz 没有准周期区间，所以借教科书的例子。ω = 2/5：每次转 144°，0、144、288、72、216，第 5 次回到起点，5 个点，周期。ω = 0.618：每次转 222.5°，也就是反着转向日葵的黄金角 137.5°，永不闭合，400 个点把圆画满了，这是准周期。声学里就是两个纯音叠加的李萨如图：频率比有理就闭合，无理就铺满矩形。</p>
+    <p>准周期的点次序也跳，但转动是刚性的，近邻间距永远不变，两个指数都是 0。知道 ω 就能直接写出第一百万个点；ω 差 δ，n 步后只偏 nδ 圈，是线性的。</p>
+    <p>右一列，ρ = 28：点不收拢，也不铺成光滑的圈，而是落在两条细线上。标出的 0 到 5 是下一页蛛网走的那六步。近邻每圈乘 |F′| &gt; 1，几十圈后拉开到吸引子那么大。</p>
+    <p class="key">留下一句：形状分出周期和非周期；近邻怎么走，分出准周期和混沌。</p>
+  </aside>
+</section>
+
+<!-- 40 Poincaré -->
 <section class="slide" data-part="b" data-min="0" data-title="Poincaré 截面">
   <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>三维流 → 二维截面 → 一维映射</h2></header>
   <div class="full">
@@ -926,7 +949,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 40 两件事 -->
+<!-- 41 两件事 -->
 <section class="slide" data-part="b" data-min="0" data-title="稳定性与 Lyapunov 指数">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>数值稳定性 ≠ Lyapunov 不稳定性</h2></header>
   <div class="center">
@@ -944,7 +967,44 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 41 稳定域 -->
+<!-- 42 hλ -->
+<section class="slide" data-part="b" data-min="0" data-title="hλ 与稳定性函数">
+  <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>hλ：一步跨过模的几个时间尺度</h2></header>
+  <div class="split even">
+    <div class="col">
+      <p style="font-size:24px">线性化 \(\dot{\delta u} = J\,\delta u\)，对角化后每个方向都是 \(\dot y = \lambda y\)。</p>
+      <div class="strip" style="gap:40px">
+        <div class="kv small"><span class="v">\(e^{h\lambda}\)</span><span class="k">真解一步的乘数</span></div>
+        <div class="kv small"><span class="v">\(R(h\lambda)\)</span><span class="k">格式一步的乘数</span></div>
+      </div>
+      <p style="font-size:23px">\(R_\text{RK4}(z) = 1 + z + \tfrac{z^2}{2} + \tfrac{z^3}{6} + \tfrac{z^4}{24}\)，是 \(e^z\) 的截断。</p>
+      <p style="font-size:23px"><strong>h·Re λ</strong>：一步里幅度的对数变化。<strong>h·Im λ</strong>：一步转过的弧度（C±：0.10，62 步一圈）。</p>
+    </div>
+    <div class="col">
+      <p style="font-size:22px">最快的衰减模 λ = −21.85，时间尺度 0.046：</p>
+      <table class="data" style="font-size:22px">
+        <thead><tr><th>h</th><th>hλ</th><th>真解 \(e^{h\lambda}\)</th><th>RK4 \(R(h\lambda)\)</th></tr></thead>
+        <tbody>
+          <tr><td class="num">0.01</td><td class="num">−0.22</td><td class="num">0.8037</td><td class="num stat">0.8037</td></tr>
+          <tr><td class="num">0.05</td><td class="num">−1.09</td><td class="num">0.335</td><td class="num">0.346</td></tr>
+          <tr><td class="num">0.12</td><td class="num">−2.62</td><td class="num">0.073</td><td class="num">0.78</td></tr>
+          <tr><td class="num">0.15</td><td class="num">−3.28</td><td class="num">0.038</td><td class="num orbit">2.03</td></tr>
+        </tbody>
+      </table>
+      <div class="callout navy-bg" style="font-size:22px"><strong>稳定域</strong> = { z : |R(z)| ≤ 1 }，与负实轴交在 −2.785。衰减模出了这片区域，就被格式每步放大。</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p class="q">被问“稳定域到底在说什么”“hλ 是什么”时，在下一页之前用这一页。</p>
+    <p>三维的问题先变成一个数。一步之内 J 几乎不变，对角化以后每个方向都是 y′ = λy。真解走 h 乘 e 的 hλ 次方；RK4 走一步乘 R(hλ)，R 是 e^z 泰勒展开到 z⁴。整件事只剩一个无量纲数 z = hλ。1/|λ| 是这个模的时间尺度，所以 |hλ| 是“一步跨过几个时间尺度”。</p>
+    <p>逐行读表。h = 0.01：一步跨过五分之一个时间尺度，0.8037 对 0.8037，准。h = 0.12：R 是 0.78，真解是 0.073，不炸，但该缩十几倍只缩了两成，稳定却不准。h = 0.15：hλ = −3.28，越过 −2.785，每步乘 2，十步 2 的 10 次方，一千倍，这才是“炸”。这个模本来该衰减掉，放大它的是格式，不是方程。</p>
+    <p>增长模不一样：Re λ &gt; 0 时真解自己就 |e^z| &gt; 1，R 大于 1 是对的。Re λ = +10.55、h = 0.01 时，R 和 e^z 到第七位才分开。下一页把整片谱乘上 h 放进稳定域，红点就是这些增长模。</p>
+    <p>细节见报告 4.0 节。</p>
+    <p class="key">留下一句：hλ 是一步跨过几个时间尺度；稳定域管的是衰减模别被放大。</p>
+  </aside>
+</section>
+
+<!-- 43 稳定域 -->
 <section class="slide" data-part="b" data-min="0" data-title="RK4 稳定域">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>瓶颈是精度，不是稳定性</h2></header>
   <div class="split">
@@ -964,7 +1024,48 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 42 正交化 -->
+<!-- 44 自适应稳定域 -->
+<section class="slide" data-part="b" data-min="0" data-title="自适应格式的稳定域">
+  <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>自适应：稳定域不变，守它的换成控制器</h2></header>
+  <div class="split even">
+    <div class="col">
+      <table class="data" style="font-size:22px">
+        <thead><tr><th>格式</th><th>负实轴交点</th><th>稳定上限 h</th></tr></thead>
+        <tbody>
+          <tr><td>RK4</td><td class="num">−2.785</td><td class="num">0.127</td></tr>
+          <tr><td>RK45</td><td class="num">−3.31</td><td class="num">0.151</td></tr>
+          <tr><td>DOP853</td><td class="num">−6.39</td><td class="num">0.293</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:22px">R(z) 由 Butcher 表算出；上限 = 交点 / 21.85。<strong>与 rtol 无关。</strong></p>
+      <div class="callout navy-bg" style="font-size:22px">rtol 只圈出<strong>精度域</strong> |E(z)| ≤ rtol。精度域在稳定域里：稳定域碰不到。伸出去：误差估计拒步，h 卡在边界上振荡，这就是刚性。</div>
+    </div>
+    <div class="col">
+      <p style="font-size:22px">DOP853 在吸引子上的最大步长，占稳定上限：</p>
+      <table class="data" style="font-size:22px">
+        <thead><tr><th>rtol</th><th>最大 h</th><th>占上限</th></tr></thead>
+        <tbody>
+          <tr><td class="num">10⁻³</td><td class="num">0.296</td><td class="num orbit">1.01</td></tr>
+          <tr><td class="num">10⁻⁴</td><td class="num">0.245</td><td class="num">0.84</td></tr>
+          <tr><td class="num">10⁻⁶</td><td class="num">0.135</td><td class="num">0.46</td></tr>
+          <tr><td class="num">10⁻⁹</td><td class="num">0.061</td><td class="num">0.21</td></tr>
+          <tr><td class="num">10⁻¹³</td><td class="num">0.021</td><td class="num stat">0.07</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:22px">全文用的 10⁻⁴ 到 10⁻¹³ 都在稳定域里面：<strong>步长按精度选</strong>。</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p class="q">被问“DOP853 用相对误差控制步长，那稳定域还怎么算”时，接在上一页之后用这一页。</p>
+    <p>两层分开说。第一层，稳定域是格式的性质：RK45 推进 5 阶解，DOP853 推进 8 阶解，用在 y′ = λy 上一步照样乘一个 R(hλ)，只是多项式换了。阶数越高，R 贴着 e^z 走得越远，稳定域越大：RK4 到 −2.8，DOP853 到 −6.4。rtol 是相对还是绝对，这张表都不动。</p>
+    <p>第二层，容差决定控制器挑哪个 h。嵌入式格式一步给两个解，差就是误差估计。纯相对容差下 |y| 约掉，条件只剩 |E(z)| ≤ rtol，在 z 平面上是原点附近一小片，叫它精度域。精度域在稳定域里面，稳定性就不起作用。伸出去的时候，衰减模每步被放大，长到误差估计看得见，这一步被拒、h 缩回来，于是 h 在边界上来回振荡：不炸，但步数被稳定性定死，放松 rtol 也省不下来。这就是刚性。</p>
+    <p>读右表。rtol = 10⁻³ 时最大步正好顶到边界，比全文最松的容差还松一档。10⁻¹³ 时只用掉 7%。上限是拿整个吸引子上最强的阻尼算的，偏保守。</p>
+    <p>固定步长时由人事先选 h 守住稳定域；自适应时由误差估计事后发现、拒步守住。细节见报告 4.4 节。</p>
+    <p class="key">留下一句：稳定域还是 R(z) 那一片；自适应时守它的是误差估计，Lorenz 上它根本用不着守。</p>
+  </aside>
+</section>
+
+<!-- 45 正交化 -->
 <section class="slide" data-part="b" data-min="0" data-title="QR 重正交化">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>Lyapunov 谱需要 QR 重正交</h2></header>
   <div class="full">
@@ -982,7 +1083,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 43 谱 -->
+<!-- 46 谱 -->
 <section class="slide" data-part="b" data-min="0" data-title="Lyapunov 谱与自洽检验">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>自洽检验：Σλᵢ = tr J</h2></header>
   <div class="split">
@@ -1000,7 +1101,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 44 FTLE -->
+<!-- 47 FTLE -->
 <section class="slide" data-part="b" data-min="0" data-title="有限时间 Lyapunov 指数">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>有限时间 Lyapunov 指数：局部拉伸率差别极大</h2></header>
   <div class="split">
@@ -1023,7 +1124,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 45 收敛性 -->
+<!-- 48 收敛性 -->
 <section class="slide" data-part="b" data-min="0" data-title="收敛性研究的推论">
   <header><p class="eyebrow">备用 · ④ 判据随系统类型变</p><h2>推论：混沌问题的收敛阶要在短窗口里验</h2></header>
   <div class="split even">
@@ -1042,7 +1143,7 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
-<!-- 46 数字汇总 -->
+<!-- 49 数字汇总 -->
 <section class="slide" data-part="b" data-min="0" data-title="数字汇总">
   <header><p class="eyebrow">备用</p><h2>数字汇总</h2></header>
   <div class="split even" style="font-size:21px">

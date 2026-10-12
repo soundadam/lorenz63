@@ -7,22 +7,30 @@ still nowhere near enough to track a trajectory for long.
 
 from __future__ import annotations
 
+from math import factorial
+
 import numpy as np
 import pytest
+from scipy.integrate._ivp.rk import DOP853, RK45
 
 from lorenz63.bifurcation import c_plus_stability, rho_sweep
 from lorenz63.stability import (
     RK4_IMAG_AXIS_LIMIT,
     RK4_REAL_AXIS_LIMIT,
+    adaptive_step_usage,
     attractor_eigenvalues,
     max_stable_step,
+    real_axis_limit,
     rk4_stability_function,
     rk4_stability_mask,
     spectral_extent,
+    stability_function,
+    stability_polynomial,
 )
 from lorenz63.system import LorenzParams, hopf_rho
 
 CLASSICAL = LorenzParams()
+ORDERS = {"RK4": 4, "RK45": RK45.order, "DOP853": DOP853.order}
 
 
 def test_stability_function_is_the_exponential_truncated() -> None:
@@ -78,6 +86,41 @@ def test_expanding_modes_do_not_veto_every_step() -> None:
     eigs = attractor_eigenvalues(CLASSICAL, t_end=50.0)
     assert np.any(np.abs(rk4_stability_function(1e-6 * eigs)) > 1.0)
     assert max_stable_step(CLASSICAL, t_end=50.0) > 0.01
+
+
+@pytest.mark.parametrize("method", ORDERS)
+def test_stability_polynomial_matches_exp_exactly_to_the_order(method: str) -> None:
+    """A p-th order method's R(z) agrees with exp(z) through z^p and no further."""
+    order = ORDERS[method]
+    coeffs = np.pad(stability_polynomial(method), (0, 2))  # RK4 stops at z^4
+    taylor = np.array([1.0 / factorial(k) for k in range(order + 2)])
+    np.testing.assert_allclose(coeffs[: order + 1], taylor[: order + 1], rtol=1e-12)
+    assert coeffs[order + 1] != pytest.approx(taylor[order + 1], rel=1e-6)
+
+
+def test_tableau_route_reproduces_the_rk4_closed_form() -> None:
+    z = np.array([-2.0, -0.3 + 0.2j, 1.5j])
+    np.testing.assert_allclose(stability_function("RK4", z), rk4_stability_function(z))
+    assert real_axis_limit("RK4") == pytest.approx(RK4_REAL_AXIS_LIMIT, rel=1e-9)
+
+
+@pytest.mark.parametrize("method", ORDERS)
+def test_real_axis_limit_is_where_the_modulus_crosses_one(method: str) -> None:
+    limit = real_axis_limit(method)
+    inside = abs(stability_function(method, np.array(-0.99 * limit)))
+    outside = abs(stability_function(method, np.array(-1.01 * limit)))
+    assert inside < 1.0 < outside
+
+
+def test_higher_order_reaches_further_along_the_real_axis() -> None:
+    assert real_axis_limit("RK4") < real_axis_limit("RK45") < real_axis_limit("DOP853")
+
+
+def test_adaptive_controller_stays_inside_the_region_at_working_tolerances() -> None:
+    """Accuracy, not stability, sets DOP853's step: tighter rtol, smaller share."""
+    loose = adaptive_step_usage(CLASSICAL, "DOP853", 1e-6, t_end=50.0)
+    tight = adaptive_step_usage(CLASSICAL, "DOP853", 1e-9, t_end=50.0)
+    assert tight < loose < 1.0
 
 
 def test_c_plus_real_part_crosses_zero_at_the_hopf_point() -> None:
