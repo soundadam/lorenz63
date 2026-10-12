@@ -911,16 +911,18 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
 <section class="slide" data-part="b" data-min="0" data-title="Poincaré 截面">
   <header><p class="eyebrow">备用 · ① 没有不变量可查</p><h2>三维流 → 二维截面 → 一维映射</h2></header>
   <div class="full">
-    <figure class="fig"><img src="figures/fig14_poincare.png" alt="z=27 截面上的穿越点与回归映射"><figcaption>lorenz63 figure fig14</figcaption></figure>
+    <figure class="fig"><img src="figures/fig14_poincare.png" alt="z=27 截面上的穿越点、四段回归映射与蛛网"><figcaption>lorenz63 figure fig14</figcaption></figure>
     <div class="strip">
       <div class="kv small"><span class="v">3992</span><span class="k">T = 3000 内上行穿越 z = 27 的次数</span></div>
       <div class="kv small"><span class="v">56.7%</span><span class="k">穿越后留在同一叶</span></div>
-      <p style="flex:1;min-width:12em;font-size:24px">截面上是两条细线，不是一片云。回归映射处处 |F′| &gt; 1，任何不动点都不可能稳定。</p>
+      <div class="kv small"><span class="v">13.25</span><span class="k">|x| 门槛：内侧留叶，外侧换叶</span></div>
+      <p style="flex:1;min-width:12em;font-size:24px">一个点是一步。越过门槛越少，落到对面越远，于是能连换好几次。</p>
     </div>
   </div>
   <aside class="notes">
-    <p>截面取在 C± 的高度 z = ρ−1 = 27。中间一格的两条细线，就是 Kaplan–Yorke 维数 2.06 的几何含义：横向厚度小到在这个尺度上看不见。</p>
-    <p>右格把截面压成一维：第 n 次穿越的 x 对第 n+1 次。第 ③ 部分里的 Lorenz 映射是另一条独立的降维路线，结论一致。</p>
+    <p>左图：截面取在 C± 的高度 z = ρ−1 = 27。每一叶是一张薄片，切过平面就是一条细线，两叶两条；细到看不出宽度，就是 D<sub>KY</sub> = 2.06。每条线按下一圈换不换叶分两截，靠里绿、靠外紫。</p>
+    <p>中图：第 n 次穿越的 x 对第 n+1 次。两条线各两截，正好四段。去掉符号只看 |x|：小于 13.25 留在本叶、下一圈更往外；大于 13.25 换到对面，而且越过得越少落得越远。映射处处 |F′| &gt; 1，任何不动点都不可能稳定。第 ③ 部分里的 Lorenz 映射是另一条独立的降维路线，结论一致。</p>
+    <p>右图蛛网：竖直走到曲线读下一步，水平走回 y = x 当新起点。0→1→2 沿绿色往外爬到门槛；2→3→4→5 连换三次：3 是 13.3，只越过 0.06，被甩到对面最外圈 −15.3；4 越过 2，反而落到右叶中心附近的 11.4。换叶之后马上再换的概率 47%，最长连换 9 次。</p>
   </aside>
 </section>
 

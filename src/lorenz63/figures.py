@@ -907,98 +907,94 @@ def fig13_phase_portraits(output: Path) -> Path:
 
 
 def fig14_poincare(output: Path) -> Path:
-    """The section turns the 3D flow into a 2D map, and that map into a 1D curve."""
+    """The section turns the 3D flow into a 1D map; a cobweb walks the map."""
     data = _cached("section", _section_data)
     plane_z = CLASSICAL.rho - 1.0
+    x_n, x_next = data["map_n"], data["map_next"]
+    same_wing = np.sign(x_n) == np.sign(x_next)
+    cutoff = wing_switch_threshold(x_n, x_next)
+    lo = float(min(x_n.min(), x_next.min()))
+    hi = float(max(x_n.max(), x_next.max()))
+    branches = ((same_wing, C_MID, "留在同一叶"), (~same_wing, C_ACCENT, "换到另一叶"))
 
-    fig = plt.figure(figsize=(15.0, 5.6))
-    grid = fig.add_gridspec(1, 3, width_ratios=[1.0, 1.0, 1.45])
+    fig = plt.figure(figsize=(15.0, 5.4))
+    grid = fig.add_gridspec(1, 3)
 
     ax = _portrait_axes(
-        fig.add_subplot(grid[0], projection="3d"), f"截面 z = ρ−1 = {plane_z:.0f}"
+        fig.add_subplot(grid[0], projection="3d"),
+        f"截面 z = ρ−1 = {plane_z:.0f}，按下一步是否换叶着色",
     )
-    ax.plot(data["orbit_x"], data["orbit_y"], data["orbit_z"], color=C_MUTED, lw=0.3, alpha=0.7)
+    ax.plot(data["orbit_x"], data["orbit_y"], data["orbit_z"], color=C_MUTED, lw=0.3, alpha=0.6)
     xs, ys, zs = plane_patch(
         np.array([0.0, 0.0, plane_z]),
         np.array([1.0, 0.0, 0.0]),
         np.array([0.0, 1.0, 0.0]),
         26.0,
     )
-    ax.plot_surface(xs, ys, zs, color=C_ACCENT, alpha=0.16, shade=False)
-    show = slice(0, 260)
-    ax.scatter(
-        data["sec_x"][show],
-        data["sec_y"][show],
-        np.full(data["sec_x"][show].size, plane_z),
-        color=C_LOOSE,
-        s=3.0,
-        depthshade=False,
-    )
+    ax.plot_surface(xs, ys, zs, color=C_MUTED, alpha=0.12, shade=False)
+    # Each wing crosses the plane along one thin curve; the cutoff splits each
+    # curve into an inner part that stays and an outer part that switches.
+    for mask, colour, _ in branches:
+        ax.scatter(
+            data["sec_x"][:-1][mask],
+            data["sec_y"][:-1][mask],
+            np.full(int(mask.sum()), plane_z),
+            color=colour,
+            s=1.5,
+            depthshade=False,
+        )
+
+    def draw_map(ax: plt.Axes, alpha: float, label: bool) -> None:
+        for mask, colour, name in branches:
+            ax.plot(
+                x_n[mask],
+                x_next[mask],
+                ".",
+                color=colour,
+                ms=1.3,
+                alpha=alpha,
+                label=name if label else None,
+            )
+        ax.plot([lo, hi], [lo, hi], color="k", ls=":", lw=0.9)
+        for side in (-1.0, 1.0):
+            ax.axvline(side * cutoff, color=C_ACCENT, ls="--", lw=0.9)
+            ax.axvspan(side * cutoff, side * hi * 1.05, color=C_ACCENT, alpha=0.06, lw=0)
+        ax.set_xlabel("第 n 次穿越的 x")
+        ax.set_ylabel("第 n+1 次穿越的 x")
 
     ax = _style(fig.add_subplot(grid[1]))
-    right = data["sec_x"] > 0.0
-    ax.plot(data["sec_x"][right], data["sec_y"][right], ".", color=C_REF, ms=1.1, alpha=0.5)
-    ax.plot(data["sec_x"][~right], data["sec_y"][~right], ".", color=C_LOOSE, ms=1.1, alpha=0.5)
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_title(
-        f"截面上的 {data['sec_x'].size} 个穿越点（上行）\n两支分别绕 C+ 与 C−", fontsize=10
-    )
-
-    ax = _style(fig.add_subplot(grid[2]))
-    same_wing = np.sign(data["map_n"]) == np.sign(data["map_next"])
-    for mask, colour, label in (
-        (same_wing, C_MID, "留在同一叶"),
-        (~same_wing, C_ACCENT, "换到另一叶"),
-    ):
-        ax.plot(
-            data["map_n"][mask],
-            data["map_next"][mask],
-            ".",
-            color=colour,
-            ms=1.3,
-            alpha=0.55,
-            label=label,
-        )
-    lo = float(min(data["map_n"].min(), data["map_next"].min()))
-    hi = float(max(data["map_n"].max(), data["map_next"].max()))
-    ax.plot([lo, hi], [lo, hi], color="k", ls=":", lw=0.9)
-
-    # Outside the cutoff every crossing switches wing, inside it every one stays.
-    cutoff = wing_switch_threshold(data["map_n"], data["map_next"])
-    for side in (-1.0, 1.0):
-        ax.axvline(side * cutoff, color=C_ACCENT, ls="--", lw=0.9)
-        ax.axvspan(side * cutoff, side * hi * 1.05, color=C_ACCENT, alpha=0.06, lw=0)
+    draw_map(ax, 0.55, label=True)
     ax.plot([], [], color=C_ACCENT, ls="--", lw=0.9, label=f"门槛 |x| = {cutoff:.2f}")
-
-    # Cobweb: up/down to the map gives x_{n+1}, across to the diagonal makes it
-    # the next x_n. The first crossings already show a run of switches and a stay.
-    steps = 8
-    walk = np.concatenate([data["map_n"][:1], data["map_next"][:steps]])
-    web_x = np.repeat(walk, 2)[1:-1]
-    web_y = np.repeat(walk, 2)[2:]
-    ax.plot(
-        np.concatenate([walk[:1], web_x]),
-        np.concatenate([walk[:1], web_y]),
-        color="k",
-        lw=0.8,
-        alpha=0.85,
-        label="蛛网：竖到映射、横回对角线",
-    )
-    ax.plot(walk, walk, "o", color="k", ms=3.0)
-    for k, v in enumerate(walk):
-        # Left wing labels go above-left of the diagonal, right wing below-right.
-        offset = (-10, 3) if v < 0 else (5, -10)
-        ax.annotate(str(k), (v, v), xytext=offset, textcoords="offset points", fontsize=8)
-    ax.set_xlabel("第 n 次穿越的 x")
-    ax.set_ylabel("第 n+1 次穿越的 x")
-    ax.set_title(
-        f"截面上的一维回归映射（{same_wing.mean() * 100:.0f}% 的穿越不换叶）", fontsize=10
-    )
+    ax.set_title(f"一维回归映射：四段，{same_wing.mean() * 100:.0f}% 的穿越不换叶", fontsize=10)
     ax.legend(loc="upper left", bbox_to_anchor=(0.16, 0.98), fontsize=8, markerscale=4)
 
+    # Cobweb: vertical to the map reads x_{n+1}, horizontal back to the diagonal
+    # makes it the next x_n. These five steps from crossing 3 contain two stays,
+    # a switch landing just past the cutoff, the far throw that follows, and a
+    # far switch that lands near the other wing's centre.
+    ax = _style(fig.add_subplot(grid[2]))
+    draw_map(ax, 0.18, label=False)
+    start, steps = 3, 5
+    walk = np.concatenate([x_n[start : start + 1], x_next[start : start + steps]])
+    for k in range(steps):
+        a, b = walk[k], walk[k + 1]
+        colour = C_MID if np.sign(a) == np.sign(b) else C_ACCENT
+        ax.annotate(
+            "",
+            xy=(a, b),
+            xytext=(a, a),
+            arrowprops={"arrowstyle": "-|>", "color": colour, "lw": 1.3, "mutation_scale": 9},
+        )
+        ax.plot([a, b], [b, b], color=colour, lw=1.3)
+    ax.plot(walk, walk, "o", color="k", ms=3.5, zorder=5)
+    for k, v in enumerate(walk):
+        # Step numbers only, below-right of the diagonal where the panel is empty;
+        # the values are listed in the report's walk-through table.
+        ax.annotate(str(k), (v, v), xytext=(6, -12), textcoords="offset points", fontsize=9)
+    ax.set_title("蛛网：竖到映射读下一步，横回 y=x 当新起点", fontsize=10)
+
     fig.suptitle(
-        "Poincaré 截面：三维流 → 二维映射 → 一条一维曲线（吸引子横向厚度近乎为零）",
+        "Poincaré 截面：三维流 → 截面上两条细线 → 一条一维映射",
         fontsize=11,
     )
     return _finish(fig, output, "fig14_poincare")
