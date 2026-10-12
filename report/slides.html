@@ -1093,6 +1093,42 @@ C±    −13.854578   +0.093956 ± 10.194505 i          <span class="muted">收�
   </aside>
 </section>
 
+<!-- 工作量对精度 -->
+<section class="slide" data-part="b" data-min="0" data-title="阶数什么时候值钱">
+  <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>阶数在精度定步长时才值钱</h2></header>
+  <div class="split">
+    <figure class="fig"><img src="figures/fig21_work_precision.png" alt="Lorenz 上 RK45 与 DOP853 的工作量对误差；刚性问题上显式格式的工作量被稳定域卡在平台上"><figcaption>lorenz63 figure fig21</figcaption></figure>
+    <div class="col">
+      <p style="font-size:19px">非刚性：h ∝ tol<sup>1/p</sup>，nfev ∝ s · tol<sup>−1/p</sup></p>
+      <table class="data" style="font-size:19px">
+        <thead><tr><th></th><th>斜率</th><th>−1/p</th><th>误差 10⁻¹⁰</th></tr></thead>
+        <tbody>
+          <tr><td>RK45</td><td class="num">−0.17</td><td class="num">−0.20</td><td class="num">6100 次</td></tr>
+          <tr><td>DOP853</td><td class="num">−0.10</td><td class="num">−0.125</td><td class="num">1440 次</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:19px">刚性：nfev ≈ s · |λ|T / 交点，与 tol、阶数都无关</p>
+      <table class="data" style="font-size:19px">
+        <thead><tr><th></th><th>s / 交点</th><th>步数：心算</th><th>实测</th></tr></thead>
+        <tbody>
+          <tr><td>RK45</td><td class="num">1.81</td><td class="num">3020</td><td class="num">3025</td></tr>
+          <tr><td>DOP853</td><td class="num">1.88</td><td class="num">1560</td><td class="num">1567</td></tr>
+        </tbody>
+      </table>
+      <div class="callout navy-bg" style="font-size:19px">精度定步长：阶数高线平，越紧越划算。<strong>稳定性定步长：阶数换不来步数。</strong></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p class="q">被问“阶数越高的格式，是不是步长越小越有优势”“DOP853 是不是总比 RK45 好”时，接在稳定域与精度域之后用这一页。</p>
+    <p>先改两处说法。RK45、DOP853 是显式格式，给非刚性问题用；自变量是精度要求，不是步长，步长是控制器按 rtol 选的。改完是：非刚性问题里，精度要求越紧，阶数高的越划算。</p>
+    <p>心算。p 阶每步误差 h 的 p+1 次方，压到 tol，h 正比 tol 的 1/p 次方，求值次数正比 s 乘 tol 的 −1/p 次方。log-log 图上是斜率 −1/p 的直线：阶数高线平，但每步贵、起点高，所以两条线必然相交。5 阶对 8 阶，每紧一个数量级工作量之比涨 10 的 0.075 次方，约 1.19 倍。读左图：实测斜率 −0.17 和 −0.10，都比理论略平，差 0.07，每个数量级 1.18 倍，对上了。交汇在 10⁻⁴ 到 10⁻⁶，到 10⁻¹⁰ DOP853 便宜 4 倍多。</p>
+    <p>再看反例，右图。y′ = −1000(y − cos t)，积 10 个时间单位。步长被稳定域卡住，h 约等于交点除以 1000。RK45：10 乘 1000 除以 3.31，约 3020 步；DOP853 除以 6.39，约 1560 步。实测 3025 和 1567。乘上每步求值 6 和 12，都是一万八千多次，贴着虚线走平台：rtol 松几个数量级，一次也不省。稳定域只随求值次数线性长，阶数高的好处被每步更贵吃掉，s 除以交点 1.81 对 1.88。RK45 实测多出一成多，是被拒的步，h 在边界上振荡。</p>
+    <p>绿线 Radau 是隐式格式，稳定性不卡步长，10⁻² 时只要 112 次，便宜近两百倍。但隐式也有天花板：A-稳定的线性多步法最高 2 阶（Dahlquist 第二壁垒），BDF 7 阶以上不稳定；Radau IIA 又 5 阶又 A-稳定，代价是每步解一个大方程组。所以刚性求解器停在 5 阶左右。</p>
+    <p>非刚性那边也有两条边：rtol 到 10⁻¹³ 附近舍入误差占主导，这就是参考解停在 10⁻¹³ 的原因；解里有尖峰或事件切换，高阶导数大，高阶不再等于小误差。细节见报告 4.5 节。</p>
+    <p class="key">留下一句：精度定步长时，阶数越高越划算；稳定性定步长时，显式格式的阶数换不来步数。</p>
+  </aside>
+</section>
+
 <!-- 46 正交化 -->
 <section class="slide" data-part="b" data-min="0" data-title="QR 重正交化">
   <header><p class="eyebrow">备用 · ② 精度只换来对数时间</p><h2>Lyapunov 谱需要 QR 重正交</h2></header>

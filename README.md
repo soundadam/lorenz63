@@ -50,6 +50,7 @@ src/lorenz63/
   bifurcation.py    ρ 扫描；C± 特征值分支与复平面轨迹
   portrait.py       相图：分区轨道、不动点本征方向与不变平面
   stability.py      RK4 稳定域与吸引子上的 Jacobian 谱
+  efficiency.py     工作量对精度：非刚性时阶数的回报，刚性时步长被稳定域卡住
   hamiltonian.py    守恒对照：Kepler 问题上的 RK4 与 Störmer–Verlet
   figures.py        报告的图，每张一个函数
   cli.py
