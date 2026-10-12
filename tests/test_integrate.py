@@ -70,11 +70,13 @@ def test_tighter_tolerance_is_more_accurate_before_saturation() -> None:
     report, and it makes naive error comparisons over long windows meaningless.
     """
     u0 = on_attractor(CLASSICAL)
-    truth = reference_trajectory(CLASSICAL, u0, 8.0, dt_out=0.01)
+    # t=5, not longer: the rtol=1e-6 error grows ~30x per time unit here, and
+    # by t=8 it sits within a factor of a few of 1 and crosses it on some platforms.
+    truth = reference_trajectory(CLASSICAL, u0, 5.0, dt_out=0.01)
     errors = []
     for rtol in (1e-6, 1e-9, 1e-12):
         test = solve_adaptive(
-            CLASSICAL, u0, 8.0, method="DOP853", rtol=rtol, atol=rtol * 1e-3, dt_out=0.01
+            CLASSICAL, u0, 5.0, method="DOP853", rtol=rtol, atol=rtol * 1e-3, dt_out=0.01
         )
         errors.append(np.linalg.norm(truth.u - test.u, axis=1).max())
     assert errors[0] > errors[1] > errors[2]
