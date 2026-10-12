@@ -7,10 +7,11 @@ Purpose in the report: to separate two things that are easy to conflate.
 * *Lyapunov exponents* are a property of the flow. The step size cannot change
   them; the true solution separates exponentially whatever you do.
 
-On the Lorenz attractor the Jacobian eigenvalues reach magnitude ~30, so RK4
-needs h < 2.785/30 ~ 0.09 to stay stable. Practical runs use h ~ 0.01 or an
-adaptive controller that goes far below that. So stability is never the binding
-constraint here -- accuracy is. Saying "I must limit h to stop it blowing up"
+On the Lorenz attractor the most strongly damped Jacobian eigenvalue has real
+part about -21.9, so RK4 needs h < 2.785/21.9 ~ 0.13 to stay stable. The
+fixed-step runs use h = 0.01, and DOP853 at the report's tolerances steps well
+inside its own, wider region. So stability is never the binding constraint
+here -- accuracy is. Saying "I must limit h to stop it blowing up"
 gets the right action for the wrong reason.
 """
 
