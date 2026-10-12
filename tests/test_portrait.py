@@ -23,11 +23,14 @@ from lorenz63.lyapunov import (
     unrenormalised_tangents,
 )
 from lorenz63.portrait import (
+    GOLDEN_ROTATION,
     all_eigen_structures,
     eigen_structure,
     origin_eigenvalues_closed_form,
     plane_patch,
     regime_trajectory,
+    torus_orbit,
+    torus_section,
 )
 from lorenz63.statistics import poincare_section, section_return_map
 from lorenz63.system import (
@@ -189,6 +192,55 @@ def test_a_crossing_never_lands_on_the_wrong_side_of_the_wing() -> None:
     traj = reference_trajectory(CLASSICAL, np.array([1.0, 1.0, 1.0]), 400.0, dt_out=0.002)
     section = poincare_section(traj, plane_z=CLASSICAL.rho - 1.0)
     assert np.abs(section[:, 0]).min() > 1.0
+
+
+def _distinct(points: np.ndarray, tol: float) -> int:
+    rounded = np.round(points / tol).astype(int)
+    return len({tuple(row) for row in rounded})
+
+
+def test_a_rational_torus_orbit_returns_to_q_points() -> None:
+    for num, den in ((2, 5), (3, 7), (1, 2)):
+        assert _distinct(torus_section(num / den, 10 * den), 1e-9) == den
+
+
+def test_an_irrational_torus_orbit_never_repeats_and_fills_the_circle() -> None:
+    def largest_gap(n: int) -> float:
+        points = torus_section(GOLDEN_ROTATION, n)
+        angles = np.sort(np.arctan2(points[:, 1], points[:, 0] - 3.0))
+        return float(np.diff(np.concatenate([angles, angles[:1] + 2 * np.pi])).max())
+
+    assert _distinct(torus_section(GOLDEN_ROTATION, 2000), 1e-9) == 2000
+    assert largest_gap(1000) < largest_gap(100) / 5
+
+
+def test_the_torus_return_map_is_a_rotation() -> None:
+    """Every return turns the section circle by the same angle: a rigid map."""
+    points = torus_section(GOLDEN_ROTATION, 50)
+    steps = np.linalg.norm(np.diff(points, axis=0), axis=1)
+    np.testing.assert_allclose(steps, 2.0 * np.sin(np.pi * GOLDEN_ROTATION), rtol=1e-12)
+
+
+def test_the_torus_section_lies_on_the_orbit() -> None:
+    laps = np.arange(6)
+    on_orbit = torus_orbit(0.4, 2 * np.pi * laps)
+    np.testing.assert_allclose(on_orbit[:, [0, 2]], torus_section(0.4, 6), atol=1e-12)
+    np.testing.assert_allclose(on_orbit[:, 1], 0.0, atol=1e-12)
+
+
+def test_a_periodic_lorenz_orbit_collapses_to_two_mirror_points() -> None:
+    rho = 350.0
+    traj = regime_trajectory(rho, np.array([1.0, 1.0, 1.0]), 80.0, dt_out=0.0005)
+    section = poincare_section(traj, plane_z=rho - 1.0)[:, :2]
+    tail = section[-20:]
+    assert _distinct(tail, 0.05) == 2
+    # One loop per wing, alternating, and the two points are each other's mirror.
+    np.testing.assert_array_less(tail[:-1, 0] * tail[1:, 0], 0.0)
+    np.testing.assert_allclose(tail[-1], -tail[-2], atol=0.05)
+    # Early crossings close in on the limit points rather than wander.
+    limit = np.array([tail[-1], tail[-2]])
+    distance = np.min(np.linalg.norm(section[:, None, :] - limit[None], axis=2), axis=1)
+    assert distance[60] < distance[20] / 10
 
 
 # ---------------------------------------------------------------------------
