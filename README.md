@@ -6,6 +6,8 @@ Lorenz (1963) 系统的可复现数值工程，为课程汇报《**从对流方�
 
 汇报幻灯片：[`report/slides.html`](report/slides.html)，浏览器直接打开，按 N 显示讲稿。
 
+讲台上用的打印稿：[`report/mindmap.html`](report/mindmap.html)（A4 横向一页）与 [`report/cheatsheet.html`](report/cheatsheet.html)（A4 纵向，左栏板书与心算、右栏讲稿），浏览器打开后打印。
+
 论点一句话：**判断数值结果可信的标准随系统类型而变。守恒系统靠不变量验证；混沌系统的单条轨道不可信，统计量可信。**
 
 Lorenz 是这个论点的理想载体：它没有守恒量可查，可预报时间被最大 Lyapunov 指数锁死，但它的 Lyapunov 谱、不变密度和 Lorenz 映射对积分容差不敏感。具体数字由 `lorenz63 info` 打印，报告正文引用它们。
@@ -57,6 +59,8 @@ src/lorenz63/
 report/
   report.md         报告正文
   slides.html       汇报幻灯片：每页正文与讲稿（引用 figures/ 里的图）
+  mindmap.html      讲述思维导图：六个板块与黑板右栏，A4 横向
+  cheatsheet.html   板书小抄：每段写什么、心算、讲稿，A4 纵向
   slides/           幻灯片的样式与脚本
     slides.css
     dop853_coefficients.js  DOP853 系数表（照 scipy）

@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>讲述思维导图</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;900&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* A4 横向一页。从右上顺时针读 1 → 6，圆圈里的号与 cheatsheet.html 的板块号一致。
+   连线由页面脚本按卡片位置画出。 */
+:root {
+  color-scheme: light;
+  --ink: #16213a;
+  --ink-2: #4b5770;
+  --ink-3: #6b7489;
+  --rule: #d6dbe4;
+  --paper: #ffffff;
+  --surround: #e3e7ee;
+  --c1: #5b6478;
+  --c2: #1f3a73;
+  --c3: #7b3fa0;
+  --c4: #2f6db5;
+  --c5: #c2410c;
+  --c6: #0f7a6e;
+  --sans: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --serif: "Noto Serif SC", "Songti SC", "STSong", serif;
+  --math: "STIX Two Text", "STIXGeneral", "Times New Roman", "Noto Serif SC", "Songti SC", serif;
+}
+@page { size: A4 landscape; margin: 0; }
+* { box-sizing: border-box; }
+html { font-size: 8.6pt; }
+body {
+  margin: 0;
+  background: var(--surround);
+  color: var(--ink);
+  font-family: var(--sans);
+  line-height: 1.42;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.hint { width: 297mm; margin: 6mm auto 0; color: var(--ink-2); font-size: 8.5pt; }
+.sheet {
+  position: relative;
+  width: 297mm; height: 209.5mm;
+  margin: 6mm auto 10mm;
+  padding: 7mm 9mm 6mm;
+  background: var(--paper);
+  box-shadow: 0 1px 3px rgba(22, 33, 58, .12), 0 10px 30px rgba(22, 33, 58, .10);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+@media print {
+  body { background: none; }
+  .hint { display: none; }
+  .sheet { margin: 0; box-shadow: none; }
+}
+.wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+
+.top { display: flex; align-items: baseline; gap: 4mm; border-bottom: 1.4px solid var(--ink); padding-bottom: 1.2mm; position: relative; z-index: 1; }
+.top h1 { margin: 0; font-family: var(--serif); font-weight: 900; font-size: 14pt; letter-spacing: .04em; }
+.top p { margin: 0; color: var(--ink-2); font-size: 8pt; }
+.top p:last-child { margin-left: auto; }
+
+.mm {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: 1fr 64mm 1fr; grid-template-rows: repeat(3, 1fr);
+  column-gap: 13mm; row-gap: 3.2mm; padding: 3.4mm 0 3mm;
+  position: relative; z-index: 1;
+}
+.root {
+  grid-column: 2; grid-row: 1 / 4; align-self: center;
+  border: 1.6px solid var(--ink); border-radius: 3mm; padding: 4mm 4mm 3.6mm; text-align: center;
+  background: var(--paper);
+}
+.root .eyebrow { margin: 0; font-size: 7.4pt; color: var(--ink-3); letter-spacing: .12em; }
+.root h2 { margin: 1mm 0 .6mm; font-family: var(--serif); font-weight: 900; font-size: 15pt; line-height: 1.25; }
+.root .sub { margin: 0 0 2.4mm; color: var(--ink-2); }
+.root .eqs { display: inline-grid; grid-template-columns: auto auto; column-gap: 1.4mm; font-family: var(--math); font-size: 11pt; line-height: 1.3; text-align: left; }
+.root .eqs span:nth-child(odd) { text-align: right; }
+.root .params { margin: 1mm 0 2.6mm; font-family: var(--math); font-size: 9.6pt; color: var(--ink-2); }
+.root .spine { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 1.8mm 0; font-family: var(--math); font-size: 10.4pt; line-height: 1.5; }
+.root .spine b { display: block; font-family: var(--sans); font-size: 7.2pt; color: var(--ink-3); letter-spacing: .12em; font-weight: 500; }
+.root .open { margin: 2mm 0 0; font-size: 7.8pt; color: var(--ink-2); }
+
+.card {
+  border: 1.2px solid var(--c); border-radius: 2mm; background: var(--paper);
+  padding: 1.6mm 2.6mm 1.8mm; display: flex; flex-direction: column; min-height: 0;
+}
+.card.r { grid-column: 3; }
+.card.l { grid-column: 1; }
+.card header { display: flex; align-items: center; gap: 1.8mm; margin-bottom: .8mm; }
+.card .n {
+  display: inline-grid; place-items: center; width: 5mm; height: 5mm; border-radius: 50%;
+  background: var(--c); color: #fff; font-weight: 700; font-size: 8.4pt; flex: none;
+}
+.card h3 { margin: 0; font-family: var(--serif); font-weight: 900; font-size: 11pt; color: var(--c); }
+.card .pg { margin-left: auto; font-size: 7.2pt; color: var(--ink-3); white-space: nowrap; }
+.card ul { margin: 0; padding-left: 3.6mm; flex: 1; }
+.card li { margin: .15mm 0; }
+.card li::marker { color: var(--c); }
+.card .m { font-family: var(--math); font-size: 9.4pt; }
+.card .land {
+  margin: 1mm 0 0; padding: .9mm 2mm; border-radius: 1.2mm; font-weight: 700;
+  background: color-mix(in srgb, var(--c) 10%, white); color: var(--ink);
+}
+.card .land i { font-style: normal; color: var(--c); font-size: 7pt; margin-right: 1.4mm; letter-spacing: .05em; }
+
+.boardline {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; gap: 4mm; flex-wrap: wrap;
+  border: 1.4px solid var(--ink); border-radius: 1.6mm; padding: 1.6mm 3mm;
+  font-size: 8.4pt;
+}
+.boardline b { font-size: 7.4pt; color: var(--ink-3); letter-spacing: .1em; font-weight: 500; }
+.boardline span { white-space: nowrap; }
+.boardline .m { font-family: var(--math); font-size: 9.6pt; }
+.boardline .c2 { color: var(--c2); font-weight: 700; }
+.boardline .c4 { color: var(--c4); font-weight: 700; }
+.boardline .c5 { color: var(--c5); font-weight: 700; }
+.boardline .c6 { color: var(--c6); font-weight: 700; }
+</style>
+</head>
+<body>
+<p class="hint">打印：A4 横向，边距“无”，勾选“背景图形”。从右上顺时针读 1 → 6。</p>
+<main class="sheet">
+  <svg class="wires" aria-hidden="true"></svg>
+
+  <div class="top">
+    <h1>讲述思维导图</h1>
+    <p>从右上顺时针 1 → 6 · 圆圈号 = 板书小抄的板块号</p>
+    <p>正文 40 页，约 51 分钟</p>
+  </div>
+
+  <div class="mm">
+    <!-- 左列从上到下 6、5、4；右列从上到下 1、2、3：顺时针 -->
+    <article class="card l" style="--c:var(--c6); grid-row:1">
+      <header><span class="n">6</span><h3>什么可信</h3><span class="pg">③④ · 第 29–40 页</span></header>
+      <ul>
+        <li>t &gt; 41 单条轨道没有答案；影随只给方向，辩护靠测量</li>
+        <li>统计量不随 rtol 变：映射厚度 8.6×10⁻⁵，密度总变差 0.0099</li>
+        <li>判据三行：守恒 · 耗散非混沌 · 耗散混沌</li>
+        <li>哈密顿守 H、相体积、辛形式；Lorenz 一样也没有</li>
+        <li>算力 ×10：Kepler 可信时间 ×100，Lorenz +20</li>
+        <li>声学：FDTD = 蛙跳 = 辛；声湍流报谱与统计矩</li>
+      </ul>
+      <p class="land"><i>落地</i>守恒看不变量，混沌看统计量</p>
+    </article>
+
+    <article class="card l" style="--c:var(--c5); grid-row:2">
+      <header><span class="n">5</span><h3>精度估算</h3><span class="pg">② · 第 24–28 页 + 备用</span></header>
+      <ul>
+        <li><span class="m">|Δ| ≈ δe<sup>λ₁t</sup> ⇒ T = ln(1/δ)/λ₁</span>，每位 +2.55</li>
+        <li>心算 12.7 · 23 · 20.4 · 41 ↔ 实测 13.6 · 23.4 · 21.2 · 40.76</li>
+        <li>代价是幂律 <span class="m">nfev ∝ s·tol<sup>−1/p</sup></span>：DOP853 步数 ×10 换 +20</li>
+        <li>方法：阶 4 / 5 / 8，稳定域交点 −2.79 / −3.31 / −6.39</li>
+        <li>精度域在稳定域里：h ≈ 0.01，RK4 上限 0.127</li>
+        <li>关注点：稳定性 → 精度 → λ₁ → 双精度 1e−16</li>
+      </ul>
+      <p class="land"><i>落地</i>精度乘 10，时间只加 2.55</p>
+    </article>
+
+    <article class="card l" style="--c:var(--c4); grid-row:3">
+      <header><span class="n">4</span><h3>Jacobian 与 Lyapunov 指数</h3><span class="pg">① · 第 19–23 页</span></header>
+      <ul>
+        <li>J 逐行求偏导，含 x、y、z → 随点变；读三次</li>
+        <li>局部指数 <span class="m">e·Je</span>：平均 0.907 = λ₁，51% 的时刻在缩</li>
+        <li>定义 <span class="m">M′ = JM</span>；Benettin：<span class="m">Σ ln|R<sub>kk</sub>| / t</span></li>
+        <li>QR：diag(2, ½)，减掉投影才见 −ln 2</li>
+        <li><span class="m">tr(QᵀJQ) = tr J = −13.67</span> ⇒ λ = (0.904, 0, −14.57)，D<sub>KY</sub> ≈ 2.06</li>
+      </ul>
+      <p class="land"><i>黑板 ②③</i>一个方向在拉伸；体积缩到零</p>
+    </article>
+
+    <div class="root">
+      <p class="eyebrow">计算物理 · 课程汇报</p>
+      <h2>从对流方程<br>到可信的数值解</h2>
+      <p class="sub">以 Lorenz 系统为例</p>
+      <div class="eqs"><span>ẋ =</span><span>σ(y − x)</span><span>ẏ =</span><span>ρx − y − xz</span><span>ż =</span><span>xy − βz</span></div>
+      <p class="params">σ = 10 · β = 8/3 · ρ = 28</p>
+      <div class="spine"><b>主线</b>T = ln(1/δ) / λ₁<br>精度 ×10 → 时间 +2.55<br>16 位 → 41</div>
+      <p class="open">开场：同一方程、初值、求解器，只拧 rtol<br>1e−3 → 1e−12，脱钩 5.4 → 26.8</p>
+    </div>
+
+    <article class="card r" style="--c:var(--c1); grid-row:1">
+      <header><span class="n">1</span><h3>方程从哪来</h3><span class="pg">绪论 · 第 4–13 页</span></header>
+      <ul>
+        <li>Rayleigh–Bénard：Ra = 想翻的 ÷ 拦着的，ΔT 是旋钮</li>
+        <li>Boussinesq → ψ、θ 两条 PDE：未知量是函数，无穷维</li>
+        <li>三模 Galerkin：x 转速 · y 温差 · z 多运的热</li>
+        <li>代入：x·y → sin 2πZ 给 +xy；x·z → sin πZ 给 −xz，sin 3πZ 扔掉</li>
+        <li>ρ = 28：被扔的与驱动之比 (ρ−1)/ρ ≈ 96%，定常卷 Nu ≤ 3 → 数学对象</li>
+        <li>线方法 N = 3：RK4 讲原理，DOP853 只拧 rtol</li>
+      </ul>
+      <p class="land"><i>落地</i>每一步都很准；问题是误差怎么累积</p>
+    </article>
+
+    <article class="card r" style="--c:var(--c2); grid-row:2">
+      <header><span class="n">2</span><h3>不动点与分岔</h3><span class="pg">① · 第 14–17 页</span></header>
+      <ul>
+        <li>演示拧 ρ：静止 → 定常卷 → 停不下</li>
+        <li>O 静止导热；C± = (±8.49, ±8.49, 27) 定常卷</li>
+        <li>原点：两根之积 σ(1−ρ)，ρ = 1 变鞍点（叉式）</li>
+        <li>C±：系数全正 ⇒ 只能复根穿虚轴；<span class="m">a₂a₁ = a₀</span> ⇒ ρ<sub>H</sub> = 470/19 ≈ 24.74</li>
+        <li>验算 ρ = 28：根之和 −13.67 = tr J，积 1440，a₂a₁ ≈ 1385 &lt; 1440</li>
+      </ul>
+      <p class="land"><i>黑板 ①</i>停不下：三个不动点全不稳</p>
+    </article>
+
+    <article class="card r" style="--c:var(--c3); grid-row:3">
+      <header><span class="n">3</span><h3>截面与一维映射</h3><span class="pg">① 第 18 页 · ③ 第 31 页</span></header>
+      <ul>
+        <li>平面流线不交叉 → 混沌至少三维</li>
+        <li>截面 z = 27：3992 次穿越，一圈 ≈ 0.75 个时间单位</li>
+        <li>门槛 |x| ≈ 13.25：内留外换，越过越少落得越远</li>
+        <li>|F′| &gt; 1 处处；每圈约 2 倍（0.9 × 0.75 ≈ 0.68）</li>
+        <li>Lorenz 映射对 rtol 不敏感：厚度 8.6×10⁻⁵</li>
+      </ul>
+      <p class="land"><i>落地</i>三维的流压成一条处处拉伸的映射</p>
+    </article>
+  </div>
+
+  <div class="boardline">
+    <b>黑板右栏</b>
+    <span class="c2">① 停不下</span>
+    <span class="c4">② 一个方向在拉伸，λ₁ ≈ 0.9</span>
+    <span class="c4">③ 体积缩到零，<span class="m">Σλ = tr J = −13.67</span></span>
+    <span class="c5"><span class="m">T = ln(1/δ)/λ₁</span>，+2.55 / 位，41</span>
+    <span class="c6">守恒乘法，混沌加法</span>
+  </div>
+</main>
+
+<script>
+// 从中心卡片两侧各引一束曲线到六张分支卡片的标题行
+(function () {
+  const sheet = document.querySelector(".sheet");
+  const svg = sheet.querySelector(".wires");
+  const root = sheet.querySelector(".root");
+  const cards = [...sheet.querySelectorAll(".card")];
+  const NS = "http://www.w3.org/2000/svg";
+
+  function draw() {
+    const s = sheet.getBoundingClientRect();
+    const r = root.getBoundingClientRect();
+    svg.setAttribute("viewBox", `0 0 ${s.width} ${s.height}`);
+    svg.replaceChildren();
+    for (const side of ["l", "r"]) {
+      const group = cards.filter(c => c.classList.contains(side));
+      group.forEach((card, k) => {
+        const c = card.getBoundingClientRect();
+        const head = card.querySelector("header").getBoundingClientRect();
+        const colour = getComputedStyle(card).getPropertyValue("--c").trim();
+        const x1 = (side === "r" ? r.right : r.left) - s.left;
+        const y1 = r.top + r.height * (0.32 + 0.18 * k) - s.top;
+        const x2 = (side === "r" ? c.left : c.right) - s.left;
+        const y2 = head.top + head.height / 2 - s.top;
+        const mx = (x1 + x2) / 2;
+        const path = document.createElementNS(NS, "path");
+        path.setAttribute("d", `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`);
+        path.setAttribute("fill", "none");
+        path.setAttribute("stroke", colour);
+        path.setAttribute("stroke-width", "2.2");
+        path.setAttribute("stroke-linecap", "round");
+        svg.append(path);
+        const dot = document.createElementNS(NS, "circle");
+        dot.setAttribute("cx", x1);
+        dot.setAttribute("cy", y1);
+        dot.setAttribute("r", "3");
+        dot.setAttribute("fill", colour);
+        svg.append(dot);
+      });
+    }
+  }
+
+  draw();
+  if (document.fonts) document.fonts.ready.then(draw);
+  addEventListener("load", draw);
+  addEventListener("resize", draw);
+  addEventListener("beforeprint", draw);
+})();
+</script>
+</body>
+</html>
