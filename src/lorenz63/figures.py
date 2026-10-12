@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from numpy.typing import NDArray  # noqa: E402
 from scipy.integrate import solve_ivp  # noqa: E402
+from scipy.integrate._ivp.rk import DOP853, RK45  # noqa: E402
 
 from lorenz63.bifurcation import (  # noqa: E402
     c_plus_stability,
@@ -27,6 +28,12 @@ from lorenz63.bifurcation import (  # noqa: E402
     rho_sweep,
 )
 from lorenz63.convection import convection_field, nusselt  # noqa: E402
+from lorenz63.efficiency import (  # noqa: E402
+    STIFF_LAMBDA,
+    STIFF_T_END,
+    stiff_work,
+    work_precision,
+)
 from lorenz63.hamiltonian import (  # noqa: E402
     DEFAULT_ECCENTRICITY,
     KEPLER_PERIOD,
@@ -501,6 +508,66 @@ def fig20_adaptive_regions(output: Path) -> Path:
         fontsize=11,
     )
     return _finish(fig, output, "fig20_adaptive_regions")
+
+
+#: Evaluations of f per step, from scipy's own tableaux.
+STAGES = {"RK45": RK45.n_stages, "DOP853": DOP853.n_stages}
+ORDER = {"RK45": RK45.order, "DOP853": DOP853.order}
+
+
+def fig21_work_precision(output: Path) -> Path:
+    methods = (("RK45", C_LOOSE), ("DOP853", C_REF))
+    fig, (left, right) = plt.subplots(1, 2, figsize=(10.4, 5.2))
+
+    _style(left)
+    runs = {m: work_precision(CLASSICAL, m, np.logspace(-3, -12, 10)) for m, _ in methods}
+    for m, color in methods:
+        run = runs[m]
+        left.loglog(
+            run.error, run.nfev, "o-", color=color, ms=4, lw=1.4,
+            label=f"{m}：斜率 {run.slope():.2f}（−1/p = −{1 / ORDER[m]:.3f}）",
+        )
+    # Work at a common error, read off each curve in log space.
+    target = 1e-10
+    work = {
+        m: np.exp(np.interp(np.log(target), np.log(r.error[::-1]), np.log(r.nfev[::-1])))
+        for m, r in runs.items()
+    }
+    left.axvline(target, color=C_MUTED, lw=0.8, ls=":")
+    left.annotate(
+        f"误差 1e-10 处\nRK45 {work['RK45']:.0f} 次\nDOP853 {work['DOP853']:.0f} 次\n"
+        f"差 {work['RK45'] / work['DOP853']:.1f} 倍",
+        (target, work["DOP853"]), xytext=(10, 30), textcoords="offset points", fontsize=8,
+        bbox={"boxstyle": "round", "fc": "white", "ec": C_MUTED, "alpha": 0.9},
+    )
+    left.invert_xaxis()
+    left.set_xlabel("t = 2 处的相对误差（向右更准）")
+    left.set_ylabel("f 的求值次数 nfev")
+    left.set_title("Lorenz（非刚性）：精度由步长换，阶数高的线更平", fontsize=10)
+    left.legend(loc="upper left", fontsize=8)
+
+    _style(right)
+    rtols = np.logspace(-2, -10, 9)
+    for m, color in (*methods, ("Radau", C_MID)):
+        run = stiff_work(m, rtols)
+        right.loglog(run.rtol, run.nfev, "o-", color=color, ms=4, lw=1.4, label=m)
+        if m in STAGES:
+            floor = STAGES[m] * STIFF_LAMBDA * STIFF_T_END / real_axis_limit(m)
+            right.axhline(floor, color=color, lw=0.9, ls="--")
+    right.invert_xaxis()
+    right.set_xlabel("rtol（向右更紧）")
+    right.set_title(
+        f"刚性 y′ = −{STIFF_LAMBDA:.0f}(y − cos t)：显式格式的步长被稳定域卡住", fontsize=10
+    )
+    right.legend(loc="upper left", fontsize=8)
+    right.text(
+        0.97, 0.04,
+        "虚线：s · |λ| T / 交点\n= 稳定性定的求值次数",
+        transform=right.transAxes, fontsize=8, ha="right", va="bottom",
+        bbox={"boxstyle": "round", "fc": "white", "ec": C_MUTED, "alpha": 0.9},
+    )
+    fig.suptitle("阶数在精度定步长时才值钱", fontsize=11)
+    return _finish(fig, output, "fig21_work_precision")
 
 
 # ---------------------------------------------------------------------------
@@ -1722,5 +1789,6 @@ FIGURES: dict[str, Callable[[Path], Path]] = {
     "fig18": fig18_convection,
     "fig19": fig19_section_types,
     "fig20": fig20_adaptive_regions,
+    "fig21": fig21_work_precision,
     "slides": slides_data,
 }
