@@ -6,6 +6,8 @@ Lorenz (1963) 系统的可复现数值工程，为课程汇报《**从对流方�
 
 汇报幻灯片：[`report/slides.html`](report/slides.html)，浏览器直接打开，按 N 显示讲稿。
 
+在线版：<https://soundadam.github.io/lorenz63/>。`report/` 推到 main 后由 `.github/workflows/pages.yml` 原样发布，首页是幻灯片，打印稿在 `mindmap.html`、`cheatsheet.html`。
+
 讲台上用的打印稿：[`report/mindmap.html`](report/mindmap.html)（A4 横向一页）与 [`report/cheatsheet.html`](report/cheatsheet.html)（A4 纵向，左栏板书与心算、右栏讲稿），浏览器打开后打印。
 
 论点一句话：**判断数值结果可信的标准随系统类型而变。守恒系统靠不变量验证；混沌系统的单条轨道不可信，统计量可信。**
